@@ -60,9 +60,11 @@ class AutomationManager {
             this.fetchOpenPositionsForTable();
         });
         
-        // Try to load previous data for the last used symbol
-        // If no last used symbol, try the first symbol
-        this.lastUsedSymbol = localStorage.getItem('automationLastUsedSymbol');
+        // ✓ Try to load previous data for the last used symbol
+        //   lastUsedSymbol is read from DB first (priority), then localStorage as fallback.
+        //   This ensures cross-device/cross-browser restoration in Cloudflare deployment.
+        const dbLastUsedSymbol = await this.dbGet('lastUsedSymbol');
+        this.lastUsedSymbol = dbLastUsedSymbol || localStorage.getItem('automationLastUsedSymbol');
         
         if (this.lastUsedSymbol) {
             // Try to load data for the last used symbol
@@ -83,20 +85,46 @@ class AutomationManager {
     }
     
     restoreUIWithLoadedData(symbolName) {
-        // Restore UI with loaded data
-        if (this.currentSymbolData.length > 0) {
+        // ✓ Restore ALL 8 sections of the automation page from loaded data.
+        //   This is called after loadAutomationData() successfully loads data
+        //   from the permanent database, so navigating away and returning to
+        //   the automation page shows the most recent data.
+
+        let restoredSections = [];
+
+        // 1. "داده‌های بازار" — market data table
+        if (this.currentSymbolData && this.currentSymbolData.length > 0) {
             this.populateMarketDataTable();
+            restoredSections.push('داده‌های بازار');
         }
-        if (this.signals.length > 0) {
+
+        // 2. "جزئیات سیگنال‌ها" + 5. "نمودار قیمت و سیگنال‌ها"
+        //    (chart is rendered from currentSymbolData + signals)
+        if (this.signals && this.signals.length > 0) {
             this.renderSignalDetails();
             this.renderChart();
-            // ✓ Update chart symbol name label
             this.updateChartSymbolName(symbolName);
+            restoredSections.push('جزئیات سیگنال‌ها + نمودار');
         }
-        if (this.currentSymbolHistory.length > 0) {
+
+        // 4. "سیگنال آماده برای ورود" — ready signal card
+        //    ✓ This is the key addition: previously this section was NOT restored
+        //      on page reload, so the ready-signal card was always empty when
+        //      returning to the automation page. Now it's restored from DB.
+        this.renderSelectedSignal();
+        if (this.selectedSignal) {
+            restoredSections.push('سیگنال آماده');
+        }
+
+        // 3. "سوابق پوزیشن‌ها" — history table
+        if (this.currentSymbolHistory && this.currentSymbolHistory.length > 0) {
             this.populateHistoryTable();
+            restoredSections.push('سوابق پوزیشن‌ها');
         }
-        this.log(`${symbolName}: داده‌های قبلی بارگذاری شدند`, 'success', symbolName);
+
+        if (restoredSections.length > 0) {
+            this.log(`${symbolName}: داده‌های قبلی بارگذاری شدند (${restoredSections.join('، ')})`, 'success', symbolName);
+        }
     }
 
     initChart() {
@@ -1214,10 +1242,30 @@ class AutomationManager {
 
     /**
      * ذخیره تمام داده‌های اتوماسیون در دیتابیس
+     *
+     * ✓ Cloudflare-ready: All 8 sections of the automation page persist to the
+     *   permanent database (KV in Cloudflare) so that navigating away and
+     *   returning to the page restores the most recent data.
+     *
+     * Sections persisted (per symbol):
+     *   1. "داده‌های بازار"      → marketData_{symbol}
+     *   2. "جزئیات سیگنال‌ها"    → signals_{symbol}
+     *   3. "سوابق پوزیشن‌ها"     → history_{symbol}
+     *   4. "سیگنال آماده برای ورود" → selectedSignal_{symbol}
+     *
+     * Sections persisted (global, not per-symbol):
+     *   5. "نمودار قیمت و سیگنال‌ها" → rendered from marketData + signals (no separate key needed)
+     *   6. "گزارش چرخه‌ها"        → already persisted via log() → /api/db/logs
+     *   7. "لیست نمادها"         → automation_symbols (handled in saveSymbols())
+     *   8. "پوزیشن‌های باز"       → openPositions (handled in fetchOpenPositionsForTable())
+     *   + balance bar            → balance (handled in fetchBalanceForBar())
+     *
+     * Each save REPLACES the previous value for the same key (no append),
+     * so the latest data always overwrites the old data.
      */
     async saveAutomationData(symbol) {
         try {
-            // Save market data
+            // Save market data (داده‌های بازار) — replaces previous
             if (this.currentSymbolData && this.currentSymbolData.length > 0) {
                 const marketDataPayload = {
                     symbol: symbol,
@@ -1242,10 +1290,27 @@ class AutomationManager {
                     }
                 };
                 localStorage.setItem(`automation_market_${symbol}`, JSON.stringify(marketDataPayload));
+                // ✓ Always overwrite with latest raw market data (used for chart + market table)
                 await this.dbSet(`marketData_${symbol}`, this.marketData);
+                // ✓ Also store the processed candle data (with rsi/atr/signal/tp/sl) so it can be
+                //   restored exactly as shown in the market data table + chart on page reload.
+                await this.dbSet(`processedData_${symbol}`, this.currentSymbolData.map(d => ({
+                    timestamp: d.timestamp.getTime(),
+                    open: d.open,
+                    high: d.high,
+                    low: d.low,
+                    close: d.close,
+                    amount: d.amount,
+                    rsi: d.rsi || null,
+                    atr: d.atr || null,
+                    signal: d.signal || null,
+                    tp: d.tp || null,
+                    sl: d.sl || null,
+                    clientOrderId: d.clientOrderId || null
+                })));
             }
 
-            // Save signals
+            // Save signals (جزئیات سیگنال‌ها) — replaces previous
             if (this.signals && this.signals.length > 0) {
                 const signalsPayload = {
                     symbol: symbol,
@@ -1262,9 +1327,12 @@ class AutomationManager {
                 };
                 localStorage.setItem(`automation_signals_${symbol}`, JSON.stringify(signalsPayload));
                 await this.dbSet(`signals_${symbol}`, this.signals);
+            } else {
+                // ✓ Clear any previously saved signals so stale data doesn't persist
+                await this.dbSet(`signals_${symbol}`, []);
             }
 
-            // Save position history
+            // Save position history (سوابق پوزیشن‌ها) — replaces previous
             if (this.currentSymbolHistory && this.currentSymbolHistory.length > 0) {
                 const historyPayload = {
                     symbol: symbol,
@@ -1282,6 +1350,37 @@ class AutomationManager {
                 localStorage.setItem(`automation_history_${symbol}`, JSON.stringify(historyPayload));
                 await this.dbSet(`history_${symbol}`, this.currentSymbolHistory);
             }
+
+            // ✓ Save the ready signal (سیگنال آماده برای ورود) — replaces previous
+            //    This persists the selectedSignal so it's restored when returning to the page.
+            if (this.selectedSignal) {
+                const selectedSignalPayload = {
+                    symbol: symbol,
+                    signal: {
+                        type: this.selectedSignal.type,
+                        timestamp: this.selectedSignal.timestamp.getTime(),
+                        price: this.selectedSignal.price,
+                        tp: this.selectedSignal.tp,
+                        sl: this.selectedSignal.sl,
+                        orderId: this.selectedSignal.orderId,
+                        symbol: this.selectedSignal.symbol
+                    },
+                    signalSymbol: this.signalSymbol || symbol,
+                    signalTimestamp: this.signalTimestamp || null,
+                    signalGenerationTime: this.signalGenerationTime ? this.signalGenerationTime.getTime() : null,
+                    savedAt: Date.now()
+                };
+                await this.dbSet(`selectedSignal_${symbol}`, selectedSignalPayload);
+            } else {
+                // No ready signal — clear any previously saved one
+                await this.dbSet(`selectedSignal_${symbol}`, null);
+            }
+
+            // ✓ Persist lastUsedSymbol to DB (not just localStorage) so it survives
+            //   cross-device/cross-browser access in Cloudflare deployment.
+            if (symbol) {
+                await this.dbSet('lastUsedSymbol', symbol);
+            }
         } catch (error) {
             console.warn(`Failed to save automation data for ${symbol}:`, error);
         }
@@ -1289,17 +1388,36 @@ class AutomationManager {
 
     /**
      * بارگذاری داده‌های اتوماسیون از دیتابیس
+     *
+     * ✓ Cloudflare-ready: Restores all per-symbol sections from the permanent
+     *   database so that returning to the automation page shows the most recent
+     *   data — even after navigating to other pages or closing the browser.
+     *
+     * Sections restored (per symbol):
+     *   1. "داده‌های بازار"      ← processedData_{symbol} (preferred) or marketData_{symbol}
+     *   2. "جزئیات سیگنال‌ها"    ← signals_{symbol}
+     *   3. "سوابق پوزیشن‌ها"     ← history_{symbol}
+     *   4. "سیگنال آماده برای ورود" ← selectedSignal_{symbol}
+     *   5. "نمودار قیمت و سیگنال‌ها" ← rebuilt from currentSymbolData + signals (in restoreUIWithLoadedData)
+     *
+     * Sections restored (global, handled elsewhere in init()):
+     *   6. "گزارش چرخه‌ها"        ← loadLogsFromDatabase()
+     *   7. "لیست نمادها"         ← loadSymbols()
+     *   8. "پوزیشن‌های باز"       ← loadOpenPositionsFromDB()
+     *   + balance bar            ← loadBalanceFromDB()
      */
     async loadAutomationData(symbol) {
         try {
-            // Try DB first for market data
+            // ✓ Try DB first for PROCESSED market data (includes rsi/atr/signal/tp/sl columns)
+            //    This is preferred over raw marketData because it has all the indicator values
+            //    needed to fully restore the "داده‌های بازار" table + chart.
             let loadedFromDB = false;
             try {
-                const dbMarket = await this.dbGet(`marketData_${symbol}`);
-                if (dbMarket) {
-                    const marketData = typeof dbMarket === 'string' ? JSON.parse(dbMarket) : dbMarket;
-                    if (Array.isArray(marketData)) {
-                        this.currentSymbolData = marketData.map(d => ({
+                const dbProcessed = await this.dbGet(`processedData_${symbol}`);
+                if (dbProcessed) {
+                    const processedData = typeof dbProcessed === 'string' ? JSON.parse(dbProcessed) : dbProcessed;
+                    if (Array.isArray(processedData) && processedData.length > 0) {
+                        this.currentSymbolData = processedData.map(d => ({
                             ...d,
                             timestamp: new Date(d.timestamp)
                         }));
@@ -1308,8 +1426,52 @@ class AutomationManager {
                 }
             } catch (e) { /* ignore */ }
 
+            // ✓ Fall back to raw marketData_{symbol}
+            //    This can be in TWO formats:
+            //      (a) Array of objects {timestamp, open, high, low, close, amount} — saved by newer code
+            //      (b) Array of arrays [ts, open, high, low, close, volume, ...] — raw Toobit API format
+            //    We detect the format and normalize to objects.
             if (!loadedFromDB) {
-                // Load market data from localStorage
+                try {
+                    const dbMarket = await this.dbGet(`marketData_${symbol}`);
+                    if (dbMarket) {
+                        const marketData = typeof dbMarket === 'string' ? JSON.parse(dbMarket) : dbMarket;
+                        if (Array.isArray(marketData) && marketData.length > 0) {
+                            // Detect format: if first item is an array → raw Toobit format
+                            if (Array.isArray(marketData[0])) {
+                                this.currentSymbolData = marketData.map(c => ({
+                                    timestamp: new Date(c[0]),
+                                    open: parseFloat(c[1]),
+                                    high: parseFloat(c[2]),
+                                    low: parseFloat(c[3]),
+                                    close: parseFloat(c[4]),
+                                    amount: parseFloat(c[5])
+                                }));
+                            } else {
+                                // Object format
+                                this.currentSymbolData = marketData.map(d => ({
+                                    timestamp: new Date(d.timestamp),
+                                    open: d.open,
+                                    high: d.high,
+                                    low: d.low,
+                                    close: d.close,
+                                    amount: d.amount,
+                                    rsi: d.rsi || null,
+                                    atr: d.atr || null,
+                                    signal: d.signal || null,
+                                    tp: d.tp || null,
+                                    sl: d.sl || null,
+                                    clientOrderId: d.clientOrderId || null
+                                }));
+                            }
+                            loadedFromDB = true;
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!loadedFromDB) {
+                // Load market data from localStorage (legacy fallback)
                 const marketDataStr = localStorage.getItem(`automation_market_${symbol}`);
                 if (marketDataStr) {
                     try {
@@ -1329,7 +1491,7 @@ class AutomationManager {
                 }
             }
 
-            // Try DB first for signals
+            // ✓ Try DB first for signals (جزئیات سیگنال‌ها)
             let signalsFromDB = false;
             try {
                 const dbSignals = await this.dbGet(`signals_${symbol}`);
@@ -1347,7 +1509,7 @@ class AutomationManager {
             } catch (e) { /* ignore */ }
 
             if (!signalsFromDB) {
-                // Load signals from localStorage
+                // Load signals from localStorage (legacy fallback)
                 const signalsStr = localStorage.getItem(`automation_signals_${symbol}`);
                 if (signalsStr) {
                     try {
@@ -1369,7 +1531,7 @@ class AutomationManager {
                 }
             }
 
-            // Try DB first for history
+            // ✓ Try DB first for history (سوابق پوزیشن‌ها)
             let historyFromDB = false;
             try {
                 const dbHistory = await this.dbGet(`history_${symbol}`);
@@ -1386,7 +1548,7 @@ class AutomationManager {
             } catch (e) { /* ignore */ }
 
             if (!historyFromDB) {
-                // Load position history from localStorage
+                // Load position history from localStorage (legacy fallback)
                 const historyStr = localStorage.getItem(`automation_history_${symbol}`);
                 if (historyStr) {
                     try {
@@ -1406,6 +1568,39 @@ class AutomationManager {
                 } else {
                     this.currentSymbolHistory = [];
                 }
+            }
+
+            // ✓ Load the ready signal (سیگنال آماده برای ورود) from DB
+            //    This restores the "selectedSignal" so the ready-signal card shows
+            //    the same signal that was ready before navigating away.
+            try {
+                const dbSelectedSignal = await this.dbGet(`selectedSignal_${symbol}`);
+                if (dbSelectedSignal) {
+                    const payload = typeof dbSelectedSignal === 'string' ? JSON.parse(dbSelectedSignal) : dbSelectedSignal;
+                    if (payload && payload.signal) {
+                        this.selectedSignal = {
+                            type: payload.signal.type,
+                            timestamp: new Date(payload.signal.timestamp),
+                            price: payload.signal.price,
+                            tp: payload.signal.tp,
+                            sl: payload.signal.sl,
+                            orderId: payload.signal.orderId,
+                            symbol: payload.signal.symbol
+                        };
+                        // Restore associated state
+                        if (payload.signalSymbol) this.signalSymbol = payload.signalSymbol;
+                        if (payload.signalTimestamp) this.signalTimestamp = payload.signalTimestamp;
+                        if (payload.signalGenerationTime) {
+                            this.signalGenerationTime = new Date(payload.signalGenerationTime);
+                        }
+                    } else {
+                        this.selectedSignal = null;
+                    }
+                } else {
+                    this.selectedSignal = null;
+                }
+            } catch (e) {
+                this.selectedSignal = null;
             }
 
             return true;
@@ -1791,6 +1986,14 @@ class AutomationManager {
             symbol.errorCount = 0;
             this.saveSymbols();
             this.renderSymbolsTable();
+
+            // ✓ Save all automation data (market data, signals, history, selected signal)
+            //   so that returning to the automation page shows the latest state.
+            //   After a successful position open, the selectedSignal is still the one
+            //   we just traded — we keep it persisted so the UI shows what happened.
+            await this.saveAutomationData(symbol.name);
+            this.lastUsedSymbol = symbol.name;
+            localStorage.setItem('automationLastUsedSymbol', symbol.name);
 
             this.log(`چرخه ${symbol.name} با موفقیت انجام شد`, 'success', symbol.name);
             this.currentCycleSymbol = null;
@@ -3259,6 +3462,8 @@ console.log('✓ automation-manager.js loaded');
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOMContentLoaded - Initializing AutomationManager...');
     automationManager = new AutomationManager();
+    // ✓ Expose on window for debugging / inspection
+    window.automationManager = automationManager;
     console.log('✓ AutomationManager initialized');
     
     window.addEventListener('resize', () => {
