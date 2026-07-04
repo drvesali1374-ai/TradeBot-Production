@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد - اتوماسیون هوشمند</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .signal-long {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .signal-short {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .data-table {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .data-table::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .data-table::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        
+        .data-table::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 3px;
+        }
+        
+        .section-meta {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+        }
+
+        .sticky-submenu {
+            position: sticky;
+            top: 64px;
+            z-index: 40;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+    <!-- Scripts loaded in HEAD so initialization happens before DOM -->
+    <script src="init-settings.js"></script>
+    <script src="main.js"></script>
+    <!-- Shared utilities -->
+    <script src="js/shared/signal-utils.js"></script>
+    <script src="js/shared/visualization.js"></script>
+    <script src="js/shared/ui-utils.js"></script>
+    <!-- Market Signal Analyzer -->
+    <script src="js/market-signal-analyzer.js"></script>
+</head>
+<body class="text-white">
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-effect">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-reverse space-x-6">
+                    <a href="index.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-home ml-1"></i>
+                        خانه
+                    </a>
+                    <a href="settings.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-cog ml-1"></i>
+                        تنظیمات
+                    </a>
+                    <a href="market_signal.html" class="text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-chart-line ml-1"></i>
+                        داشبورد
+                    </a>
+                    <a href="trading.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-exchange-alt ml-1"></i>
+                        خرید و فروش
+                    </a>
+                    <a href="automation.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-robot ml-1"></i>
+                        اتوماسیون
+                    </a>
+                </div>
+                <div class="flex items-center">
+                    <div class="text-2xl font-bold text-gradient">
+                        اتوماسیون هوشمند
+                        <i class="fas fa-robot mr-2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sticky Sub-Menu for Dashboard -->
+    <div class="sticky-submenu py-3">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-center space-x-reverse space-x-4 items-center">
+                <button id="fetch-data-btn" class="glass-effect px-4 py-2 text-sm rounded-lg hover:bg-purple-600 transition-all duration-300">
+                    <i class="fas fa-database ml-1"></i>
+                    اطلاعات بازار
+                </button>
+                <button id="analyze-btn" class="glass-effect px-4 py-2 text-sm rounded-lg hover:bg-green-600 transition-all duration-300" disabled>
+                    <i class="fas fa-chart-line ml-1"></i>
+                    تولید سیگنال
+                </button>
+                <button id="fetch-history-btn" class="glass-effect px-4 py-2 text-sm rounded-lg hover:bg-blue-600 transition-all duration-300">
+                    <i class="fas fa-history ml-1"></i>
+                    سوابق پوزیشن‌ها
+                </button>
+                <div id="loading-indicator" class="hidden">
+                    <div class="loading-spinner"></div>
+                </div>
+                <div id="status-indicator" class="text-xs text-gray-300">
+                    <i class="fas fa-circle text-gray-500 ml-1"></i>
+                    آماده
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="pt-32 pb-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Statistics Cards - Grouped 2x2 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Market Data Stats -->
+                <div class="glass-effect rounded-xl p-4">
+                    <div class="text-xs text-gray-400 mb-3" id="market-stats-symbol">نماد: -</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-gradient mb-1" id="total-candles">0</div>
+                            <div class="text-gray-300 text-xs">کل کندل‌ها</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-gradient mb-1" id="last-price">-</div>
+                            <div class="text-gray-300 text-xs">آخرین قیمت</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signal Stats -->
+                <div class="glass-effect rounded-xl p-4">
+                    <div class="text-xs text-gray-400 mb-3" id="signal-stats-symbol">نماد: -</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-gradient mb-1" id="long-signals">0</div>
+                            <div class="text-gray-300 text-xs">سیگنال Long</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-gradient mb-1" id="short-signals">0</div>
+                            <div class="text-gray-300 text-xs">سیگنال Short</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Section (منتقل شده به بالا) -->
+            <div class="glass-effect rounded-2xl p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-gradient">
+                            <i class="fas fa-chart-area ml-2"></i>
+                            <span id="chart-symbol-name">-</span> نمودار قیمت و سیگنال‌ها
+                        </h2>
+                        <div id="chart-meta" class="section-meta"></div>
+                    </div>
+                </div>
+                <div id="price-chart" class="w-full h-96" dir="ltr"></div>
+            </div>
+
+            <!-- Signal Details (منتقل شده به پایین) -->
+            <div id="signal-details" class="glass-effect rounded-2xl p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-gradient">
+                            <i class="fas fa-bullseye ml-2"></i>
+                            جزئیات سیگنال‌ها
+                        </h2>
+                        <div id="signal-meta" class="section-meta"></div>
+                    </div>
+                </div>
+                <div id="signal-list" class="space-y-4">
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-chart-line text-4xl mb-4"></i>
+                        <div>سیگنالی برای نمایش وجود ندارد</div>
+                        <div class="text-sm mt-2">برای تولید سیگنال، دکمه "تولید سیگنال" را کلیک کنید</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Table (Market Data) -->
+            <div class="glass-effect rounded-2xl p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-semibold text-gradient">
+                            <i class="fas fa-table ml-2"></i>
+                            داده‌های بازار
+                        </h2>
+                        <div id="market-data-meta" class="section-meta"></div>
+                    </div>
+                    <div class="flex items-center space-x-reverse space-x-4">
+                        <button id="export-market-btn" class="glass-effect px-4 py-2 text-sm rounded-lg hover:bg-purple-600 transition-all duration-300" disabled>
+                            <i class="fas fa-file-export ml-1"></i>
+                            CSV
+                        </button>
+                        <select id="signal-filter" class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 text-sm ml-3">
+                            <option value="">فیلتر</option>
+                            <option value="Long">فقط Long</option>
+                            <option value="Short">فقط Short</option>
+                            <option value="signals">فقط سیگنال</option>
+                            <option value="none">بدون سیگنال</option>
+                        </select>
+                        <input type="text" id="table-search" placeholder="جستجو..." 
+                               class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 text-sm">
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-700 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-right">تاریخ</th>
+                                <th class="px-4 py-3 text-right">قیمت بازگشایی</th>
+                                <th class="px-4 py-3 text-right">قیمت بسته</th>
+                                <th class="px-4 py-3 text-right">بالاترین</th>
+                                <th class="px-4 py-3 text-right">پایین‌ترین</th>
+                                <th class="px-4 py-3 text-right">حجم</th>
+                                <th class="px-4 py-3 text-right">RSI</th>
+                                <th class="px-4 py-3 text-right">ATR</th>
+                                <th class="px-4 py-3 text-right">سیگنال</th>
+                                <th class="px-4 py-3 text-right">حد سود</th>
+                                <th class="px-4 py-3 text-right">حد ضرر</th>
+                                <th class="px-4 py-3 text-right">کد سفارش</th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-table-body">
+                            <tr>
+                                <td colspan="12" class="px-4 py-8 text-center text-gray-400">
+                                    <i class="fas fa-download text-4xl mb-4"></i>
+                                    <div>داده‌ای برای نمایش وجود ندارد</div>
+                                    <div class="text-sm mt-2">برای شروع، دکمه "اطلاعات بازار" را کلیک کنید</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- History Table (Position History) -->
+            <div class="glass-effect rounded-2xl p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-semibold text-gradient">
+                            <i class="fas fa-history ml-2"></i>
+                            سوابق پوزیشن‌ها
+                        </h2>
+                        <div id="history-meta" class="section-meta"></div>
+                    </div>
+                    <div class="flex items-center space-x-reverse space-x-4">
+                        <button id="export-history-btn" class="glass-effect px-4 py-2 text-sm rounded-lg hover:bg-purple-600 transition-all duration-300" disabled>
+                            <i class="fas fa-file-export ml-1"></i>
+                            CSV
+                        </button>
+                        <select id="side-filter" class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 text-sm ml-3">
+                            <option value="">فیلتر</option>
+                            <option value="OPEN">OPEN</option>
+                            <option value="CLOSE">CLOSE</option>
+                        </select>
+                        <input type="text" id="history-search" placeholder="جستجو..." 
+                               class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 text-sm">
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-700 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-right">زمان</th>
+                                <th class="px-4 py-3 text-right">نماد</th>
+                                <th class="px-4 py-3 text-right">قیمت</th>
+                                <th class="px-4 py-3 text-right">مقدار</th>
+                                <th class="px-4 py-3 text-right">کمیسیون</th>
+                                <th class="px-4 py-3 text-right">سمت</th>
+                                <th class="px-4 py-3 text-right">سود/زیان محقق‌شده</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <tr>
+                                <td colspan="7" class="px-4 py-8 text-center text-gray-400">
+                                    <i class="fas fa-download text-4xl mb-4"></i>
+                                    <div>داده‌ای برای نمایش وجود ندارد</div>
+                                    <div class="text-sm mt-2">برای شروع، دکمه "سوابق پوزیشن‌ها" را کلیک کنید</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <div class="text-2xl font-bold text-gradient mb-4">
+                    <i class="fas fa-robot ml-2"></i>
+                    اتوماسیون هوشمند
+                </div>
+                <p class="text-gray-400 mb-6">سیستم تحلیل تکنیکال پیشرفته</p>
+                <div class="text-gray-500">
+                    © 2025 اتوماسیون هوشمند. تمام حقوق محفوظ است.
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

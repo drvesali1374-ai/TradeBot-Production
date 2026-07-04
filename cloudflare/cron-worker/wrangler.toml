@@ -1,0 +1,57 @@
+# ============================================================================
+# TradeBot Cron Worker — Cloudflare Worker Configuration
+# ============================================================================
+#
+# This is a SEPARATE Cloudflare Worker that runs independently from the
+# Next.js Pages app. It exists because Cloudflare Pages does NOT support
+# Cron Triggers — only Cloudflare Workers do.
+#
+# What it does:
+#   Every 5 minutes, the cron trigger fires the `scheduled` handler which
+#   calls the /api/run-cycle endpoint on your deployed Pages site.
+#   This keeps the trading automation running 24/7 without needing a browser
+#   tab open.
+#
+# Deploy steps:
+#   1. cd cloudflare/cron-worker
+#   2. npx wrangler login   (one-time)
+#   3. Set the secret: npx wrangler secret put RUN_CYCLE_SECRET
+#      (use the same secret value you set on the Pages app)
+#   4. Update APP_URL below to your deployed Pages URL
+#      (or set it as a secret: npx wrangler secret put APP_URL)
+#   5. npx wrangler deploy
+#
+# After deploy, verify in Cloudflare dashboard:
+#   Workers & Pages → tradebot-cron-worker → Triggers → Cron Triggers
+#   You should see: */5 * * * *
+# ============================================================================
+
+name = "tradebot-cron-worker"
+main = "src/index.ts"
+compatibility_date = "2024-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── Cron Trigger: every 5 minutes ──────────────────────────────────────────
+[triggers]
+crons = ["*/5 * * * *"]
+
+# ─── Environment variables (non-secret) ──────────────────────────────────────
+# APP_URL is the base URL of your deployed Next.js Pages app.
+# For local testing, set this to http://localhost:3000
+# For production, set it to your Cloudflare Pages URL (e.g. https://tradebot.pages.dev)
+# You can override this with a secret: npx wrangler secret put APP_URL
+[vars]
+APP_URL = "https://your-tradebot-app.pages.dev"
+
+# ─── Secrets (set via `wrangler secret put`) ────────────────────────────────
+# RUN_CYCLE_SECRET — shared secret that authorizes the worker to call
+#                    /api/run-cycle?source=cron on the Pages app.
+#                    MUST match the RUN_CYCLE_SECRET set on the Pages app.
+#
+# Set it with:
+#   npx wrangler secret put RUN_CYCLE_SECRET
+# ============================================================================
+
+# Optional: observability
+[observability]
+enabled = true

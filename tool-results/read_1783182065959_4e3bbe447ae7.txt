@@ -1,0 +1,843 @@
+     1→# ☁️ راهنمای جامع مهاجرت به کلودفلر — سیستم اتوماسیون معاملات
+     2→
+     3→> این سند شامل تمام اقدامات، اصلاحات و تغییرات لازم برای استقرار پروژه در محیط کلودفلر است.
+     4→> **اصل مهم:** هیچ تغییر نباید باعث نقص یا خطا در عملکرد فعلی پروژه شود.
+     5→> تمام تغییرات باید به صورت向后-سازگار (backward-compatible) باشند.
+     6→
+     7→---
+     8→
+     9→## ۰. خلاصه اجرایی
+    10→
+    11→| اولویت | اقدام | سختی | ریسک شکستن |
+    12→|--------|-------|------|-----------|
+    13→| 🔴 ۱ | مهاجرت دیتابیس JSON → Cloudflare KV | بالا | بالا |
+    14→| 🔴 ۲ | جایگزینی `crypto` Node.js با Web Crypto API | متوسط | بالا |
+    15→| 🟠 ۳ | سازگارسازی API Routes با Edge Runtime | متوسط | متوسط |
+    16→| 🟠 ۴ | ایجاد مسیر `/api/db/automation-state` از دست رفته | کم | کم |
+    17→| 🟡 ۵ | حذف API Keys هاردکد و انتقال به Secrets | کم | کم |
+    18→| 🟡 ۶ | تنظیم `next.config` برای کلودفلر | کم | متوسط |
+    19→| 🟢 ۷ | استقرار و تنظیم متغیرهای محیطی | کم | کم |
+    20→| 🔵 ۸ | (آینده) پیاده‌سازی Cron Trigger | بالا | کم |
+    21→
+    22→---
+    23→
+    24→## ۱. محدودیت‌های کلودفلر Workers/Pages
+    25→
+    26→### ۱.۱ محدودیت‌های محیط اجرایی
+    27→
+    28→| محدودیت | توضیح | تأثیر روی پروژه |
+    29→|---------|-------|-----------------|
+    30→| **بدون فایل‌سیستم** | `fs` ماژول در Workers وجود ندارد | 🔴 `database.js` کاملاً بی‌استفاده می‌شود |
+    31→| **بدون `crypto` ماژول Node.js** | فقط Web Crypto API پشتیبانی می‌شود | 🟠 `helpers.ts` و `history/route.ts` باید بازنویسی شوند |
+    32→| **زمان CPU محدود** | 10ms (رایگان) / 30ms (Bundled) | 🟢 API Routes فعلی سریع هستند |
+    33→| **زمان دیواری** | 30s (Bundled) / 15min (Unbound) | 🟢 هر درخواست < 5 ثانیه |
+    34→| **حجم Worker** | حداکثر 10MB فشرده | 🟢 پروژه فعلی کوچک است |
+    35→| **بدون `setTimeout` طولانی** | حداکثر چند ثانیه | 🟢 فقط تأخیرهای 200-300ms در سفارش‌ها |
+    36→| **بدون `setInterval` دائمی** | Worker پس از پاسخ خاتمه می‌یابد | 🔵 اتوماسیون باید به Cron منتقل شود |
+    37→
+    38→### ۱.۲ پشتیبانی Next.js در کلودفلر
+    39→
+    40→کلودفلر از طریق `@cloudflare/next-on-pages` از Next.js پشتیبانی می‌کند، اما:
+    41→- همه API Routes باید `export const runtime = 'edge'` داشته باشند
+    42→- فقط Edge Runtime پشتیبانی می‌شود (نه Node.js Runtime)
+    43→- برخی ویژگی‌های Next.js پشتیبانی نمی‌شوند (مثلاً `getStaticProps` با `revalidate`)
+    44→
+    45→---
+    46→
+    47→## ۲. تغییر ۱: مهاجرت دیتابیس JSON → Cloudflare KV
+    48→
+    49→### ۲.۱ وضعیت فعلی
+    50→
+    51→**فایل:** `src/lib/tradebot/database.js`
+    52→
+    53→```javascript
+    54→import fs from 'fs'
+    55→const dbPath = '/home/z/my-project/lib/tradebot/trading_data.json'
+    56→
+    57→// هر عملیات:
+    58→// 1. fs.readFileSync(dbPath) → خواندن کل فایل
+    59→// 2. تغییر در حافظه
+    60→// 3. fs.writeFileSync(dbPath, ...) → نوشتن کل فایل
+    61→```
+    62→
+    63→**مجموعه‌های داده:**
+    64→- `Settings` — کلید/مقدار
+    65→- `Trades` — آرایه اشیاء با id خودافزایشی
+    66→- `Positions` — آرایه اشیاء با id خودافزایشی
+    67→- `Signals` — آرایه اشیاء با id خودافزایشی
+    68→- `AutomationLogs` — آرایه اشیاء با id خودافزایشی
+    69→- `Errors` — آرایه اشیاء
+    70→- `AutomationState` — کلید/مقدار
+    71→- `Analytics` — محاسبات روی Trades
+    72→
+    73→### ۲.۲ طراحی جدید: KV + الگوی Repository
+    74→
+    75→**استراتژی:** هر مجموعه داده در KV با کلید متمایز ذخیره می‌شود.
+    76→
+    77→```
+    78→KV Namespace: TRADING_DATA
+    79→├── settings              → JSON (کل تنظیمات)
+    80→├── trades                → JSON Array
+    81→├── positions             → JSON Array
+    82→├── signals               → JSON Array
+    83→├── logs                  → JSON Array (آخرین 200 مورد)
+    84→├── errors                → JSON Array
+    85→├── automationState       → JSON Object (کلید/مقدار)
+    86→├── settings:{key}        → مقدار تکی (دسترسی سریع)
+    87→├── automationState:{key} → مقدار تکی (دسترسی سریع)
+    88→└── stats                 → JSON (کش آمار)
+    89→```
+    90→
+    91→### ۲.۳ فایل جدید: `src/lib/tradebot/kv-database.ts`
+    92→
+    93→```typescript
+    94→// ⚠️ این فایل باید جایگزین database.js شود
+    95→// اما تا زمان استقرار، هر دو فایل باید وجود داشته باشند
+    96→
+    97→interface Env {
+    98→  TRADING_DATA: KVNamespace
+    99→}
+   100→
+   101→// الگوی KV Repository
+   102→export class KVDatabase {
+   103→  private kv: KVNamespace
+   104→
+   105→  constructor(kv: KVNamespace) {
+   106→    this.kv = kv
+   107→  }
+   108→
+   109→  // ===== Settings =====
+   110→  async getSetting(key: string): Promise<string | null> {
+   111→    return this.kv.get(`setting:${key}`)
+   112→  }
+   113→
+   114→  async setSetting(key: string, value: string): Promise<void> {
+   115→    await this.kv.put(`setting:${key}`, value)
+   116→    // همچنین بروز کل settings کلی
+   117→    const all = await this.kv.get('settings') || '{}'
+   118→    const parsed = JSON.parse(all)
+   119→    parsed[key] = value
+   120→    await this.kv.put('settings', JSON.stringify(parsed))
+   121→  }
+   122→
+   123→  // ===== Trades (و سایر آرایه‌ها) =====
+   124→  async getTrades(limit = 1000): Promise<any[]> {
+   125→    const data = await this.kv.get('trades')
+   126→    const trades = data ? JSON.parse(data) : []
+   127→    return trades.slice(-limit)
+   128→  }
+   129→
+   130→  async addTrade(trade: any): Promise<{id: number}> {
+   131→    const trades = await this.getTrades(Infinity)
+   132→    trade.id = trades.length > 0
+   133→      ? Math.max(...trades.map(t => t.id || 0)) + 1
+   134→      : 1
+   135→    trade.created_at = new Date().toISOString()
+   136→    trades.push(trade)
+   137→    await this.kv.put('trades', JSON.stringify(trades))
+   138→    return { id: trade.id }
+   139→  }
+   140→
+   141→  // ... مشابه برای Positions, Signals, Logs, Errors, AutomationState
+   142→}
+   143→```
+   144→
+   145→### ۲.۴ نحوه دسترسی به KV در API Routes
+   146→
+   147→در کلودفلر Workers، KV از طریق `context.env` در دسترس است:
+   148→
+   149→```typescript
+   150→// app/api/db/trades/route.ts
+   151→export const runtime = 'edge'
+   152→
+   153→export async function GET(request: NextRequest) {
+   154→  // در کلودفلر: KV از طریق bindings در دسترس است
+   155→  // در توسعه محلی: از فایل JSON استفاده می‌شود
+   156→  const db = getDatabase() // ← تابع کارخانه (factory)
+   157→  const trades = await db.getTrades()
+   158→  return NextResponse.json(trades)
+   159→}
+   160→```
+   161→
+   162→### ۲.۵ تابع کارخانه (Factory Pattern) — 🔴 حیاتی
+   163→
+   164→برای اینکه پروژه هم در محیط محلی (Node.js + فایل JSON) و هم در کلودفلر (KV) کار کند:
+   165→
+   166→```typescript
+   167→// src/lib/tradebot/db-factory.ts
+   168→
+   169→let dbInstance: DatabaseInterface | null = null
+   170→
+   171→export interface DatabaseInterface {
+   172→  getSetting(key: string): Promise<string | null>
+   173→  setSetting(key: string, value: string): Promise<void>
+   174→  getTrades(limit?: number): Promise<any[]>
+   175→  addTrade(trade: any): Promise<{id: number}>
+   176→  // ... سایر متدها
+   177→}
+   178→
+   179→export function getDatabase(kv?: KVNamespace): DatabaseInterface {
+   180→  if (!dbInstance) {
+   181→    if (kv) {
+   182→      // محیط کلودفلر
+   183→      dbInstance = new KVDatabase(kv)
+   184→    } else {
+   185→      // محیط محلی (توسعه)
+   186→      dbInstance = new JsonFileDatabase()
+   187→    }
+   188→  }
+   189→  return dbInstance
+   190→}
+   191→```
+   192→
+   193→**⚠️ نکته مهم:** این الگو تضمین می‌کند که در توسعه محلی، پروژه بدون تغییر با فایل JSON کار می‌کند و فقط در محیط کلودفلر از KV استفاده می‌شود.
+   194→
+   195→### ۲.۶ نحوه انتقال داده‌های موجود
+   196→
+   197→```bash
+   198→# ۱. خواندن فایل JSON فعلی
+   199→cat lib/tradebot/trading_data.json
+   200→
+   201→# ۲. نوشتن هر کلید در KV با wrangler
+   202→wrangler kv key put --namespace-id=xxx "trades" "$(jq '.trades' trading_data.json)"
+   203→wrangler kv key put --namespace-id=xxx "positions" "$(jq '.positions' trading_data.json)"
+   204→# ... برای هر مجموعه
+   205→```
+   206→
+   207→### ۲.۷ محدودیت‌های KV و راه‌حل‌ها
+   208→
+   209→| محدودیت | راه‌حل |
+   210→|---------|--------|
+   211→| **Eventual Consistency** (تأخیر تا ۶۰ ثانیه) | برای writes از `waitUntil()` استفاده شود؛ برای reads از cache حافظه |
+   212→| **حداکثر ۲۵MB هر مقدار** | اگر آرایه trades بزرگ شد، صفحه‌بندی (pagination) با کلیدهای `trades:page:1`, `trades:page:2` |
+   213→| **1,000 writes/روز (رایگان)** | فقط داده‌های مهم نوشته شود؛ logs حجیم محدود شود |
+   214→| **هیچ query** | تمام فیلتر/جستجو در حافظه انجام شود |
+   215→
+   216→### ۲.۸ جایگزین KV: Cloudflare D1 (SQLite در لبه)
+   217→
+   218→اگر KV مناسب نبود، D1 گزینه بهتری است:
+   219→- پشتیبانی از SQL کامل
+   220→- کنترل همزمانی بهتر
+   221→- مناسبت‌تر برای داده‌های ساختاریافته
+   222→
+   223→```sql
+   224→CREATE TABLE trades (
+   225→  id INTEGER PRIMARY KEY AUTOINCREMENT,
+   226→  symbol TEXT,
+   227→  side TEXT,
+   228→  price REAL,
+   229→  quantity REAL,
+   230→  pnl REAL,
+   231→  status TEXT,
+   232→  created_at TEXT,
+   233→  updated_at TEXT
+   234→);
+   235→-- مشابه برای positions, signals, logs, errors
+   236→```
+   237→
+   238→---
+   239→
+   240→## ۳. تغییر ۲: جایگزینی `crypto` Node.js با Web Crypto API
+   241→
+   242→### ۳.۱ فایل‌های درگیر
+   243→
+   244→| فایل | استفاده | نوع |
+   245→|------|---------|------|
+   246→| `src/lib/tradebot/helpers.ts` | `crypto.createHmac('sha256', secretKey)` | 🔴 |
+   247→| `src/app/api/history/route.ts` | `crypto.createHmac('sha256', secretKey)` | 🔴 |
+   248→
+   249→### ۳.۲ تغییر `helpers.ts`
+   250→
+   251→**کد فعلی:**
+   252→```typescript
+   253→import crypto from 'crypto'
+   254→
+   255→export function generateSignature(queryString: string, secretKey: string): string {
+   256→  return crypto.createHmac('sha256', secretKey).update(queryString).digest('hex')
+   257→}
+   258→```
+   259→
+   260→**کد جدید (سازگار با هر دو محیط):**
+   261→```typescript
+   262→// تشخیص محیط اجرایی
+   263→const isEdgeRuntime = typeof globalThis.crypto?.subtle !== 'undefined'
+   264→
+   265→export async function generateSignature(queryString: string, secretKey: string): Promise<string> {
+   266→  if (isEdgeRuntime) {
+   267→    // Web Crypto API (کلودفلر Workers)
+   268→    const encoder = new TextEncoder()
+   269→    const key = await crypto.subtle.importKey(
+   270→      'raw',
+   271→      encoder.encode(secretKey),
+   272→      { name: 'HMAC', hash: 'SHA-256' },
+   273→      false,
+   274→      ['sign']
+   275→    )
+   276→    const signature = await crypto.subtle.sign(
+   277→      'HMAC',
+   278→      key,
+   279→      encoder.encode(queryString)
+   280→    )
+   281→    return Array.from(new Uint8Array(signature))
+   282→      .map(b => b.toString(16).padStart(2, '0'))
+   283→      .join('')
+   284→  } else {
+   285→    // Node.js crypto (توسعه محلی)
+   286→    const nodeCrypto = await import('crypto')
+   287→    return nodeCrypto.createHmac('sha256', secretKey).update(queryString).digest('hex')
+   288→  }
+   289→}
+   290→```
+   291→
+   292→### ۳.۳ ⚠️ تغییر مهم: `generateSignature` حالت async دارد
+   293→
+   294→چون `crypto.subtle.sign` asynchronous است، تمام فراخوانی‌های `generateSignature` باید `await` شوند.
+   295→
+   296→**فایل‌هایی که باید بروز شوند:**
+   297→
+   298→| فایل | تغییر |
+   299→|------|-------|
+   300→| `create-position/route.ts` | ۳ فراخوانی `generateSignature` → `await generateSignature()` |
+   301→| `close-position/route.ts` | ۳ فراخوانی `generateSignature` → `await generateSignature()` |
+   302→| `balance/route.ts` | ۱ فراخوانی → `await generateSignature()` |
+   303→| `open-positions/route.ts` | ۱ فراخوانی → `await generateSignature()` |
+   304→
+   305→### ۳.۴ تغییر `history/route.ts`
+   306→
+   307→این فایل مستقیماً از `crypto` استفاده می‌کند (بدون helpers):
+   308→
+   309→**کد فعلی:**
+   310→```typescript
+   311→import crypto from 'crypto'
+   312→const signature = crypto.createHmac('sha256', secretKey).update(queryString).digest('hex')
+   313→```
+   314→
+   315→**کد جدید:**
+   316→```typescript
+   317→import { generateSignature } from '@/lib/tradebot/helpers'
+   318→// ...
+   319→const signature = await generateSignature(queryString, secretKey)
+   320→```
+   321→
+   322→---
+   323→
+   324→## ۴. تغییر ۳: سازگارسازی API Routes با Edge Runtime
+   325→
+   326→### ۴.۱ اضافه کردن `runtime = 'edge'` به هر Route
+   327→
+   328→| Route | نیاز به تغییر؟ | توضیح |
+   329→|-------|---------------|-------|
+   330→| `/api/toobit-proxy` | ✅ بله | فقط `fetch` — بدون مشکل |
+   331→| `/api/balance` | ✅ بله | `crypto` باید async شود |
+   332→| `/api/history` | ✅ بله | `crypto` مستقیم باید حذف شود |
+   333→| `/api/open-positions` | ✅ بله | `crypto` باید async شود |
+   334→| `/api/create-position` | ✅ بله | `crypto` باید async شود |
+   335→| `/api/close-position` | ✅ بله | `crypto` باید async شود |
+   336→| `/api/bale-send` | ✅ بله | فقط `fetch` — بدون مشکل |
+   337→| `/api/db/*` (8 routes) | ✅ بله | `fs` باید با KV جایگزین شود |
+   338→
+   339→**تغییر در هر فایل:**
+   340→```typescript
+   341→// اضافه شدن به ابتدای هر route.ts:
+   342→export const runtime = 'edge'
+   343→```
+   344→
+   345→### ۴.۲ نکته درباره `setTimeout` در `create-position/route.ts`
+   346→
+   347→```typescript
+   348→// خط 43:
+   349→await new Promise(resolve => setTimeout(resolve, 200)) // تأخیر بعد از تنظیم اهرم
+   350→
+   351→// خط 91:
+   352→await new Promise(resolve => setTimeout(resolve, 200)) // تأخیر بعد از ثبت سفارش
+   353→```
+   354→
+   355→**وضعیت در کلودفلر:** `setTimeout` با تأخیر کم (< 1 ثانیه) در Workers مجاز است. اما اگر Worker خیلی زود خاتمه یابد، ممکن است تأخیر اجرا نشود.
+   356→
+   357→**راه‌حل:** این تأخیرها برای جلوگیری از rate-limit صرافی هستند و باید حفظ شوند. در Workers، چون کل درخواست در یک handler اجرا می‌شود، این تأخیرها مشکلی ایجاد نمی‌کنند.
+   358→
+   359→### ۴.۳ نکته درباره `close-position/route.ts`
+   360→
+   361→```typescript
+   362→// خط 98-100: تأخیر بین بستن چند پوزیشن
+   363→if (targetPositions.length > 1) {
+   364→  await new Promise(resolve => setTimeout(resolve, 300))
+   365→}
+   366→```
+   367→
+   368→**وضعیت:** مشابه مورد بالا — باید حفظ شود.
+   369→
+   370→---
+   371→
+   372→## ۵. تغییر ۴: ایجاد مسیر `/api/db/automation-state`
+   373→
+   374→### ۵.۱ مشکل
+   375→
+   376→`automation-manager.js` فراخوانی‌های `dbGet()`, `dbSet()`, `dbDelete()` به `/api/db/automation-state` انجام می‌دهد، اما این مسیر در سرور وجود ندارد و خطای 404 برمی‌گرداند.
+   377→
+   378→### ۵.۲ فایل جدید: `src/app/api/db/automation-state/route.ts`
+   379→
+   380→```typescript
+   381→import { NextRequest, NextResponse } from 'next/server'
+   382→import { AutomationState } from '@/lib/tradebot/database'
+   383→
+   384→export const runtime = 'edge'  // یا حذف در صورت عدم مهاجرت
+   385→
+   386→export async function GET(request: NextRequest) {
+   387→  const key = request.nextUrl.searchParams.get('key')
+   388→  if (!key) {
+   389→    const all = AutomationState.getAll()
+   390→    return NextResponse.json({ success: true, data: all })
+   391→  }
+   392→  const value = AutomationState.get(key)
+   393→  return NextResponse.json({ success: true, data: value })
+   394→}
+   395→
+   396→export async function POST(request: NextRequest) {
+   397→  const { key, value } = await request.json()
+   398→  if (!key) return NextResponse.json({ error: 'Key is required' }, { status: 400 })
+   399→  AutomationState.set(key, value)
+   400→  return NextResponse.json({ success: true })
+   401→}
+   402→
+   403→export async function DELETE(request: NextRequest) {
+   404→  const { key } = await request.json()
+   405→  if (!key) return NextResponse.json({ error: 'Key is required' }, { status: 400 })
+   406→  AutomationState.delete(key)
+   407→  return NextResponse.json({ success: true })
+   408→}
+   409→```
+   410→
+   411→### ۵.۳ ⚠️ نکته مهم درباره فرمت پاسخ
+   412→
+   413→`automation-manager.js` پاسخ را اینگونه پارس می‌کند:
+   414→```javascript
+   415→const data = await response.json()
+   416→return data.success ? data.data : null
+   417→```
+   418→
+   419→بنابراین فرمت پاسخ **باید** `{ success: true, data: value }` باشد.
+   420→
+   421→---
+   422→
+   423→## ۶. تغییر ۵: حذف API Keys هاردکد
+   424→
+   425→### ۶.۱ فایل‌های درگیر
+   426→
+   427→| فایل | خطوط | مشکل |
+   428→|------|-------|-------|
+   429→| `create-position/route.ts` | 10-11 | API Keys به عنوان fallback |
+   430→| `close-position/route.ts` | 10-11 | API Keys به عنوان fallback |
+   431→| `public/init-settings.js` | ~20 | API Keys در localStorage |
+   432→| `public/settings.html` | (default values) | API Keys در HTML |
+   433→
+   434→### ۶.۲ تغییر در API Routes
+   435→
+   436→**کد فعلی:**
+   437→```typescript
+   438→const apiKey = settings.apiKey || process.env.TOOBIT_API_KEY || 'X8eeI84g9Prhgxmf...'
+   439→const secretKey = settings.secretKey || process.env.TOOBIT_SECRET_KEY || 'CimriVFjSdI7POG4...'
+   440→```
+   441→
+   442→**کد جدید:**
+   443→```typescript
+   444→const apiKey = settings.apiKey || process.env.TOOBIT_API_KEY || ''
+   445→const secretKey = settings.secretKey || process.env.TOOBIT_SECRET_KEY || ''
+   446→
+   447→if (!apiKey || !secretKey) {
+   448→  return NextResponse.json(
+   449→    { error: 'API keys not configured. Set TOOBIT_API_KEY and TOOBIT_SECRET_KEY environment variables.' },
+   450→    { status: 401 }
+   451→  )
+   452→}
+   453→```
+   454→
+   455→### ۶.۳ تغییر در init-settings.js
+   456→
+   457→**حذف:** مقادیر پیش‌فرض API Keys از localStorage
+   458→
+   459→```javascript
+   460→// قبل:
+   461→apiKey: 'X8eeI84g9Prhgxmf...',
+   462→secretKey: 'CimriVFjSdI7POG4...',
+   463→
+   464→// بعد:
+   465→apiKey: '',
+   466→secretKey: '',
+   467→```
+   468→
+   469→### ۶.۴ تنظیم در کلودفلر
+   470→
+   471→```bash
+   472→wrangler secret put TOOBIT_API_KEY
+   473→wrangler secret put TOOBIT_SECRET_KEY
+   474→```
+   475→
+   476→یا از داشبورد: Workers → Settings → Environment Variables → Encrypt
+   477→
+   478→---
+   479→
+   480→## ۷. تغییر ۶: تنظیم `next.config` برای کلودفلر
+   481→
+   482→### ۷.۱ فایل فعلی
+   483→
+   484→```typescript
+   485→const nextConfig: NextConfig = {
+   486→  output: "standalone",
+   487→  typescript: { ignoreBuildErrors: true },
+   488→  reactStrictMode: false,
+   489→  allowedDevOrigins: [".space-z.ai"],
+   490→};
+   491→```
+   492→
+   493→### ۷.۲ تغییرات لازم
+   494→
+   495→```typescript
+   496→import type { NextConfig } from "next";
+   497→
+   498→const nextConfig: NextConfig = {
+   499→  // ❌ حذف: output: "standalone" — کلودفلر از این خروجی استفاده نمی‌کند
+   500→  typescript: { ignoreBuildErrors: true },
+   501→  reactStrictMode: false,
+   502→  allowedDevOrigins: [".space-z.ai"],
+   503→
+   504→  // ✅ اضافه: تنظیمات کلودفلر
+   505→  experimental: {
+   506→    // اگر لازم باشد
+   507→  },
+   508→};
+   509→
+   510→export default nextConfig;
+   511→```
+   512→
+   513→### ۷.۳ پکیج‌های لازم
+   514→
+   515→```bash
+   516→npm install -D @cloudflare/next-on-pages wrangler
+   517→```
+   518→
+   519→### ۷.۴ فایل `wrangler.toml` (جدید)
+   520→
+   521→```toml
+   522→name = "trading-automation"
+   523→compatibility_date = "2024-01-01"
+   524→compatibility_flags = ["nodejs_compat"]
+   525→
+   526→# KV Namespace
+   527→[[kv_namespaces]]
+   528→binding = "TRADING_DATA"
+   529→id = "xxx"  # ← بعد از ایجاد KV در داشبورد تکمیل شود
+   530→
+   531→# Secrets (بعداً تنظیم شوند)
+   532→# [vars]
+   533→# (بدون secrets — فقط مقادیر عمومی)
+   534→```
+   535→
+   536→### ۷.۵ اسکریپت `package.json`
+   537→
+   538→```json
+   539→{
+   540→  "scripts": {
+   541→    "dev": "next dev --turbopack --port 3000",
+   542→    "build": "next build",
+   543→    "pages:build": "npx @cloudflare/next-on-pages",
+   544→    "pages:dev": "npx wrangler pages dev .vercel/output/static --kv TRADING_DATA",
+   545→    "pages:deploy": "npx wrangler pages deploy .vercel/output/static"
+   546→  }
+   547→}
+   548→```
+   549→
+   550→---
+   551→
+   552→## ۸. تغییر ۷: استقرار و تنظیم متغیرها
+   553→
+   554→### ۸.۱ مراحل استقرار
+   555→
+   556→```
+   557→۱. نصب پکیج‌ها:
+   558→   npm install -D @cloudflare/next-on-pages wrangler
+   559→
+   560→۲. ورود به کلودفلر:
+   561→   npx wrangler login
+   562→
+   563→۳. ایجاد KV Namespace:
+   564→   npx wrangler kv namespace create TRADING_DATA
+   565→
+   566→۴. بروزرسانی wrangler.toml با ID نام‌فضای KV
+   567→
+   568→۵. ساخت پروژه:
+   569→   npx @cloudflare/next-on-pages
+   570→
+   571→۶. تست محلی:
+   572→   npx wrangler pages dev .vercel/output/static --kv TRADING_DATA
+   573→
+   574→۷. استقرار:
+   575→   npx wrangler pages deploy .vercel/output/static
+   576→
+   577→۸. تنظیم Secrets:
+   578→   npx wrangler secret put TOOBIT_API_KEY
+   579→   npx wrangler secret put TOOBIT_SECRET_KEY
+   580→```
+   581→
+   582→### ۸.۲ اتصال GitHub (توصیه‌شده)
+   583→
+   584→از داشبورد کلودفلر:
+   585→1. Pages → Create a project → Connect to Git
+   586→2. انتخاب Repository
+   587→3. Build command: `npx @cloudflare/next-on-pages`
+   588→4. Build output: `.vercel/output/static`
+   589→5. تنظیم Environment Variables
+   590→
+   591→---
+   592→
+   593→## ۹. تغییر ۸ (آینده): پیاده‌سازی Cron Trigger
+   594→
+   595→### ۹.۱ توضیح
+   596→
+   597→اتوماسیون فعلی با `setInterval` در مرورگر کار می‌کند. در کلودفلر، این روش ممکن نیست.
+   598→باید از Cron Trigger + Cloudflare Queue استفاده شود (نیاز به پلن پولی $5/ماه).
+   599→
+   600→### ۹.۲ معماری پیشنهادی
+   601→
+   602→```
+   603→Cron Trigger (5 * * * * UTC)
+   604→  → Producer Worker: خواندن نمادها از KV → ارسال به Queue
+   605→    → Queue Consumer: پردازش هر نماد (یک چرخه کامل)
+   606→      → retry خودکار در صورت خطا
+   607→      → Dead Letter Queue برای بررسی دستی
+   608→```
+   609→
+   610→### ۹.۳ wrangler.toml (اضافه‌شده)
+   611→
+   612→```toml
+   613→# Cron Trigger
+   614→[triggers]
+   615→crons = ["5 * * * *"]
+   616→
+   617→# Queue
+   618→[[queues.producers]]
+   619→queue = "trading-cycle"
+   620→binding = "CYCLE_QUEUE"
+   621→
+   622→[[queues.consumers]]
+   623→queue = "trading-cycle"
+   624→max_batch_size = 1
+   625→max_retries = 3
+   626→retry_delay = 30
+   627→```
+   628→
+   629→### ۹.۴ منطق Producer Worker
+   630→
+   631→```typescript
+   632→// workers/cron-producer.ts
+   633→export default {
+   634→  async scheduled(event, env, ctx) {
+   635→    // ۱. خواندن لیست نمادها از KV
+   636→    const symbolsData = await env.TRADING_DATA.get('automation_symbols')
+   637→    const symbols = JSON.parse(symbolsData || '[]')
+   638→
+   639→    // ۲. ارسال هر نماد به Queue
+   640→    for (const symbol of symbols) {
+   641→      await env.CYCLE_QUEUE.send({
+   642→        symbol: symbol.name,
+   643→        timestamp: Date.now()
+   644→      })
+   645→    }
+   646→  }
+   647→}
+   648→```
+   649→
+   650→### ۹.۵ منطق Consumer Worker
+   651→
+   652→```typescript
+   653→// workers/cycle-consumer.ts
+   654→export default {
+   655→  async queue(batch, env) {
+   656→    for (const message of batch.messages) {
+   657→      const { symbol, timestamp } = message.body
+   658→      try {
+   659→        await runCycleForSymbol(symbol, env)
+   660→        message.ack()
+   661→      } catch (error) {
+   662→        message.retry()
+   663→      }
+   664→    }
+   665→  }
+   666→}
+   667→```
+   668→
+   669→### ۹.۶ ⚠️ نکته مهم: مهاجرت منطق client-side به server-side
+   670→
+   671→تمام منطق `AutomationManager` (3000+ خط JavaScript) در حال حاضر در مرورگر اجرا می‌شود.
+   672→برای Cron Trigger، این منطق باید به TypeScript سمت سرور (Worker) تبدیل شود.
+   673→
+   674→**اقدامات لازم:**
+   675→1. تولید سیگنال → `analyzeMarketData()` → TypeScript Worker
+   676→2. کنترل‌های ریسک → TypeScript Worker
+   677→3. باز/بسته پوزیشن → API Routes موجود (fetch از Worker)
+   678→4. نوتیفیکیشن بله → API Route موجود (fetch از Worker)
+   679→5. مدیریت وضعیت نمادها → KV
+   680→
+   681→**⚠️ این بزرگ‌ترین تغییر پروژه است و باید با دقت انجام شود.**
+   682→
+   683→---
+   684→
+   685→## ۱۰. جدول کامل فایل‌های درگیر در تغییرات
+   686→
+   687→### ۱۰.۱ فایل‌هایی که باید **تغییر** کنند
+   688→
+   689→| فایل | نوع تغییر | ریسک | تغییرات |
+   690→|------|-----------|------|---------|
+   691→| `src/lib/tradebot/helpers.ts` | 🔴 بازنویسی | بالا | crypto → Web Crypto (async) |
+   692→| `src/lib/tradebot/database.js` | 🔴 بازنویسی | بالا | fs → KV (یا D1) |
+   693→| `src/app/api/history/route.ts` | 🟠 اصلاح | متوسط | حذف crypto مستقیم، استفاده از helpers |
+   694→| `src/app/api/create-position/route.ts` | 🟠 اصلاح | متوسط | await generateSignature, حذف fallback API Keys |
+   695→| `src/app/api/close-position/route.ts` | 🟠 اصلاح | متوسط | await generateSignature, حذف fallback API Keys |
+   696→| `src/app/api/balance/route.ts` | 🟡 کم | کم | await generateSignature |
+   697→| `src/app/api/open-positions/route.ts` | 🟡 کم | کم | await generateSignature |
+   698→| `public/init-settings.js` | 🟡 کم | کم | حذف API Keys هاردکد |
+   699→| `next.config.ts` | 🟡 کم | متوسط | حذف standalone, تنظیمات کلودفلر |
+   700→| `package.json` | 🟢 افزودن | کم | اضافه کردن پکیج‌های کلودفلر |
+   701→
+   702→### ۱۰.۲ فایل‌هایی که باید **ایجاد** شوند
+   703→
+   704→| فایل | هدف |
+   705→|------|------|
+   706→| `src/app/api/db/automation-state/route.ts` | مسیر API مفقود |
+   707→| `src/lib/tradebot/kv-database.ts` | دیتابیس KV |
+   708→| `src/lib/tradebot/db-factory.ts` | الگوی کارخانه |
+   709→| `wrangler.toml` | تنظیمات کلودفلر |
+   710→| `workers/cron-producer.ts` | (آینده) Producer Cron |
+   711→| `workers/cycle-consumer.ts` | (آینده) Consumer Queue |
+   712→
+   713→### ۱۰.۳ فایل‌هایی که **بدون تغییر** باقی می‌مانند
+   714→
+   715→| فایل | دلیل |
+   716→|------|-------|
+   717→| تمام فایل‌های `public/` | استاتیک — مستقیم سرو می‌شوند |
+   718→| `public/js/automation-manager.js` | فقط در مرورگر اجرا می‌شود |
+   719→| `public/js/market-signal-analyzer.js` | فقط در مرورگر اجرا می‌شود |
+   720→| `public/js/shared/*.js` | فقط در مرورگر |
+   721→| `src/app/api/bale-send/route.ts` | فقط `fetch` — بدون Node.js API |
+   722→| `src/app/api/toobit-proxy/route.ts` | فقط `fetch` |
+   723→| `src/app/page.tsx` | فقط iframe |
+   724→| `src/app/layout.tsx` | فقط HTML |
+   725→| `src/components/ui/*` | کامپوننت‌های React |
+   726→
+   727→---
+   728→
+   729→## ۱۱. ترتیب اجرای تغییرات (Roadmap)
+   730→
+   731→### فاز ۱: آماده‌سازی (بدون شکستن عملکرد فعلی)
+   732→
+   733→```
+   734→✅ 1. ایجاد /api/db/automation-state/route.ts
+   735→✅ 2. حذف API Keys هاردکد از init-settings.js
+   736→✅ 3. حذف fallback API Keys از create-position و close-position
+   737→✅ 4. بازنویسی helpers.ts با Web Crypto (async, backward-compatible)
+   738→✅ 5. اصلاح history/route.ts برای استفاده از helpers
+   739→✅ 6. اضافه کردن await به فراخوانی‌های generateSignature
+   740→```
+   741→
+   742→**⚠️ بعد از هر مرحله: تست کامل عملکرد در محیط محلی!**
+   743→
+   744→### فاز ۲: مهاجرت دیتابیس
+   745→
+   746→```
+   747→✅ 7. ایجاد db-factory.ts (الگوی کارخانه)
+   748→✅ 8. ایجاد kv-database.ts
+   749→✅ 9. بازنویسی database.js به نسخه سازگار
+   750→✅ 10. بروزرسانی تمام /api/db/* routes برای استفاده از factory
+   751→✅ 11. اضافه کردن runtime = 'edge' به هر route
+   752→✅ 12. تست کامل با فایل JSON (محیط محلی)
+   753→```
+   754→
+   755→### فاز ۳: استقرار
+   756→
+   757→```
+   758→✅ 13. نصب @cloudflare/next-on-pages و wrangler
+   759→✅ 14. ایجاد wrangler.toml
+   760→✅ 15. ایجاد KV Namespace
+   761→✅ 16. انتقال داده‌ها از JSON به KV
+   762→✅ 17. ساخت و تست محلی با wrangler pages dev
+   763→✅ 18. تنظیم Secrets در کلودفلر
+   764→✅ 19. استقرار نهایی
+   765→```
+   766→
+   767→### فاز ۴: اتوماسیون (آینده)
+   768→
+   769→```
+   770→🔲 20. مهاجرت منطق AutomationManager به Worker TypeScript
+   771→🔲 21. پیاده‌سازی Cron Trigger
+   772→🔲 22. پیاده‌سازی Queue
+   773→🔲 23. تست جامع
+   774→```
+   775→
+   776→---
+   777→
+   778→## ۱۲. چک‌لیست تست پس از هر فاز
+   779→
+   780→### پس از فاز ۱:
+   781→
+   782→- [ ] صفحه اتوماسیون بارگذاری می‌شود
+   783→- [ ] دکمه «بروزرسانی داده‌های بازار» کار می‌کند
+   784→- [ ] دکمه «تولید سیگنال» کار می‌کند
+   785→- [ ] دکمه «یک چرخه» کار می‌کند
+   786→- [ ] نوتیفیکیشن بله ارسال می‌شود
+   787→- [ ] `/api/db/automation-state` پاسخ 200 می‌دهد
+   788→- [ ] بدون API Keys هاردکد در کد
+   789→
+   790→### پس از فاز ۲:
+   791→
+   792→- [ ] تمام API Routes پاسخ 200 می‌دهند
+   793→- [ ] داده‌ها در فایل JSON ذخیره می‌شوند (محیط محلی)
+   794→- [ ] `runtime = 'edge'` در هر route وجود دارد
+   795→- [ ] `crypto` Node.js هیچ‌کجا مستقیماً استفاده نمی‌شود
+   796→- [ ] `fs` هیچ‌کجا مستقیماً استفاده نمی‌شود
+   797→
+   798→### پس از فاز ۳:
+   799→
+   800→- [ ] سایت در URL کلودفلر بارگذاری می‌شود
+   801→- [ ] تمام صفحات HTML کار می‌کنند
+   802→- [ ] API Routes پاسخ می‌دهند
+   803→- [ ] داده‌ها در KV ذخیره می‌شوند
+   804→- [ ] نوتیفیکیشن بله ارسال می‌شود
+   805→- [ ] تنظیمات از Secrets خوانده می‌شوند
+   806→
+   807→---
+   808→
+   809→## ۱۳. ریسک‌ها و نکات احتیاطی
+   810→
+   811→### ۱۳.۱ ریسک‌های اصلی
+   812→
+   813→| ریسک | احتمال | تأثیر | راه‌حل |
+   814→|------|--------|-------|--------|
+   815→| Web Crypto نتیجه متفاوت می‌دهد | کم | بحرانی | تست: مقایسه خروجی Node.js و Web Crypto |
+   816→| KV eventual consistency باعث داده قدیمی می‌شود | متوسط | بالا | کش حافظه + بروزرسانی پس از نوشتن |
+   817→| `setTimeout` در Workers کار نمی‌کند | کم | متوسط | تأخیرهای کوچک مجاز هستند؛ در غیر این صورت حذف |
+   818→| صفحات HTML استاتیک سرو نمی‌شوند | کم | بالا | پوشه `public/` به طور خودکار سرو می‌شود |
+   819→| `@cloudflare/next-on-pages` با Next.js 16 سازگار نیست | متوسط | بحرانی | بررسی compatibility matrix |
+   820→
+   821→### ۱۳.۲ نکات احتیاطی
+   822→
+   823→1. **هرگز کد فعلی را حذف نکنید** — فقط بازنویسی یا اضافه کنید
+   824→2. **الگوی Factory** تضمین می‌کند کد قدیمی بدون تغییر کار می‌کند
+   825→3. **تست محلی** قبل از هر استقرار الزامی است
+   826→4. **نسخه‌پشتیبان** از `trading_data.json` قبل از انتقال به KV بگیرید
+   827→5. **ابتدا در محیط تست** کلودفلر استقرار دهید، نه تولید
+   828→
+   829→---
+   830→
+   831→## ۱۴. منابع
+   832→
+   833→| منبع | آدرس |
+   834→|------|------|
+   835→| Cloudflare Pages + Next.js | https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/ |
+   836→| @cloudflare/next-on-pages | https://github.com/cloudflare/next-on-pages |
+   837→| Cloudflare KV | https://developers.cloudflare.com/kv/ |
+   838→| Cloudflare D1 | https://developers.cloudflare.com/d1/ |
+   839→| Cloudflare Workers Limits | https://developers.cloudflare.com/workers/platform/limits/ |
+   840→| Web Crypto API | https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto |
+   841→| Cloudflare Queues | https://developers.cloudflare.com/queues/ |
+   842→| Cron Triggers | https://developers.cloudflare.com/workers/configuration/cron-triggers/ |
+   843→

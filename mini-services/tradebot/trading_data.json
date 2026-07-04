@@ -1,0 +1,3549 @@
+{
+  "settings": {},
+  "trades": [],
+  "positions": [],
+  "signals": [],
+  "logs": [
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "تنظیمات با موفقیت ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:40:47.422Z\",\"type\":\"success\"}",
+      "id": 1,
+      "created_at": "2026-02-20T19:40:47.478Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:58:45.865Z\",\"type\":\"success\"}",
+      "id": 2,
+      "created_at": "2026-02-20T19:58:45.871Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:58:49.689Z\",\"type\":\"success\"}",
+      "id": 3,
+      "created_at": "2026-02-20T19:58:49.693Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:59:02.473Z\",\"type\":\"info\"}",
+      "id": 4,
+      "created_at": "2026-02-20T19:59:02.478Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:59:02.473Z\",\"type\":\"info\"}",
+      "id": 5,
+      "created_at": "2026-02-20T19:59:02.483Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:59:04.507Z\",\"type\":\"success\"}",
+      "id": 6,
+      "created_at": "2026-02-20T19:59:04.514Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:59:04.509Z\",\"type\":\"info\"}",
+      "id": 7,
+      "created_at": "2026-02-20T19:59:04.520Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.3518",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:59:04.940Z\",\"type\":\"success\"}",
+      "id": 8,
+      "created_at": "2026-02-20T19:59:04.947Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:59:04.941Z\",\"type\":\"info\"}",
+      "id": 9,
+      "created_at": "2026-02-20T19:59:04.955Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:59:05.788Z\",\"type\":\"success\"}",
+      "id": 10,
+      "created_at": "2026-02-20T19:59:05.790Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: تولید سیگنال...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T19:59:05.788Z\",\"type\":\"info\"}",
+      "id": 11,
+      "created_at": "2026-02-20T19:59:05.794Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا - خطا در تولید سیگنال: لطفا صبر کنید، شرایط سیگنال برقرار نیستند. RSI: N/A, قیمت: 1.353 (تلاش 1/4)",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-20T19:59:05.803Z\",\"type\":\"error\"}",
+      "id": 12,
+      "created_at": "2026-02-20T19:59:05.805Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T20:00:02.689Z\",\"type\":\"success\"}",
+      "id": 13,
+      "created_at": "2026-02-20T20:00:02.692Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T20:00:03.648Z\",\"type\":\"success\"}",
+      "id": 14,
+      "created_at": "2026-02-20T20:00:03.651Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T20:18:34.803Z\",\"type\":\"info\"}",
+      "id": 15,
+      "created_at": "2026-02-20T20:18:34.811Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T20:18:34.804Z\",\"type\":\"info\"}",
+      "id": 16,
+      "created_at": "2026-02-20T20:18:34.816Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T20:18:37.336Z\",\"type\":\"success\"}",
+      "id": 17,
+      "created_at": "2026-02-20T20:18:37.338Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T20:18:37.338Z\",\"type\":\"info\"}",
+      "id": 18,
+      "created_at": "2026-02-20T20:18:37.342Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.347",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T20:18:37.805Z\",\"type\":\"success\"}",
+      "id": 19,
+      "created_at": "2026-02-20T20:18:37.805Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T20:18:37.805Z\",\"type\":\"info\"}",
+      "id": 20,
+      "created_at": "2026-02-20T20:18:37.808Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T20:18:38.883Z\",\"type\":\"success\"}",
+      "id": 21,
+      "created_at": "2026-02-20T20:18:38.887Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: تولید سیگنال...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T20:18:38.884Z\",\"type\":\"info\"}",
+      "id": 22,
+      "created_at": "2026-02-20T20:18:38.890Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا - خطا در تولید سیگنال: لطفا صبر کنید، شرایط سیگنال برقرار نیستند. RSI: 40.58, قیمت: 1.347 (تلاش 1/4)",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-20T20:18:38.900Z\",\"type\":\"error\"}",
+      "id": 23,
+      "created_at": "2026-02-20T20:18:38.902Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "تنظیمات با موفقیت ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:09:53.181Z\",\"type\":\"success\"}",
+      "id": 24,
+      "created_at": "2026-02-20T21:09:53.215Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:10:23.099Z\",\"type\":\"info\"}",
+      "id": 25,
+      "created_at": "2026-02-20T21:10:23.098Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:10:23.100Z\",\"type\":\"info\"}",
+      "id": 26,
+      "created_at": "2026-02-20T21:10:23.105Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:10:24.884Z\",\"type\":\"success\"}",
+      "id": 27,
+      "created_at": "2026-02-20T21:10:24.885Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:10:24.887Z\",\"type\":\"info\"}",
+      "id": 28,
+      "created_at": "2026-02-20T21:10:24.892Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.3448",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:10:25.337Z\",\"type\":\"success\"}",
+      "id": 29,
+      "created_at": "2026-02-20T21:10:25.337Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:10:25.338Z\",\"type\":\"info\"}",
+      "id": 30,
+      "created_at": "2026-02-20T21:10:25.343Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:10:26.154Z\",\"type\":\"success\"}",
+      "id": 31,
+      "created_at": "2026-02-20T21:10:26.154Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: تولید سیگنال...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:10:26.155Z\",\"type\":\"info\"}",
+      "id": 32,
+      "created_at": "2026-02-20T21:10:26.159Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا - خطا در تولید سیگنال: سیگنال منقضی شده (6.2 ساعت پیش) (تلاش 2/4)",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-20T21:10:26.181Z\",\"type\":\"error\"}",
+      "id": 33,
+      "created_at": "2026-02-20T21:10:26.183Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "تنظیمات با موفقیت ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:11:59.494Z\",\"type\":\"success\"}",
+      "id": 34,
+      "created_at": "2026-02-20T21:11:59.495Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:03.710Z\",\"type\":\"info\"}",
+      "id": 35,
+      "created_at": "2026-02-20T21:12:03.704Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:03.711Z\",\"type\":\"info\"}",
+      "id": 36,
+      "created_at": "2026-02-20T21:12:03.708Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:05.707Z\",\"type\":\"success\"}",
+      "id": 37,
+      "created_at": "2026-02-20T21:12:05.701Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:05.709Z\",\"type\":\"info\"}",
+      "id": 38,
+      "created_at": "2026-02-20T21:12:05.705Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.3445",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:06.124Z\",\"type\":\"success\"}",
+      "id": 39,
+      "created_at": "2026-02-20T21:12:06.123Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:06.125Z\",\"type\":\"info\"}",
+      "id": 40,
+      "created_at": "2026-02-20T21:12:06.128Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:06.966Z\",\"type\":\"success\"}",
+      "id": 41,
+      "created_at": "2026-02-20T21:12:06.966Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: تولید سیگنال...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:06.967Z\",\"type\":\"info\"}",
+      "id": 42,
+      "created_at": "2026-02-20T21:12:06.975Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال Long (ورود: 1.3635, TP: 1.6267, SL: 1.2845, RSI: 49.34)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:07.001Z\",\"type\":\"success\"}",
+      "id": 43,
+      "created_at": "2026-02-20T21:12:06.998Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال long تولید شد (ورود: 1.3445, TP: 1.6267, SL: 1.2845)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:07.007Z\",\"type\":\"success\"}",
+      "id": 44,
+      "created_at": "2026-02-20T21:12:07.019Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:07.014Z\",\"type\":\"info\"}",
+      "id": 45,
+      "created_at": "2026-02-20T21:12:07.029Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:07.507Z\",\"type\":\"info\"}",
+      "id": 46,
+      "created_at": "2026-02-20T21:12:07.505Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:07.508Z\",\"type\":\"info\"}",
+      "id": 47,
+      "created_at": "2026-02-20T21:12:07.510Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2928 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:08.081Z\",\"type\":\"success\"}",
+      "id": 48,
+      "created_at": "2026-02-20T21:12:08.078Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:08.082Z\",\"type\":\"info\"}",
+      "id": 49,
+      "created_at": "2026-02-20T21:12:08.082Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:08.084Z\",\"type\":\"success\"}",
+      "id": 50,
+      "created_at": "2026-02-20T21:12:08.088Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:08.085Z\",\"type\":\"info\"}",
+      "id": 51,
+      "created_at": "2026-02-20T21:12:08.095Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2154915375598344704, مقدار: 28)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:11.094Z\",\"type\":\"success\"}",
+      "id": 52,
+      "created_at": "2026-02-20T21:12:11.089Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-20T21:12:11.096Z\",\"type\":\"success\"}",
+      "id": 53,
+      "created_at": "2026-02-20T21:12:11.094Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "تنظیمات با موفقیت ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:30:33.117Z\",\"type\":\"success\"}",
+      "id": 54,
+      "created_at": "2026-02-21T20:30:33.200Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:30:59.413Z\",\"type\":\"info\"}",
+      "id": 55,
+      "created_at": "2026-02-21T20:30:59.422Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:30:59.414Z\",\"type\":\"info\"}",
+      "id": 56,
+      "created_at": "2026-02-21T20:30:59.426Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:31:02.448Z\",\"type\":\"success\"}",
+      "id": 57,
+      "created_at": "2026-02-21T20:31:02.467Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:31:02.865Z\",\"type\":\"info\"}",
+      "id": 58,
+      "created_at": "2026-02-21T20:31:02.871Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.3388",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:31:03.673Z\",\"type\":\"success\"}",
+      "id": 59,
+      "created_at": "2026-02-21T20:31:03.680Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:31:03.676Z\",\"type\":\"info\"}",
+      "id": 60,
+      "created_at": "2026-02-21T20:31:03.684Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:31:04.487Z\",\"type\":\"success\"}",
+      "id": 61,
+      "created_at": "2026-02-21T20:31:04.497Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: تولید سیگنال...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:31:04.489Z\",\"type\":\"info\"}",
+      "id": 62,
+      "created_at": "2026-02-21T20:31:04.501Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا - خطا در تولید سیگنال: سیگنال منقضی شده (15.5 ساعت پیش) (تلاش 1/4)",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-21T20:31:04.520Z\",\"type\":\"error\"}",
+      "id": 63,
+      "created_at": "2026-02-21T20:31:04.524Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "تنظیمات با موفقیت ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:38:06.842Z\",\"type\":\"success\"}",
+      "id": 64,
+      "created_at": "2026-02-21T20:38:06.846Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:38:13.650Z\",\"type\":\"info\"}",
+      "id": 65,
+      "created_at": "2026-02-21T20:38:13.655Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:38:13.651Z\",\"type\":\"info\"}",
+      "id": 66,
+      "created_at": "2026-02-21T20:38:13.659Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:38:15.162Z\",\"type\":\"success\"}",
+      "id": 67,
+      "created_at": "2026-02-21T20:38:15.170Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:38:15.758Z\",\"type\":\"info\"}",
+      "id": 68,
+      "created_at": "2026-02-21T20:38:15.763Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.3376",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:38:16.401Z\",\"type\":\"success\"}",
+      "id": 69,
+      "created_at": "2026-02-21T20:38:16.406Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:38:16.402Z\",\"type\":\"info\"}",
+      "id": 70,
+      "created_at": "2026-02-21T20:38:16.409Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:38:17.172Z\",\"type\":\"success\"}",
+      "id": 71,
+      "created_at": "2026-02-21T20:38:17.175Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: تولید سیگنال...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:38:17.173Z\",\"type\":\"info\"}",
+      "id": 72,
+      "created_at": "2026-02-21T20:38:17.182Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال Long (ورود: 1.3314, TP: 1.5726, SL: 1.2590, RSI: 36.64)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T20:38:17.185Z\",\"type\":\"success\"}",
+      "id": 73,
+      "created_at": "2026-02-21T20:38:17.237Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا - Cannot read properties of undefined (reading 'toLocaleString') (تلاش 2/4)",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-21T20:38:17.204Z\",\"type\":\"error\"}",
+      "id": 74,
+      "created_at": "2026-02-21T20:38:17.239Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:09.738Z\",\"type\":\"success\"}",
+      "id": 75,
+      "created_at": "2026-02-21T22:08:09.742Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:22.097Z\",\"type\":\"info\"}",
+      "id": 76,
+      "created_at": "2026-02-21T22:08:22.101Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:22.098Z\",\"type\":\"info\"}",
+      "id": 77,
+      "created_at": "2026-02-21T22:08:22.145Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:23.150Z\",\"type\":\"success\"}",
+      "id": 78,
+      "created_at": "2026-02-21T22:08:23.153Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:23.654Z\",\"type\":\"info\"}",
+      "id": 79,
+      "created_at": "2026-02-21T22:08:23.659Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.341",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:24.057Z\",\"type\":\"success\"}",
+      "id": 80,
+      "created_at": "2026-02-21T22:08:24.062Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:24.058Z\",\"type\":\"info\"}",
+      "id": 81,
+      "created_at": "2026-02-21T22:08:24.064Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:24.589Z\",\"type\":\"success\"}",
+      "id": 82,
+      "created_at": "2026-02-21T22:08:24.595Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: تولید سیگنال...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:24.590Z\",\"type\":\"info\"}",
+      "id": 83,
+      "created_at": "2026-02-21T22:08:24.603Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال Long (ورود: 1.3314, TP: 1.5726, SL: 1.2590, RSI: 36.64)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:24.607Z\",\"type\":\"success\"}",
+      "id": 84,
+      "created_at": "2026-02-21T22:08:24.613Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال Long (ورود: 1.3410, TP: 1.5726, SL: 1.2590)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:24.611Z\",\"type\":\"success\"}",
+      "id": 85,
+      "created_at": "2026-02-21T22:08:24.616Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:24.612Z\",\"type\":\"info\"}",
+      "id": 86,
+      "created_at": "2026-02-21T22:08:24.621Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:25.032Z\",\"type\":\"info\"}",
+      "id": 87,
+      "created_at": "2026-02-21T22:08:25.035Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:25.033Z\",\"type\":\"info\"}",
+      "id": 88,
+      "created_at": "2026-02-21T22:08:25.040Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2881 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:25.515Z\",\"type\":\"success\"}",
+      "id": 89,
+      "created_at": "2026-02-21T22:08:25.517Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:25.515Z\",\"type\":\"info\"}",
+      "id": 90,
+      "created_at": "2026-02-21T22:08:25.521Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:25.516Z\",\"type\":\"success\"}",
+      "id": 91,
+      "created_at": "2026-02-21T22:08:25.524Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:25.516Z\",\"type\":\"info\"}",
+      "id": 92,
+      "created_at": "2026-02-21T22:08:25.529Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2155668479927260928, مقدار: 28)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:28.463Z\",\"type\":\"success\"}",
+      "id": 93,
+      "created_at": "2026-02-21T22:08:28.465Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-21T22:08:28.464Z\",\"type\":\"success\"}",
+      "id": 94,
+      "created_at": "2026-02-21T22:08:28.468Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:26.335Z\",\"type\":\"success\"}",
+      "id": 95,
+      "created_at": "2026-02-27T09:43:26.339Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:33.560Z\",\"type\":\"info\"}",
+      "id": 96,
+      "created_at": "2026-02-27T09:43:33.564Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:33.560Z\",\"type\":\"info\"}",
+      "id": 97,
+      "created_at": "2026-02-27T09:43:33.568Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:34.440Z\",\"type\":\"success\"}",
+      "id": 98,
+      "created_at": "2026-02-27T09:43:34.443Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:34.746Z\",\"type\":\"info\"}",
+      "id": 99,
+      "created_at": "2026-02-27T09:43:34.752Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.311",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:35.245Z\",\"type\":\"success\"}",
+      "id": 100,
+      "created_at": "2026-02-27T09:43:35.249Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:35.245Z\",\"type\":\"info\"}",
+      "id": 101,
+      "created_at": "2026-02-27T09:43:35.254Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:35.754Z\",\"type\":\"success\"}",
+      "id": 102,
+      "created_at": "2026-02-27T09:43:35.759Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: تولید سیگنال...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:35.755Z\",\"type\":\"info\"}",
+      "id": 103,
+      "created_at": "2026-02-27T09:43:35.764Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال Long (ورود: 1.3132, TP: 1.5991, SL: 1.2274, RSI: 41.71)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:35.772Z\",\"type\":\"success\"}",
+      "id": 104,
+      "created_at": "2026-02-27T09:43:35.778Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال Long (ورود: 1.3110, TP: 1.5991, SL: 1.2274)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:35.777Z\",\"type\":\"success\"}",
+      "id": 105,
+      "created_at": "2026-02-27T09:43:35.783Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:35.781Z\",\"type\":\"info\"}",
+      "id": 106,
+      "created_at": "2026-02-27T09:43:35.790Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:36.277Z\",\"type\":\"info\"}",
+      "id": 107,
+      "created_at": "2026-02-27T09:43:36.281Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:36.278Z\",\"type\":\"info\"}",
+      "id": 108,
+      "created_at": "2026-02-27T09:43:36.286Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2874 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:36.757Z\",\"type\":\"success\"}",
+      "id": 109,
+      "created_at": "2026-02-27T09:43:36.760Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:36.758Z\",\"type\":\"info\"}",
+      "id": 110,
+      "created_at": "2026-02-27T09:43:36.763Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:36.759Z\",\"type\":\"success\"}",
+      "id": 111,
+      "created_at": "2026-02-27T09:43:36.767Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:36.760Z\",\"type\":\"info\"}",
+      "id": 112,
+      "created_at": "2026-02-27T09:43:36.770Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2159642253286584576, مقدار: 28)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:39.715Z\",\"type\":\"success\"}",
+      "id": 113,
+      "created_at": "2026-02-27T09:43:39.718Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T09:43:39.716Z\",\"type\":\"success\"}",
+      "id": 114,
+      "created_at": "2026-02-27T09:43:39.723Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:01:17.504Z\",\"type\":\"success\"}",
+      "id": 115,
+      "created_at": "2026-02-27T10:01:17.508Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "هیچ نمادی برای معامله آماده نیست",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:01:21.312Z\",\"type\":\"warning\"}",
+      "id": 116,
+      "created_at": "2026-02-27T10:01:21.315Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:01:58.480Z\",\"type\":\"success\"}",
+      "id": 117,
+      "created_at": "2026-02-27T10:01:58.484Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "تنظیمات با موفقیت ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:11.065Z\",\"type\":\"success\"}",
+      "id": 118,
+      "created_at": "2026-02-27T10:02:11.068Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:19.241Z\",\"type\":\"info\"}",
+      "id": 119,
+      "created_at": "2026-02-27T10:02:19.247Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:19.242Z\",\"type\":\"info\"}",
+      "id": 120,
+      "created_at": "2026-02-27T10:02:19.250Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:22.718Z\",\"type\":\"success\"}",
+      "id": 121,
+      "created_at": "2026-02-27T10:02:22.724Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:23.304Z\",\"type\":\"info\"}",
+      "id": 122,
+      "created_at": "2026-02-27T10:02:23.309Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.3125",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:23.809Z\",\"type\":\"success\"}",
+      "id": 123,
+      "created_at": "2026-02-27T10:02:23.814Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:23.810Z\",\"type\":\"info\"}",
+      "id": 124,
+      "created_at": "2026-02-27T10:02:23.819Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:24.504Z\",\"type\":\"success\"}",
+      "id": 125,
+      "created_at": "2026-02-27T10:02:24.509Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: تولید سیگنال...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:24.506Z\",\"type\":\"info\"}",
+      "id": 126,
+      "created_at": "2026-02-27T10:02:24.515Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال Long (ورود: 1.3132, TP: 1.5991, SL: 1.2274, RSI: 41.71)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:24.524Z\",\"type\":\"success\"}",
+      "id": 127,
+      "created_at": "2026-02-27T10:02:24.531Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال Long (ورود: 1.3125, TP: 1.5991, SL: 1.2274)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:24.532Z\",\"type\":\"success\"}",
+      "id": 128,
+      "created_at": "2026-02-27T10:02:24.536Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:24.535Z\",\"type\":\"info\"}",
+      "id": 129,
+      "created_at": "2026-02-27T10:02:24.542Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:25.004Z\",\"type\":\"info\"}",
+      "id": 130,
+      "created_at": "2026-02-27T10:02:25.007Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:25.004Z\",\"type\":\"info\"}",
+      "id": 131,
+      "created_at": "2026-02-27T10:02:25.010Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2815 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:25.583Z\",\"type\":\"success\"}",
+      "id": 132,
+      "created_at": "2026-02-27T10:02:25.591Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:25.584Z\",\"type\":\"info\"}",
+      "id": 133,
+      "created_at": "2026-02-27T10:02:25.596Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:25.586Z\",\"type\":\"success\"}",
+      "id": 134,
+      "created_at": "2026-02-27T10:02:25.599Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:25.588Z\",\"type\":\"info\"}",
+      "id": 135,
+      "created_at": "2026-02-27T10:02:25.607Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2159651722355656192, مقدار: 28)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:28.487Z\",\"type\":\"success\"}",
+      "id": 136,
+      "created_at": "2026-02-27T10:02:28.493Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:02:28.489Z\",\"type\":\"success\"}",
+      "id": 137,
+      "created_at": "2026-02-27T10:02:28.497Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "تنظیمات با موفقیت ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:33.461Z\",\"type\":\"success\"}",
+      "id": 138,
+      "created_at": "2026-02-27T10:05:33.450Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:46.281Z\",\"type\":\"info\"}",
+      "id": 139,
+      "created_at": "2026-02-27T10:05:46.286Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:46.282Z\",\"type\":\"info\"}",
+      "id": 140,
+      "created_at": "2026-02-27T10:05:46.291Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:49.248Z\",\"type\":\"success\"}",
+      "id": 141,
+      "created_at": "2026-02-27T10:05:49.252Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:49.619Z\",\"type\":\"info\"}",
+      "id": 142,
+      "created_at": "2026-02-27T10:05:49.623Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.3128",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:50.221Z\",\"type\":\"success\"}",
+      "id": 143,
+      "created_at": "2026-02-27T10:05:50.227Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:50.222Z\",\"type\":\"info\"}",
+      "id": 144,
+      "created_at": "2026-02-27T10:05:50.231Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:50.835Z\",\"type\":\"success\"}",
+      "id": 145,
+      "created_at": "2026-02-27T10:05:50.842Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: تولید سیگنال...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:50.836Z\",\"type\":\"info\"}",
+      "id": 146,
+      "created_at": "2026-02-27T10:05:50.847Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال Long (ورود: 1.3132, TP: 1.5991, SL: 1.2274, RSI: 41.71)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:50.851Z\",\"type\":\"success\"}",
+      "id": 147,
+      "created_at": "2026-02-27T10:05:50.860Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: سیگنال Long (ورود: 1.3128, TP: 1.5991, SL: 1.2274)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:50.853Z\",\"type\":\"success\"}",
+      "id": 148,
+      "created_at": "2026-02-27T10:05:50.864Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:50.854Z\",\"type\":\"info\"}",
+      "id": 149,
+      "created_at": "2026-02-27T10:05:50.869Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:51.457Z\",\"type\":\"info\"}",
+      "id": 150,
+      "created_at": "2026-02-27T10:05:51.462Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:51.459Z\",\"type\":\"info\"}",
+      "id": 151,
+      "created_at": "2026-02-27T10:05:51.465Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2765 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:51.931Z\",\"type\":\"success\"}",
+      "id": 152,
+      "created_at": "2026-02-27T10:05:51.934Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:51.931Z\",\"type\":\"info\"}",
+      "id": 153,
+      "created_at": "2026-02-27T10:05:51.938Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:51.932Z\",\"type\":\"success\"}",
+      "id": 154,
+      "created_at": "2026-02-27T10:05:51.945Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:51.932Z\",\"type\":\"info\"}",
+      "id": 155,
+      "created_at": "2026-02-27T10:05:51.951Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2159653453999255808, مقدار: 28)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:54.925Z\",\"type\":\"success\"}",
+      "id": 156,
+      "created_at": "2026-02-27T10:05:54.929Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:05:54.927Z\",\"type\":\"success\"}",
+      "id": 157,
+      "created_at": "2026-02-27T10:05:54.932Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:41:30.259Z\",\"type\":\"info\"}",
+      "id": 158,
+      "created_at": "2026-02-27T10:41:30.269Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:41:30.259Z\",\"type\":\"info\"}",
+      "id": 159,
+      "created_at": "2026-02-27T10:41:30.275Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:41:31.508Z\",\"type\":\"success\"}",
+      "id": 160,
+      "created_at": "2026-02-27T10:41:31.511Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:41:31.522Z\",\"type\":\"success\"}",
+      "id": 161,
+      "created_at": "2026-02-27T10:41:31.527Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا در به‌روز رسانی: Cannot read properties of null (reading 'filter')",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-27T10:41:31.591Z\",\"type\":\"error\"}",
+      "id": 162,
+      "created_at": "2026-02-27T10:41:31.595Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا - Cannot read properties of null (reading 'filter') (تلاش 1/4)",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-27T10:41:31.593Z\",\"type\":\"error\"}",
+      "id": 163,
+      "created_at": "2026-02-27T10:41:31.599Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "تنظیمات با موفقیت ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:48:45.899Z\",\"type\":\"success\"}",
+      "id": 164,
+      "created_at": "2026-02-27T10:48:45.905Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:42.341Z\",\"type\":\"info\"}",
+      "id": 165,
+      "created_at": "2026-02-27T10:57:42.342Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:42.341Z\",\"type\":\"info\"}",
+      "id": 166,
+      "created_at": "2026-02-27T10:57:42.346Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:44.300Z\",\"type\":\"success\"}",
+      "id": 167,
+      "created_at": "2026-02-27T10:57:44.298Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:44.314Z\",\"type\":\"success\"}",
+      "id": 168,
+      "created_at": "2026-02-27T10:57:44.310Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:45.500Z\",\"type\":\"success\"}",
+      "id": 169,
+      "created_at": "2026-02-27T10:57:45.501Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:45.501Z\",\"type\":\"info\"}",
+      "id": 170,
+      "created_at": "2026-02-27T10:57:45.505Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:46.221Z\",\"type\":\"success\"}",
+      "id": 171,
+      "created_at": "2026-02-27T10:57:46.218Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:46.493Z\",\"type\":\"info\"}",
+      "id": 172,
+      "created_at": "2026-02-27T10:57:46.490Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.3021",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:47.218Z\",\"type\":\"success\"}",
+      "id": 173,
+      "created_at": "2026-02-27T10:57:47.214Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:47.218Z\",\"type\":\"info\"}",
+      "id": 174,
+      "created_at": "2026-02-27T10:57:47.220Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:47.703Z\",\"type\":\"info\"}",
+      "id": 175,
+      "created_at": "2026-02-27T10:57:47.717Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:47.704Z\",\"type\":\"info\"}",
+      "id": 176,
+      "created_at": "2026-02-27T10:57:47.727Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2725 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:48.414Z\",\"type\":\"success\"}",
+      "id": 177,
+      "created_at": "2026-02-27T10:57:48.412Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:48.415Z\",\"type\":\"info\"}",
+      "id": 178,
+      "created_at": "2026-02-27T10:57:48.420Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:48.415Z\",\"type\":\"success\"}",
+      "id": 179,
+      "created_at": "2026-02-27T10:57:48.426Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:48.416Z\",\"type\":\"info\"}",
+      "id": 180,
+      "created_at": "2026-02-27T10:57:48.433Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2159679597138003456, مقدار: 28)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:51.451Z\",\"type\":\"success\"}",
+      "id": 181,
+      "created_at": "2026-02-27T10:57:51.446Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T10:57:51.452Z\",\"type\":\"success\"}",
+      "id": 182,
+      "created_at": "2026-02-27T10:57:51.452Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:45.968Z\",\"type\":\"info\"}",
+      "id": 183,
+      "created_at": "2026-02-27T11:35:45.966Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:45.969Z\",\"type\":\"info\"}",
+      "id": 184,
+      "created_at": "2026-02-27T11:35:45.971Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:47.102Z\",\"type\":\"success\"}",
+      "id": 185,
+      "created_at": "2026-02-27T11:35:47.095Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:47.115Z\",\"type\":\"success\"}",
+      "id": 186,
+      "created_at": "2026-02-27T11:35:47.108Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:48.522Z\",\"type\":\"success\"}",
+      "id": 187,
+      "created_at": "2026-02-27T11:35:48.519Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:48.523Z\",\"type\":\"info\"}",
+      "id": 188,
+      "created_at": "2026-02-27T11:35:48.525Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:49.388Z\",\"type\":\"success\"}",
+      "id": 189,
+      "created_at": "2026-02-27T11:35:49.383Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:49.689Z\",\"type\":\"info\"}",
+      "id": 190,
+      "created_at": "2026-02-27T11:35:49.685Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.2998",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:50.551Z\",\"type\":\"success\"}",
+      "id": 191,
+      "created_at": "2026-02-27T11:35:50.544Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:50.551Z\",\"type\":\"info\"}",
+      "id": 192,
+      "created_at": "2026-02-27T11:35:50.548Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:51.219Z\",\"type\":\"info\"}",
+      "id": 193,
+      "created_at": "2026-02-27T11:35:51.211Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:51.219Z\",\"type\":\"info\"}",
+      "id": 194,
+      "created_at": "2026-02-27T11:35:51.215Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2722 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:51.772Z\",\"type\":\"success\"}",
+      "id": 195,
+      "created_at": "2026-02-27T11:35:51.765Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:51.773Z\",\"type\":\"info\"}",
+      "id": 196,
+      "created_at": "2026-02-27T11:35:51.772Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:51.774Z\",\"type\":\"success\"}",
+      "id": 197,
+      "created_at": "2026-02-27T11:35:51.779Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:51.775Z\",\"type\":\"info\"}",
+      "id": 198,
+      "created_at": "2026-02-27T11:35:51.796Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2159698751442241024, مقدار: 28)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:54.641Z\",\"type\":\"success\"}",
+      "id": 199,
+      "created_at": "2026-02-27T11:35:54.635Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:35:54.643Z\",\"type\":\"success\"}",
+      "id": 200,
+      "created_at": "2026-02-27T11:35:54.640Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:45.650Z\",\"type\":\"info\"}",
+      "id": 201,
+      "created_at": "2026-02-27T11:51:45.666Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:45.652Z\",\"type\":\"info\"}",
+      "id": 202,
+      "created_at": "2026-02-27T11:51:45.674Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:49.094Z\",\"type\":\"success\"}",
+      "id": 203,
+      "created_at": "2026-02-27T11:51:49.095Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:49.107Z\",\"type\":\"success\"}",
+      "id": 204,
+      "created_at": "2026-02-27T11:51:49.107Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:50.619Z\",\"type\":\"success\"}",
+      "id": 205,
+      "created_at": "2026-02-27T11:51:50.629Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:50.624Z\",\"type\":\"info\"}",
+      "id": 206,
+      "created_at": "2026-02-27T11:51:50.637Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 0 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:51.348Z\",\"type\":\"success\"}",
+      "id": 207,
+      "created_at": "2026-02-27T11:51:51.352Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:51.751Z\",\"type\":\"info\"}",
+      "id": 208,
+      "created_at": "2026-02-27T11:51:51.754Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.302",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:52.236Z\",\"type\":\"success\"}",
+      "id": 209,
+      "created_at": "2026-02-27T11:51:52.239Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:52.239Z\",\"type\":\"info\"}",
+      "id": 210,
+      "created_at": "2026-02-27T11:51:52.245Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:52.782Z\",\"type\":\"info\"}",
+      "id": 211,
+      "created_at": "2026-02-27T11:51:52.782Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:52.782Z\",\"type\":\"info\"}",
+      "id": 212,
+      "created_at": "2026-02-27T11:51:52.788Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2674 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:53.278Z\",\"type\":\"success\"}",
+      "id": 213,
+      "created_at": "2026-02-27T11:51:53.280Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:53.278Z\",\"type\":\"info\"}",
+      "id": 214,
+      "created_at": "2026-02-27T11:51:53.288Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:53.279Z\",\"type\":\"success\"}",
+      "id": 215,
+      "created_at": "2026-02-27T11:51:53.292Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:53.280Z\",\"type\":\"info\"}",
+      "id": 216,
+      "created_at": "2026-02-27T11:51:53.297Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2159706817113998848, مقدار: 28)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:56.173Z\",\"type\":\"success\"}",
+      "id": 217,
+      "created_at": "2026-02-27T11:51:56.173Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T11:51:56.175Z\",\"type\":\"success\"}",
+      "id": 218,
+      "created_at": "2026-02-27T11:51:56.178Z"
+    },
+    {
+      "symbol": "DOT",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "DOT: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:01:17.838Z\",\"type\":\"success\"}",
+      "id": 219,
+      "created_at": "2026-02-27T12:01:17.849Z"
+    },
+    {
+      "symbol": "DOT",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "DOT: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:05:42.020Z\",\"type\":\"success\"}",
+      "id": 220,
+      "created_at": "2026-02-27T12:05:42.024Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:05:53.370Z\",\"type\":\"info\"}",
+      "id": 221,
+      "created_at": "2026-02-27T12:05:53.364Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:05:53.371Z\",\"type\":\"info\"}",
+      "id": 222,
+      "created_at": "2026-02-27T12:05:53.369Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا - خطا در دریافت داده‌های بازار: HTTP 500 (تلاش 1/4)",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-27T12:05:57.219Z\",\"type\":\"error\"}",
+      "id": 223,
+      "created_at": "2026-02-27T12:05:57.211Z"
+    },
+    {
+      "symbol": "DOT",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "DOT: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:06.983Z\",\"type\":\"success\"}",
+      "id": 224,
+      "created_at": "2026-02-27T12:07:06.994Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:39.266Z\",\"type\":\"info\"}",
+      "id": 225,
+      "created_at": "2026-02-27T12:07:39.270Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:39.266Z\",\"type\":\"info\"}",
+      "id": 226,
+      "created_at": "2026-02-27T12:07:39.275Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:43.858Z\",\"type\":\"success\"}",
+      "id": 227,
+      "created_at": "2026-02-27T12:07:43.861Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:43.875Z\",\"type\":\"success\"}",
+      "id": 228,
+      "created_at": "2026-02-27T12:07:43.878Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:45.514Z\",\"type\":\"success\"}",
+      "id": 229,
+      "created_at": "2026-02-27T12:07:45.522Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:45.516Z\",\"type\":\"info\"}",
+      "id": 230,
+      "created_at": "2026-02-27T12:07:45.534Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 100 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:46.302Z\",\"type\":\"success\"}",
+      "id": 231,
+      "created_at": "2026-02-27T12:07:46.305Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:46.834Z\",\"type\":\"info\"}",
+      "id": 232,
+      "created_at": "2026-02-27T12:07:46.839Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.3047",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:47.495Z\",\"type\":\"success\"}",
+      "id": 233,
+      "created_at": "2026-02-27T12:07:47.500Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:47.496Z\",\"type\":\"info\"}",
+      "id": 234,
+      "created_at": "2026-02-27T12:07:47.506Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:48.056Z\",\"type\":\"info\"}",
+      "id": 235,
+      "created_at": "2026-02-27T12:07:48.059Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:48.056Z\",\"type\":\"info\"}",
+      "id": 236,
+      "created_at": "2026-02-27T12:07:48.063Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2644 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:48.791Z\",\"type\":\"success\"}",
+      "id": 237,
+      "created_at": "2026-02-27T12:07:48.798Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:48.792Z\",\"type\":\"info\"}",
+      "id": 238,
+      "created_at": "2026-02-27T12:07:48.805Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:48.793Z\",\"type\":\"success\"}",
+      "id": 239,
+      "created_at": "2026-02-27T12:07:48.811Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:48.794Z\",\"type\":\"info\"}",
+      "id": 240,
+      "created_at": "2026-02-27T12:07:48.817Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2159714833209083392, مقدار: 28)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:51.904Z\",\"type\":\"success\"}",
+      "id": 241,
+      "created_at": "2026-02-27T12:07:51.907Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:07:51.905Z\",\"type\":\"success\"}",
+      "id": 242,
+      "created_at": "2026-02-27T12:07:51.913Z"
+    },
+    {
+      "symbol": "DOT",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "DOT: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:12:36.366Z\",\"type\":\"success\"}",
+      "id": 243,
+      "created_at": "2026-02-27T12:12:36.372Z"
+    },
+    {
+      "symbol": "DOT",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "DOT: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:01.566Z\",\"type\":\"success\"}",
+      "id": 244,
+      "created_at": "2026-02-27T12:33:01.584Z"
+    },
+    {
+      "symbol": "DOT",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "DOT: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:35.120Z\",\"type\":\"success\"}",
+      "id": 245,
+      "created_at": "2026-02-27T12:33:35.131Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:45.292Z\",\"type\":\"info\"}",
+      "id": 246,
+      "created_at": "2026-02-27T12:33:45.296Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:45.292Z\",\"type\":\"info\"}",
+      "id": 247,
+      "created_at": "2026-02-27T12:33:45.302Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:49.247Z\",\"type\":\"success\"}",
+      "id": 248,
+      "created_at": "2026-02-27T12:33:49.250Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:49.265Z\",\"type\":\"success\"}",
+      "id": 249,
+      "created_at": "2026-02-27T12:33:49.267Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:50.639Z\",\"type\":\"success\"}",
+      "id": 250,
+      "created_at": "2026-02-27T12:33:50.641Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:50.652Z\",\"type\":\"info\"}",
+      "id": 251,
+      "created_at": "2026-02-27T12:33:50.651Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 100 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:51.292Z\",\"type\":\"success\"}",
+      "id": 252,
+      "created_at": "2026-02-27T12:33:51.294Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:51.708Z\",\"type\":\"info\"}",
+      "id": 253,
+      "created_at": "2026-02-27T12:33:51.708Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.299",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:52.202Z\",\"type\":\"success\"}",
+      "id": 254,
+      "created_at": "2026-02-27T12:33:52.204Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:52.203Z\",\"type\":\"info\"}",
+      "id": 255,
+      "created_at": "2026-02-27T12:33:52.211Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:52.705Z\",\"type\":\"info\"}",
+      "id": 256,
+      "created_at": "2026-02-27T12:33:52.705Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:52.705Z\",\"type\":\"info\"}",
+      "id": 257,
+      "created_at": "2026-02-27T12:33:52.709Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2543 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:53.268Z\",\"type\":\"success\"}",
+      "id": 258,
+      "created_at": "2026-02-27T12:33:53.267Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:53.268Z\",\"type\":\"info\"}",
+      "id": 259,
+      "created_at": "2026-02-27T12:33:53.272Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:53.268Z\",\"type\":\"success\"}",
+      "id": 260,
+      "created_at": "2026-02-27T12:33:53.276Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:53.269Z\",\"type\":\"info\"}",
+      "id": 261,
+      "created_at": "2026-02-27T12:33:53.280Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2159727955458273536, مقدار: 28)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:56.157Z\",\"type\":\"success\"}",
+      "id": 262,
+      "created_at": "2026-02-27T12:33:56.159Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:33:56.159Z\",\"type\":\"success\"}",
+      "id": 263,
+      "created_at": "2026-02-27T12:33:56.164Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:43.271Z\",\"type\":\"success\"}",
+      "id": 264,
+      "created_at": "2026-02-27T12:38:43.274Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "اتوماسیون شروع شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:50.948Z\",\"type\":\"success\"}",
+      "id": 265,
+      "created_at": "2026-02-27T12:38:50.953Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:50.951Z\",\"type\":\"info\"}",
+      "id": 266,
+      "created_at": "2026-02-27T12:38:50.957Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:50.950Z\",\"type\":\"info\"}",
+      "id": 267,
+      "created_at": "2026-02-27T12:38:50.960Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:52.482Z\",\"type\":\"success\"}",
+      "id": 268,
+      "created_at": "2026-02-27T12:38:52.486Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:52.543Z\",\"type\":\"success\"}",
+      "id": 269,
+      "created_at": "2026-02-27T12:38:52.545Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:53.720Z\",\"type\":\"success\"}",
+      "id": 270,
+      "created_at": "2026-02-27T12:38:53.725Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:53.724Z\",\"type\":\"info\"}",
+      "id": 271,
+      "created_at": "2026-02-27T12:38:53.735Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 100 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:54.610Z\",\"type\":\"success\"}",
+      "id": 272,
+      "created_at": "2026-02-27T12:38:54.615Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت قیمت...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:55.147Z\",\"type\":\"info\"}",
+      "id": 273,
+      "created_at": "2026-02-27T12:38:55.157Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: قیمت فعلی = 1.2977",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:55.933Z\",\"type\":\"success\"}",
+      "id": 274,
+      "created_at": "2026-02-27T12:38:55.938Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: بررسی پوزیشن‌های مخالف...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:55.936Z\",\"type\":\"info\"}",
+      "id": 275,
+      "created_at": "2026-02-27T12:38:55.946Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن مخالفی یافت نشد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:56.845Z\",\"type\":\"info\"}",
+      "id": 276,
+      "created_at": "2026-02-27T12:38:56.854Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت موجودی حساب...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:56.846Z\",\"type\":\"info\"}",
+      "id": 277,
+      "created_at": "2026-02-27T12:38:56.862Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: موجودی آزاد = 24.2518 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:57.471Z\",\"type\":\"success\"}",
+      "id": 278,
+      "created_at": "2026-02-27T12:38:57.475Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: محاسبه مارجین با استفاده از Kelly Criterion...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:57.471Z\",\"type\":\"info\"}",
+      "id": 279,
+      "created_at": "2026-02-27T12:38:57.480Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: مارجین محاسبه شده = 2 USDT",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:57.472Z\",\"type\":\"success\"}",
+      "id": 280,
+      "created_at": "2026-02-27T12:38:57.486Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: باز کردن پوزیشن جدید...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:38:57.472Z\",\"type\":\"info\"}",
+      "id": 281,
+      "created_at": "2026-02-27T12:38:57.490Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: پوزیشن باز شد (سفارش: 2159730508715667712, مقدار: 29)",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:39:00.510Z\",\"type\":\"success\"}",
+      "id": 282,
+      "created_at": "2026-02-27T12:39:00.514Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "چرخه TON با موفقیت انجام شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:39:00.512Z\",\"type\":\"success\"}",
+      "id": 283,
+      "created_at": "2026-02-27T12:39:00.519Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T12:39:19.078Z\",\"type\":\"success\"}",
+      "id": 284,
+      "created_at": "2026-02-27T12:39:19.081Z"
+    },
+    {
+      "symbol": "DOT",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "DOT: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:23:36.191Z\",\"type\":\"success\"}",
+      "id": 285,
+      "created_at": "2026-02-27T13:23:36.205Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:25:45.487Z\",\"type\":\"success\"}",
+      "id": 286,
+      "created_at": "2026-02-27T13:25:45.495Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:10.540Z\",\"type\":\"info\"}",
+      "id": 287,
+      "created_at": "2026-02-27T13:26:10.546Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:10.541Z\",\"type\":\"info\"}",
+      "id": 288,
+      "created_at": "2026-02-27T13:26:10.554Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:13.075Z\",\"type\":\"success\"}",
+      "id": 289,
+      "created_at": "2026-02-27T13:26:13.080Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:13.090Z\",\"type\":\"success\"}",
+      "id": 290,
+      "created_at": "2026-02-27T13:26:13.093Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:14.127Z\",\"type\":\"success\"}",
+      "id": 291,
+      "created_at": "2026-02-27T13:26:14.131Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:14.128Z\",\"type\":\"info\"}",
+      "id": 292,
+      "created_at": "2026-02-27T13:26:14.142Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:14.128Z\",\"type\":\"info\"}",
+      "id": 293,
+      "created_at": "2026-02-27T13:26:14.150Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 100 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:14.777Z\",\"type\":\"success\"}",
+      "id": 294,
+      "created_at": "2026-02-27T13:26:14.780Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "TON: هیچ سیگنالی برای ورود آماده نیست - از این نماد عبور میشود",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:15.033Z\",\"type\":\"warning\"}",
+      "id": 295,
+      "created_at": "2026-02-27T13:26:15.036Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "هیچ نمادی برای معامله آماده نیست",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:25.407Z\",\"type\":\"warning\"}",
+      "id": 296,
+      "created_at": "2026-02-27T13:26:25.410Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "هیچ نمادی برای معامله آماده نیست",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:26:37.863Z\",\"type\":\"warning\"}",
+      "id": 297,
+      "created_at": "2026-02-27T13:26:37.866Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:42:59.137Z\",\"type\":\"success\"}",
+      "id": 298,
+      "created_at": "2026-02-27T13:42:59.140Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:43:13.489Z\",\"type\":\"info\"}",
+      "id": 299,
+      "created_at": "2026-02-27T13:43:13.488Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:43:13.514Z\",\"type\":\"info\"}",
+      "id": 300,
+      "created_at": "2026-02-27T13:43:13.511Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا - خطا در دریافت داده‌های بازار: HTTP 500 (تلاش 1/4)",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-27T13:43:18.606Z\",\"type\":\"error\"}",
+      "id": 301,
+      "created_at": "2026-02-27T13:43:18.603Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:43:32.616Z\",\"type\":\"info\"}",
+      "id": 302,
+      "created_at": "2026-02-27T13:43:32.615Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:43:32.617Z\",\"type\":\"info\"}",
+      "id": 303,
+      "created_at": "2026-02-27T13:43:32.621Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا - خطا در دریافت داده‌های بازار: HTTP 500 (تلاش 2/4)",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-27T13:43:37.652Z\",\"type\":\"error\"}",
+      "id": 304,
+      "created_at": "2026-02-27T13:43:37.649Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:43:46.337Z\",\"type\":\"success\"}",
+      "id": 305,
+      "created_at": "2026-02-27T13:43:46.335Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:00.933Z\",\"type\":\"success\"}",
+      "id": 306,
+      "created_at": "2026-02-27T13:44:00.938Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:15.017Z\",\"type\":\"info\"}",
+      "id": 307,
+      "created_at": "2026-02-27T13:44:15.020Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:15.040Z\",\"type\":\"info\"}",
+      "id": 308,
+      "created_at": "2026-02-27T13:44:15.042Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:19.048Z\",\"type\":\"success\"}",
+      "id": 309,
+      "created_at": "2026-02-27T13:44:19.050Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:19.063Z\",\"type\":\"success\"}",
+      "id": 310,
+      "created_at": "2026-02-27T13:44:19.065Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:20.478Z\",\"type\":\"success\"}",
+      "id": 311,
+      "created_at": "2026-02-27T13:44:20.485Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:20.480Z\",\"type\":\"info\"}",
+      "id": 312,
+      "created_at": "2026-02-27T13:44:20.492Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:20.481Z\",\"type\":\"info\"}",
+      "id": 313,
+      "created_at": "2026-02-27T13:44:20.498Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 100 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:21.171Z\",\"type\":\"success\"}",
+      "id": 314,
+      "created_at": "2026-02-27T13:44:21.174Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "TON: هیچ سیگنالی برای ورود آماده نیست - از این نماد عبور میشود",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:21.548Z\",\"type\":\"warning\"}",
+      "id": 315,
+      "created_at": "2026-02-27T13:44:21.552Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "هیچ نمادی برای معامله آماده نیست",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:42.504Z\",\"type\":\"warning\"}",
+      "id": 316,
+      "created_at": "2026-02-27T13:44:42.507Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "هیچ نمادی برای معامله آماده نیست",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:48.488Z\",\"type\":\"warning\"}",
+      "id": 317,
+      "created_at": "2026-02-27T13:44:48.491Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:44:54.649Z\",\"type\":\"success\"}",
+      "id": 318,
+      "created_at": "2026-02-27T13:44:54.651Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "هیچ نمادی برای معامله آماده نیست",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:45:02.048Z\",\"type\":\"warning\"}",
+      "id": 319,
+      "created_at": "2026-02-27T13:45:02.051Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:45:33.089Z\",\"type\":\"success\"}",
+      "id": 320,
+      "created_at": "2026-02-27T13:45:33.092Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:45:37.368Z\",\"type\":\"info\"}",
+      "id": 321,
+      "created_at": "2026-02-27T13:45:37.371Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:45:37.402Z\",\"type\":\"info\"}",
+      "id": 322,
+      "created_at": "2026-02-27T13:45:37.404Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "ERROR",
+      "message": "TON: خطا - خطا در دریافت داده‌های بازار: HTTP 500 (تلاش 1/4)",
+      "error_code": "SIGNAL_ERROR",
+      "details": "{\"timestamp\":\"2026-02-27T13:45:47.964Z\",\"type\":\"error\"}",
+      "id": 323,
+      "created_at": "2026-02-27T13:45:47.969Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:54:40.193Z\",\"type\":\"info\"}",
+      "id": 324,
+      "created_at": "2026-02-27T13:54:40.199Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:54:40.194Z\",\"type\":\"info\"}",
+      "id": 325,
+      "created_at": "2026-02-27T13:54:40.203Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:54:43.057Z\",\"type\":\"success\"}",
+      "id": 326,
+      "created_at": "2026-02-27T13:54:43.061Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:54:43.070Z\",\"type\":\"success\"}",
+      "id": 327,
+      "created_at": "2026-02-27T13:54:43.073Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:54:44.456Z\",\"type\":\"success\"}",
+      "id": 328,
+      "created_at": "2026-02-27T13:54:44.460Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:54:44.456Z\",\"type\":\"info\"}",
+      "id": 329,
+      "created_at": "2026-02-27T13:54:44.465Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:54:44.459Z\",\"type\":\"info\"}",
+      "id": 330,
+      "created_at": "2026-02-27T13:54:44.471Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 100 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:54:45.003Z\",\"type\":\"success\"}",
+      "id": 331,
+      "created_at": "2026-02-27T13:54:45.009Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "TON: هیچ سیگنالی برای ورود آماده نیست - از این نماد عبور میشود",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:54:45.401Z\",\"type\":\"warning\"}",
+      "id": 332,
+      "created_at": "2026-02-27T13:54:45.404Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:55:33.846Z\",\"type\":\"success\"}",
+      "id": 333,
+      "created_at": "2026-02-27T13:55:33.849Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "خطاهای قابل پاکسازی حذف شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:55:52.059Z\",\"type\":\"success\"}",
+      "id": 334,
+      "created_at": "2026-02-27T13:55:52.062Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:55:56.273Z\",\"type\":\"info\"}",
+      "id": 335,
+      "created_at": "2026-02-27T13:55:56.276Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:55:56.307Z\",\"type\":\"info\"}",
+      "id": 336,
+      "created_at": "2026-02-27T13:55:56.310Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:55:57.994Z\",\"type\":\"success\"}",
+      "id": 337,
+      "created_at": "2026-02-27T13:55:57.997Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:55:58.007Z\",\"type\":\"success\"}",
+      "id": 338,
+      "created_at": "2026-02-27T13:55:58.010Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:55:59.376Z\",\"type\":\"success\"}",
+      "id": 339,
+      "created_at": "2026-02-27T13:55:59.380Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:55:59.377Z\",\"type\":\"info\"}",
+      "id": 340,
+      "created_at": "2026-02-27T13:55:59.387Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:55:59.381Z\",\"type\":\"info\"}",
+      "id": 341,
+      "created_at": "2026-02-27T13:55:59.393Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 100 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:56:00.226Z\",\"type\":\"success\"}",
+      "id": 342,
+      "created_at": "2026-02-27T13:56:00.230Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "TON: هیچ سیگنالی برای ورود آماده نیست - از این نماد عبور میشود",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T13:56:00.676Z\",\"type\":\"warning\"}",
+      "id": 343,
+      "created_at": "2026-02-27T13:56:00.688Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌های قبلی بارگذاری شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:03:08.285Z\",\"type\":\"success\"}",
+      "id": 344,
+      "created_at": "2026-02-27T14:03:08.282Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "شروع چرخه برای نماد TON",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:05:46.075Z\",\"type\":\"info\"}",
+      "id": 345,
+      "created_at": "2026-02-27T14:05:46.080Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت داده‌های بازار...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:05:46.102Z\",\"type\":\"info\"}",
+      "id": 346,
+      "created_at": "2026-02-27T14:05:46.105Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 1000 کندل دریافت و ذخیره شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:05:48.044Z\",\"type\":\"success\"}",
+      "id": 347,
+      "created_at": "2026-02-27T14:05:48.047Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:05:48.056Z\",\"type\":\"success\"}",
+      "id": 348,
+      "created_at": "2026-02-27T14:05:48.059Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: داده‌ها و سیگنال‌ها به‌روز شدند",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:05:49.353Z\",\"type\":\"success\"}",
+      "id": 349,
+      "created_at": "2026-02-27T14:05:49.358Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 44 سیگنال تولید شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:05:49.354Z\",\"type\":\"info\"}",
+      "id": 350,
+      "created_at": "2026-02-27T14:05:49.363Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: دریافت تاریخچه معاملات...",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:05:49.355Z\",\"type\":\"info\"}",
+      "id": 351,
+      "created_at": "2026-02-27T14:05:49.368Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "SUCCESS",
+      "message": "TON: 100 معامله یافت شد",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:05:50.101Z\",\"type\":\"success\"}",
+      "id": 352,
+      "created_at": "2026-02-27T14:05:50.104Z"
+    },
+    {
+      "symbol": "TON",
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "TON: هیچ سیگنالی برای ورود آماده نیست - از این نماد عبور میشود",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:05:50.409Z\",\"type\":\"warning\"}",
+      "id": 353,
+      "created_at": "2026-02-27T14:05:50.414Z"
+    },
+    {
+      "symbol": null,
+      "action": "automation_cycle",
+      "status": "WARNING",
+      "message": "هیچ نمادی برای معامله آماده نیست",
+      "error_code": null,
+      "details": "{\"timestamp\":\"2026-02-27T14:06:10.802Z\",\"type\":\"warning\"}",
+      "id": 354,
+      "created_at": "2026-02-27T14:06:10.806Z"
+    }
+  ],
+  "errors": []
+}

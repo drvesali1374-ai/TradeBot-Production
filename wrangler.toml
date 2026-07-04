@@ -1,0 +1,67 @@
+# ============================================================================
+# TradeBot — Cloudflare Pages Configuration (Next.js app)
+# ============================================================================
+#
+# This wrangler.toml configures the main Next.js application for deployment
+# to Cloudflare Pages. The app is built with @cloudflare/next-on-pages and
+# deployed as a Pages project.
+#
+# NOTE: Cron Triggers are NOT supported on Pages. The cron worker that
+# triggers /api/run-cycle every 5 minutes lives in a SEPARATE Worker project
+# at cloudflare/cron-worker/. See that folder's wrangler.toml.
+#
+# ─── Deploy steps ───────────────────────────────────────────────────────────
+# 1. Create the KV namespace (one-time):
+#      npx wrangler kv namespace create TRADING_DATA
+#    Copy the returned ID into [[kv_namespaces]] below.
+#
+# 2. Set secrets (one-time each):
+#      npx wrangler secret put TOOBIT_API_KEY
+#      npx wrangler secret put TOOBIT_SECRET_KEY
+#      npx wrangler secret put BALE_TOKEN
+#      npx wrangler secret put BALE_CHAT_ID
+#      npx wrangler secret put RUN_CYCLE_SECRET
+#    (RUN_CYCLE_SECRET must match the secret set on the cron worker)
+#
+# 3. Build for Cloudflare:
+#      npx @cloudflare/next-on-pages
+#
+# 4. Deploy:
+#      npx wrangler pages deploy .vercel/output/static
+#
+# 5. Deploy the cron worker (see cloudflare/cron-worker/README.md)
+#
+# ─── Local testing with wrangler ────────────────────────────────────────────
+#      npx wrangler pages dev .vercel/output/static --kv TRADING_DATA
+# ============================================================================
+
+name = "tradebot"
+compatibility_date = "2024-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── KV Namespace (permanent database storage) ──────────────────────────────
+# Uncomment and fill in the id after creating the namespace:
+#   npx wrangler kv namespace create TRADING_DATA
+[[kv_namespaces]]
+binding = "TRADING_DATA"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+# ─── Non-secret environment variables ───────────────────────────────────────
+[vars]
+NODE_ENV = "production"
+# TOOBIT_BASE is non-secret; the actual API keys MUST be set as secrets.
+TOOBIT_BASE = "https://api.toobit.com"
+
+# ─── Secrets (set via `wrangler secret put`) ────────────────────────────────
+# These are NOT defined here — set them with wrangler secret put:
+#   TOOBIT_API_KEY     — Toobit exchange API key
+#   TOOBIT_SECRET_KEY  — Toobit exchange secret key
+#   BALE_TOKEN         — Bale messenger bot token
+#   BALE_CHAT_ID       — Bale chat ID for notifications
+#   RUN_CYCLE_SECRET   — shared secret authorizing the cron worker to call
+#                        /api/run-cycle?source=cron
+# ============================================================================
+
+# ─── Build settings for @cloudflare/next-on-pages ───────────────────────────
+# The build output directory used by @cloudflare/next-on-pages.
+# No need to configure this here — next-on-pages handles it automatically.
