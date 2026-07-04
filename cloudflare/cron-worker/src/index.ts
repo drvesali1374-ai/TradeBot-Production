@@ -27,7 +27,7 @@
  * Local testing:
  *   npx wrangler dev
  *   Then trigger the cron manually:
- *   curl "http://localhost:8787/__scheduled?cron=*/5+*+*+*+*"
+ *   curl "http://localhost:8787/__scheduled?cron=...5-minute-pattern..."
  */
 
 export interface Env {

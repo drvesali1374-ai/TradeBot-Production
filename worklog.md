@@ -264,3 +264,37 @@ Stage Summary:
 - ✅ Data persists across page navigation (KV-backed)
 - ✅ Existing JSON data migrated to KV
 - ✅ No changes to trading logic, risk controls, or signal generation
+
+---
+Task ID: 4
+Agent: Main Orchestrator
+Task: Deploy and configure Cron Trigger to run /api/run-cycle every 5 minutes
+
+Work Log:
+- Reviewed existing cron-worker code (cloudflare/cron-worker/src/index.ts + wrangler.toml)
+- Generated a cryptographically secure RUN_CYCLE_SECRET (openssl rand -hex 32)
+- Set RUN_CYCLE_SECRET on Cloudflare Pages app (production + preview env vars) via Cloudflare API
+- Redeployed Pages app to pick up the new secret
+- Verified /api/run-cycle?source=cron works with secret authentication (tested via curl)
+- Updated cron-worker wrangler.toml: APP_URL = "https://tradebot-b9u.pages.dev"
+- Fixed comment parse error in index.ts (*/ in comment was closing block comment)
+- Deployed cron worker to Cloudflare: https://tradebot-cron-worker.dr-vesali-1374.workers.dev
+  - Cron schedule: */5 * * * * (every 5 minutes)
+  - Binding: APP_URL (env var) = https://tradebot-b9u.pages.dev
+  - Secret: RUN_CYCLE_SECRET (same as Pages app)
+- Set RUN_CYCLE_SECRET as a worker secret via Cloudflare API
+- Verified cron schedule via API: Pattern: */5 * * * * ✓
+- Tested manual trigger: GET /?secret=xxx → authenticated → called /api/run-cycle → full 14-step cycle ran
+- Waited for automatic cron fire at 17:55 UTC:
+  - Cron trigger fired automatically: "*/5 * * * *" @ 5:55:30 PM - Ok
+  - Worker log: [CronWorker] Triggering cycle at https://tradebot-b9u.pages.dev/api/run-cycle?source=cron
+  - Worker log: [CronWorker] Cycle completed — full cycle ran (XRP selected, 1000 candles fetched, 44 signals generated)
+- Verified cycle logs are stored in KV and visible on automation page
+
+Stage Summary:
+- ✅ Cron Trigger deployed and active: fires every 5 minutes automatically
+- ✅ Cron Worker URL: https://tradebot-cron-worker.dr-vesali-1374.workers.dev
+- ✅ Security: shared RUN_CYCLE_SECRET authenticates cron → pages requests
+- ✅ Full flow verified: Cron (5 min) → Worker scheduled() → fetch /api/run-cycle?source=cron → full 14-step automation cycle → logs stored in KV
+- ✅ Cycle logs from cron triggers appear on the automation page's "گزارش چرخه‌ها" section
+- ✅ No browser tab needed — automation runs 24/7 server-side

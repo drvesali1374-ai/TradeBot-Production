@@ -41,7 +41,7 @@ crons = ["*/5 * * * *"]
 # For production, set it to your Cloudflare Pages URL (e.g. https://tradebot.pages.dev)
 # You can override this with a secret: npx wrangler secret put APP_URL
 [vars]
-APP_URL = "https://your-tradebot-app.pages.dev"
+APP_URL = "https://tradebot-b9u.pages.dev"
 
 # ─── Secrets (set via `wrangler secret put`) ────────────────────────────────
 # RUN_CYCLE_SECRET — shared secret that authorizes the worker to call
