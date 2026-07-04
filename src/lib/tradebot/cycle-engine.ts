@@ -327,19 +327,108 @@ export async function runCycle(
 ): Promise<CycleResult> {
   const startTime = Date.now()
   const logs: CycleLogEntry[] = []
+  // ✓ Batch logging: collect all logs in memory during the cycle, then flush
+  //   them to KV in a SINGLE write at the end. This avoids the race condition
+  //   where concurrent cron cycles overwrite each other's logs (each log was
+  //   previously doing a full read-modify-write of the entire logs array).
+  const pendingDbLogs: Array<{
+    message: string
+    type: string
+    symbol: string
+    source: string
+    timestamp: string
+  }> = []
+
   const log = (message: string, type: CycleLogEntry['type'] = 'info', symbol?: string) => {
     const entry: CycleLogEntry = { message, type, symbol, timestamp: new Date().toISOString() }
     logs.push(entry)
-    // Also persist to the AutomationLogs collection so the UI can display them
-    // (fire-and-forget — don't block the cycle on log persistence)
-    AutomationLogs.add({
+    // Buffer for batch write — do NOT write to KV on each log call
+    pendingDbLogs.push({
       message,
       type,
       symbol: symbol || '',
       source: options.triggerSource || 'server',
       timestamp: entry.timestamp
-    }).catch(() => { /* ignore log persistence errors */ })
+    })
     console.log(`[CycleEngine${options.triggerSource ? `:${options.triggerSource}` : ''}] ${type.toUpperCase()} ${symbol ? `[${symbol}] ` : ''}${message}`)
+  }
+
+  // ✓ Flush all buffered logs to KV in a single batch operation.
+  //   Uses TWO write strategies to avoid race conditions:
+  //   1. `lastCycleLogs` — stores THIS cycle's complete logs (overwrite, no race)
+  //   2. `logs` — appends to the shared historical log (best-effort, may lose some entries
+  //      under concurrent cron fire, but `lastCycleLogs` always has the complete picture)
+  const flushLogs = async () => {
+    if (pendingDbLogs.length === 0) return
+
+    // Strategy 1: Write this cycle's complete logs to `lastCycleLogs` (no race condition)
+    try {
+      const cycleLogEntry = {
+        timestamp: new Date().toISOString(),
+        source: options.triggerSource || 'server',
+        logCount: pendingDbLogs.length,
+        logs: pendingDbLogs.map((l, i) => ({
+          id: i + 1,
+          symbol: l.symbol,
+          action: 'automation_cycle',
+          status: l.type === 'error' ? 'ERROR' : l.type === 'warning' ? 'WARNING' : 'SUCCESS',
+          message: l.message,
+          error_code: l.type === 'error' ? 'SIGNAL_ERROR' : null,
+          details: JSON.stringify({ timestamp: l.timestamp, type: l.type, source: l.source }),
+          created_at: l.timestamp
+        }))
+      }
+      try {
+        const { getRequestContext } = await import('@cloudflare/next-on-pages')
+        const ctx = getRequestContext()
+        if (ctx.env && ctx.env.TRADING_DATA) {
+          await ctx.env.TRADING_DATA.put('lastCycleLogs', JSON.stringify(cycleLogEntry))
+        }
+      } catch {
+        // Not on Cloudflare — skip (local dev doesn't need this)
+      }
+    } catch (e) {
+      console.warn('[CycleEngine] Failed to write lastCycleLogs:', e)
+    }
+
+    // Strategy 2: Append to shared `logs` array (best-effort, may lose some under concurrency)
+    try {
+      const existingLogs = (await AutomationLogs.getRecent(500)) || []
+      const maxId = existingLogs.length > 0
+        ? Math.max(...existingLogs.map((l: { id?: number }) => l.id || 0))
+        : 0
+      const newLogs = pendingDbLogs.map((l, i) => ({
+        id: maxId + i + 1,
+        symbol: l.symbol,
+        action: 'automation_cycle',
+        status: l.type === 'error' ? 'ERROR' : l.type === 'warning' ? 'WARNING' : 'SUCCESS',
+        message: l.message,
+        error_code: l.type === 'error' ? 'SIGNAL_ERROR' : null,
+        details: JSON.stringify({ timestamp: l.timestamp, type: l.type, source: l.source }),
+        created_at: l.timestamp
+      }))
+      const allLogs = [...existingLogs, ...newLogs].slice(-500)
+      try {
+        const { getRequestContext } = await import('@cloudflare/next-on-pages')
+        const ctx = getRequestContext()
+        if (ctx.env && ctx.env.TRADING_DATA) {
+          await ctx.env.TRADING_DATA.put('logs', JSON.stringify(allLogs))
+        }
+      } catch {
+        // Not on Cloudflare — use individual adds for local dev
+        for (const l of pendingDbLogs) {
+          await AutomationLogs.add({
+            message: l.message,
+            type: l.type as 'info' | 'success' | 'warning' | 'error',
+            symbol: l.symbol,
+            source: l.source,
+            timestamp: l.timestamp
+          }).catch(() => {})
+        }
+      }
+    } catch (e) {
+      console.warn('[CycleEngine] Failed to append to shared logs:', e)
+    }
   }
 
   try {
@@ -1247,5 +1336,10 @@ export async function runCycle(
       errorCount: 0,
       duration: Date.now() - startTime
     }
+  } finally {
+    // ✓ Flush all buffered logs to KV in a single batch write.
+    //   This runs before ANY return (success, no_signal, risk_blocked, error).
+    //   Using finally ensures logs are always persisted even if the cycle crashes.
+    await flushLogs()
   }
 }
