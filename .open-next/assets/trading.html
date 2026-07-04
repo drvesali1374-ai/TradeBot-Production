@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خرید و فروش - اتوماسیون هوشمند</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .form-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .form-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .btn-direction {
+            transition: all 0.3s ease;
+        }
+        
+        .btn-direction.active-long {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-direction.active-short {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .data-table {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .data-table::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .data-table::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        
+        .data-table::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="text-white">
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-effect">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-reverse space-x-6">
+                    <a href="index.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-home ml-1"></i>
+                        خانه
+                    </a>
+                    <a href="settings.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-cog ml-1"></i>
+                        تنظیمات
+                    </a>
+                    <a href="market_signal.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-chart-line ml-1"></i>
+                        داشبورد
+                    </a>
+                    <a href="trading.html" class="text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-exchange-alt ml-1"></i>
+                        خرید و فروش
+                    </a>
+                    <a href="automation.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-robot ml-1"></i>
+                        اتوماسیون
+                    </a>
+                </div>
+                <div class="flex items-center">
+                    <div class="text-2xl font-bold text-gradient">
+                        اتوماسیون هوشمند
+                        <i class="fas fa-robot mr-2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Balance Bar -->
+    <div class="fixed top-16 w-full z-40 glass-effect" style="background: rgba(31, 41, 55, 0.95);">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-12 text-sm">
+                <div class="flex items-center space-x-reverse space-x-8">
+                    <div class="flex items-center">
+                        <i class="fas fa-wallet ml-2 text-purple-400"></i>
+                        <span class="text-gray-400 ml-2">موجودی کل:</span>
+                        <span id="balance-total" class="font-bold" style="color: #a78bfa; font-weight: 700;">-</span>
+                        <span class="mr-1 text-gray-500">USDT</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-lock ml-2 text-orange-400"></i>
+                        <span class="text-gray-400 ml-2">در معامله:</span>
+                        <span id="balance-position-margin" class="font-bold text-orange-400">-</span>
+                        <span class="mr-1 text-gray-500">USDT</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-unlock ml-2 text-blue-400"></i>
+                        <span class="text-gray-400 ml-2">آزاد:</span>
+                        <span id="balance-free" class="font-bold text-blue-400">-</span>
+                        <span class="mr-1 text-gray-500">USDT</span>
+                    </div>
+                </div>
+                <button id="refresh-balance-btn" class="glass-effect px-4 py-1.5 text-xs rounded-lg hover:bg-purple-600 transition-all duration-300">
+                    <i class="fas fa-sync-alt ml-1"></i>
+                    بروزرسانی
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="pt-32 pb-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Trading Panel (Merged) -->
+            <div class="glass-effect rounded-2xl p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-gradient mb-6">
+                    <i class="fas fa-exchange-alt ml-2"></i>
+                    باز / بستن پوزیشن
+                </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-coins ml-1"></i>
+                                نماد معاملاتی
+                            </label>
+                            <input type="text" id="open-symbol" class="form-input w-full px-4 py-3 rounded-lg" readonly>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-arrows-alt-h ml-1"></i>
+                                جهت پوزیشن
+                            </label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <button id="open-dir-long" class="btn-direction glass-effect px-4 py-3 rounded-lg hover:opacity-80">
+                                    Long
+                                </button>
+                                <button id="open-dir-short" class="btn-direction glass-effect px-4 py-3 rounded-lg hover:opacity-80">
+                                    Short
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-dollar-sign ml-1"></i>
+                                مقدار مارجین (USDT)
+                            </label>
+                            <input type="number" id="open-usdt" class="form-input w-full px-4 py-3 rounded-lg" placeholder="مثلا: 10" step="0.1">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-layer-group ml-1"></i>
+                                اهرم (Leverage)
+                            </label>
+                            <input type="number" id="open-leverage" class="form-input w-full px-4 py-3 rounded-lg" placeholder="پیش‌فرض: 1" min="1" max="125">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-fingerprint ml-1"></i>
+                                کد سفارش (Client Order ID)
+                            </label>
+                            <input type="text" id="open-orderid" class="form-input w-full px-4 py-3 rounded-lg" placeholder="خالی بگذارید برای تولید خودکار">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-arrow-up ml-1"></i>
+                                حد سود (Take Profit)
+                            </label>
+                            <input type="number" id="open-tp" class="form-input w-full px-4 py-3 rounded-lg" placeholder="قیمت حد سود" step="0.0001">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-arrow-down ml-1"></i>
+                                حد ضرر (Stop Loss)
+                            </label>
+                            <input type="number" id="open-sl" class="form-input w-full px-4 py-3 rounded-lg" placeholder="قیمت حد ضرر" step="0.0001">
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <button id="open-submit-btn" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-semibold transition-all duration-300">
+                                <i class="fas fa-check-circle ml-2"></i>
+                                ایجاد پوزیشن
+                            </button>
+                            <button id="close-submit-btn" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-semibold transition-all duration-300">
+                                <i class="fas fa-times-circle ml-2"></i>
+                                بستن پوزیشن
+                            </button>
+                        </div>
+                        
+                        <div class="text-xs text-gray-400 mt-2 text-center">
+                            <i class="fas fa-info-circle ml-1"></i>
+                            بستن پوزیشن: همه پوزیشن‌های مربوط به این نماد و جهت بسته خواهند شد
+                        </div>
+                    </div>
+                </div>
+
+            <!-- Pending Signal (همیشه نمایش داده می‌شود) -->
+            <div id="pending-signal-section" class="glass-effect rounded-2xl p-6 mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-gradient">
+                        <i class="fas fa-clock ml-2"></i>
+                        سیگنال آماده معامله
+                    </h2>
+                    <div id="pending-signal-meta" class="text-xs text-gray-400"></div>
+                </div>
+                <div id="pending-signal-content">
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-info-circle text-4xl mb-4"></i>
+                        <div>سیگنال آماده‌ای وجود ندارد</div>
+                        <div class="text-sm mt-2">برای تولید سیگنال به صفحه داشبورد بروید</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Open Positions Table -->
+            <div class="glass-effect rounded-2xl p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-gradient">
+                            <i class="fas fa-chart-bar ml-2"></i>
+                            پوزیشن‌های باز
+                        </h2>
+                        <div id="positions-meta" class="text-xs text-gray-400 mt-1"></div>
+                    </div>
+                    <button id="refresh-positions-btn" class="glass-effect px-4 py-2 text-sm rounded-lg hover:bg-purple-600 transition-all duration-300">
+                        <i class="fas fa-sync-alt ml-1"></i>
+                        بروزرسانی
+                    </button>
+                </div>
+                
+                <div class="data-table">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-700 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-right">نماد</th>
+                                <th class="px-4 py-3 text-right">جهت</th>
+                                <th class="px-4 py-3 text-right">قیمت ورود</th>
+                                <th class="px-4 py-3 text-right">موجودی</th>
+                                <th class="px-4 py-3 text-right">اهرم</th>
+                                <th class="px-4 py-3 text-right">مارجین</th>
+                                <th class="px-4 py-3 text-right">سود/زیان</th>
+                                <th class="px-4 py-3 text-right">درصد</th>
+                            </tr>
+                        </thead>
+                        <tbody id="positions-table-body">
+                            <tr>
+                                <td colspan="8" class="px-4 py-8 text-center text-gray-400">
+                                    <i class="fas fa-download text-4xl mb-4"></i>
+                                    <div>پوزیشنی باز نیست</div>
+                                    <div class="text-sm mt-2">برای مشاهده پوزیشن‌های باز، دکمه "بروزرسانی" را کلیک کنید</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <div class="text-2xl font-bold text-gradient mb-4">
+                    <i class="fas fa-robot ml-2"></i>
+                    اتوماسیون هوشمند
+                </div>
+                <p class="text-gray-400 mb-6">سیستم تحلیل تکنیکال پیشرفته</p>
+                <div class="text-gray-500">
+                    © 2025 اتوماسیون هوشمند. تمام حقوق محفوظ است.
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="init-settings.js"></script>
+    <script src="main.js"></script>
+    <script>
+        class TradingManager {
+            constructor() {
+                this.settings = {};
+                this.openDirection = null;
+                this.closeDirection = null;
+                this.pendingSignal = null;
+                this.pendingSignalLoadTime = null;
+                this.openPositions = [];
+                
+                this.loadSettings();
+                this.initUI();
+                this.bindEvents();
+                this.loadPendingSignal();
+                this.fetchOpenPositions();
+                this.fetchBalance();
+            }
+
+            loadSettings() {
+                const saved = localStorage.getItem('marketSignalSettings');
+                this.settings = saved ? JSON.parse(saved) : { symbolName: 'DOT' };
+                
+                // Set symbol
+                const fullSymbol = `${this.settings.symbolName}-SWAP-USDT`;
+                document.getElementById('open-symbol').value = fullSymbol;
+            }
+            
+            getApiHeaders() {
+                // Return headers with API keys from settings
+                return {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': this.settings.apiKey || '',
+                    'X-Secret-Key': this.settings.secretKey || '',
+                    'X-Base-Url': this.settings.baseUrl || 'https://api.toobit.com'
+                };
+            }
+
+            initUI() {
+                // Initialize direction buttons
+                this.setDirection(null);
+            }
+
+            bindEvents() {
+                // Position direction (shared)
+                document.getElementById('open-dir-long').addEventListener('click', () => this.setDirection('long'));
+                document.getElementById('open-dir-short').addEventListener('click', () => this.setDirection('short'));
+                
+                // Submit buttons
+                document.getElementById('open-submit-btn').addEventListener('click', () => this.openPosition());
+                document.getElementById('close-submit-btn').addEventListener('click', () => this.closePosition());
+                document.getElementById('refresh-positions-btn').addEventListener('click', () => this.fetchOpenPositions());
+                document.getElementById('refresh-balance-btn').addEventListener('click', () => this.fetchBalance());
+            }
+
+            setDirection(dir) {
+                this.openDirection = dir;
+                this.closeDirection = dir;
+                const longBtn = document.getElementById('open-dir-long');
+                const shortBtn = document.getElementById('open-dir-short');
+                
+                longBtn.classList.remove('active-long');
+                shortBtn.classList.remove('active-short');
+                
+                if (dir === 'long') {
+                    longBtn.classList.add('active-long');
+                } else if (dir === 'short') {
+                    shortBtn.classList.add('active-short');
+                }
+            }
+
+            generateClientOrderId() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hour = String(now.getHours()).padStart(2, '0');
+                const minute = String(now.getMinutes()).padStart(2, '0');
+                const second = String(now.getSeconds()).padStart(2, '0');
+                return `${this.settings.symbolName}_${year}_${month}_${day}_${hour}${minute}${second}`;
+            }
+
+            async openPosition() {
+                if (!this.openDirection) {
+                    alert('لطفا جهت پوزیشن را انتخاب کنید');
+                    return;
+                }
+                
+                const usdtAmount = parseFloat(document.getElementById('open-usdt').value);
+                if (!usdtAmount || usdtAmount <= 0) {
+                    alert('لطفا مقدار مارجین را وارد کنید');
+                    return;
+                }
+                
+                const leverage = parseInt(document.getElementById('open-leverage').value) || 1;
+                const clientOrderId = document.getElementById('open-orderid').value.trim() || this.generateClientOrderId();
+                const tpPrice = parseFloat(document.getElementById('open-tp').value) || null;
+                const slPrice = parseFloat(document.getElementById('open-sl').value) || null;
+                
+                const payload = {
+                    symbol: this.settings.symbolName,
+                    direction: this.openDirection,
+                    usdtAmount: usdtAmount,
+                    leverage: leverage,
+                    clientOrderId: clientOrderId,
+                    tpPrice: tpPrice,
+                    slPrice: slPrice
+                };
+                
+                try {
+                    // Include API credentials via headers (and also send in body as settings)
+                    payload.settings = {
+                        apiKey: this.settings.apiKey,
+                        secretKey: this.settings.secretKey,
+                        baseUrl: this.settings.baseUrl || 'https://api.toobit.com'
+                    };
+
+                    const response = await fetch('/api/create-position', {
+                        method: 'POST',
+                        headers: this.getApiHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert('پوزیشن با موفقیت ایجاد شد!\nClient Order ID: ' + clientOrderId);
+                        this.fetchOpenPositions();
+                    } else {
+                        alert('خطا در ایجاد پوزیشن: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (e) {
+                    alert('خطا در ارتباط با سرور: ' + e.message);
+                }
+            }
+
+            async closePosition() {
+                if (!this.closeDirection) {
+                    alert('لطفا جهت پوزیشن را انتخاب کنید');
+                    return;
+                }
+                
+                const clientOrderId = document.getElementById('open-orderid').value.trim() || this.generateClientOrderId();
+                
+                const payload = {
+                    symbol: this.settings.symbolName,
+                    direction: this.closeDirection,
+                    clientOrderId: clientOrderId
+                };
+                
+                if (!confirm(`آیا مطمئن هستید که می‌خواهید همه پوزیشن‌های ${this.closeDirection.toUpperCase()} را ببندید؟`)) {
+                    return;
+                }
+                
+                try {
+                    // Include API credentials for closing positions
+                    payload.settings = {
+                        apiKey: this.settings.apiKey,
+                        secretKey: this.settings.secretKey,
+                        baseUrl: this.settings.baseUrl || 'https://api.toobit.com'
+                    };
+
+                    const response = await fetch('/api/close-position', {
+                        method: 'POST',
+                        headers: this.getApiHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert('پوزیشن‌ها با موفقیت بسته شدند!\nتعداد: ' + (result.closed || 0));
+                        this.fetchOpenPositions();
+                    } else {
+                        alert('خطا در بستن پوزیشن: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (e) {
+                    alert('خطا در ارتباط با سرور: ' + e.message);
+                }
+            }
+
+            loadPendingSignal() {
+                try {
+                    const signals = JSON.parse(sessionStorage.getItem('signals') || '[]');
+                    const metadata = JSON.parse(sessionStorage.getItem('metadata') || '{}');
+                    
+                    if (!signals || signals.length === 0) {
+                        // نمایش پیام خالی اگر سیگنالی وجود ندارد
+                        const content = document.getElementById('pending-signal-content');
+                        content.innerHTML = `
+                            <div class="text-center text-gray-400 py-8">
+                                <i class="fas fa-info-circle text-4xl mb-4"></i>
+                                <div>سیگنال آماده‌ای وجود ندارد</div>
+                                <div class="text-sm mt-2">برای تولید سیگنال به صفحه داشبورد بروید</div>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Find signal with status "در انتظار"
+                    const historyData = JSON.parse(sessionStorage.getItem('historyData') || '[]');
+                    const parsedSignals = signals.map(s => ({ ...s, timestamp: new Date(s.timestamp) }));
+                    const parsedHistory = historyData.map(h => ({ ...h, time: new Date(h.time) }));
+                    
+                    let pendingSignal = null;
+                    for (let i = 0; i < parsedSignals.length; i++) {
+                        const signal = parsedSignals[i];
+                        const status = this.calculateStatus(signal, parsedSignals, parsedHistory);
+                        if (status.text === 'در انتظار') {
+                            pendingSignal = { ...signal, status: status };
+                            break;
+                        }
+                    }
+                    
+                    if (pendingSignal) {
+                        this.pendingSignal = pendingSignal;
+                        this.pendingSignalLoadTime = metadata.lastSignalTime || new Date().toISOString();
+                        this.displayPendingSignal(pendingSignal);
+                    } else {
+                        // نمایش پیام اگر سیگنال در انتظار وجود ندارد
+                        const content = document.getElementById('pending-signal-content');
+                        content.innerHTML = `
+                            <div class="text-center text-gray-400 py-8">
+                                <i class="fas fa-check-circle text-4xl mb-4"></i>
+                                <div>همه سیگنال‌ها باز شده‌اند</div>
+                                <div class="text-sm mt-2">سیگنال جدیدی در انتظار وجود ندارد</div>
+                            </div>
+                        `;
+                    }
+                } catch (e) {
+                    console.error('Error loading pending signal:', e);
+                    const content = document.getElementById('pending-signal-content');
+                    content.innerHTML = `
+                        <div class="text-center text-gray-400 py-8">
+                            <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                            <div>خطا در بارگذاری سیگنال</div>
+                        </div>
+                    `;
+                }
+            }
+
+            calculateStatus(signal, allSignals, historyData) {
+                const openPositions = historyData.filter(pos => 
+                    pos.side && pos.side.includes('OPEN')
+                );
+                
+                if (openPositions.length === 0) {
+                    const isLatest = allSignals.indexOf(signal) === allSignals.length - 1;
+                    return {
+                        text: isLatest ? 'در انتظار' : 'باز نشده',
+                        color: isLatest ? 'text-yellow-400' : 'text-gray-400'
+                    };
+                }
+                
+                const currentIndex = allSignals.indexOf(signal);
+                const nextSignal = currentIndex < allSignals.length - 1 ? allSignals[currentIndex + 1] : null;
+                
+                const currentTime = signal.timestamp.getTime();
+                const nextTime = nextSignal ? nextSignal.timestamp.getTime() : Infinity;
+                
+                const matchingPositions = openPositions.filter(pos => {
+                    const posTime = pos.time.getTime();
+                    return posTime >= currentTime && posTime < nextTime;
+                });
+                
+                if (matchingPositions.length === 0) {
+                    const isLatest = currentIndex === allSignals.length - 1;
+                    return {
+                        text: isLatest ? 'در انتظار' : 'باز نشده',
+                        color: isLatest ? 'text-yellow-400' : 'text-gray-400'
+                    };
+                }
+                
+                const earliestPosition = matchingPositions.reduce((earliest, current) => {
+                    return current.time.getTime() < earliest.time.getTime() ? current : earliest;
+                });
+                
+                return {
+                    text: earliestPosition.time.toLocaleString('fa-IR'),
+                    color: 'text-green-400'
+                };
+            }
+
+            displayPendingSignal(signal) {
+                const content = document.getElementById('pending-signal-content');
+                const meta = document.getElementById('pending-signal-meta');
+                
+                // نماد را از خود سیگنال بخوانیم (نه از تنظیمات)
+                const signalSymbol = signal.symbol;
+                const symbolFull = `${signalSymbol}-SWAP-USDT`;
+                
+                // نمایش زمان بارگذاری
+                const loadTime = new Date(this.pendingSignalLoadTime);
+                meta.textContent = `آخرین بروزرسانی: ${loadTime.toLocaleString('fa-IR')}`;
+                
+                // ساختار مشابه market_signal.html
+                content.innerHTML = `
+                    <div class="glass-effect rounded-lg p-4 border-r-4 ${
+                        signal.type === 'Long' ? 'border-green-500' : 'border-red-500'
+                    }">
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <!-- Column 1 -->
+                            <div class="space-y-2">
+                                <div>
+                                    <span class="text-lg font-bold ${
+                                        signal.type === 'Long' ? 'text-green-400' : 'text-red-400'
+                                    }">${signal.type}</span>
+                                    <span class="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded mr-2">
+                                        ${signal.timestamp.toLocaleString('fa-IR')}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400 ml-1">قیمت ورود:</span>
+                                    <span style="font-family: 'Vazirmatn', sans-serif;">${signal.price.toFixed(4)}</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400 ml-1">حد سود:</span>
+                                    <span class="text-green-400" style="font-family: 'Vazirmatn', sans-serif;">${signal.tp.toFixed(4)}</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400 ml-1">کد سفارش:</span>
+                                    <span class="text-xs text-gray-300" style="font-family: 'Vazirmatn', sans-serif;">${signal.orderId}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Column 2 -->
+                            <div class="space-y-2">
+                                <div>
+                                    <span class="text-gray-400 ml-1">نماد:</span>
+                                    <span class="text-xs" style="font-family: 'Vazirmatn', sans-serif;">${symbolFull}</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400 ml-1">وضعیت:</span>
+                                    <span class="text-xs ${signal.status.color}" style="font-family: 'Vazirmatn', sans-serif;">${signal.status.text}</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400 ml-1">حد ضرر:</span>
+                                    <span class="text-red-400" style="font-family: 'Vazirmatn', sans-serif;">${signal.sl.toFixed(4)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            async fetchBalance() {
+                try {
+                    // Check if API keys are configured
+                    if (!this.settings.apiKey || !this.settings.secretKey) {
+                        console.warn('API keys not configured');
+                        document.getElementById('balance-total').textContent = '-';
+                        document.getElementById('balance-position-margin').textContent = '-';
+                        document.getElementById('balance-free').textContent = '-';
+                        return;
+                    }
+                    
+                    const response = await fetch('/api/balance', {
+                        headers: this.getApiHeaders()
+                    });
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        const balance = result.balance;
+                        document.getElementById('balance-total').textContent = balance.total;
+                        document.getElementById('balance-position-margin').textContent = balance.positionMargin;
+                        document.getElementById('balance-free').textContent = balance.free;
+                    } else {
+                        console.error('Error fetching balance:', result.error);
+                        document.getElementById('balance-total').textContent = '-';
+                        document.getElementById('balance-position-margin').textContent = '-';
+                        document.getElementById('balance-free').textContent = '-';
+                    }
+                } catch (e) {
+                    console.error('Error:', e);
+                    document.getElementById('balance-total').textContent = '-';
+                    document.getElementById('balance-position-margin').textContent = '-';
+                    document.getElementById('balance-free').textContent = '-';
+                }
+            }
+
+            async fetchOpenPositions() {
+                try {
+                    // Check if API keys are configured
+                    if (!this.settings.apiKey || !this.settings.secretKey) {
+                        console.warn('API keys not configured');
+                        this.displayOpenPositions([]);
+                        const meta = document.getElementById('positions-meta');
+                        meta.textContent = 'کلیدهای API تنظیم نشده‌اند';
+                        return;
+                    }
+                    
+                    const response = await fetch('/api/open-positions', {
+                        headers: this.getApiHeaders()
+                    });
+                    const result = await response.json();
+                    
+                    if (response.ok && result.positions) {
+                        this.openPositions = result.positions;
+                        this.displayOpenPositions(result.positions);
+                        
+                        const meta = document.getElementById('positions-meta');
+                        meta.textContent = `آخرین بروزرسانی: ${new Date().toLocaleString('fa-IR')} | تعداد: ${result.positions.length}`;
+                    } else {
+                        console.error('Error fetching positions:', result.error);
+                        this.displayOpenPositions([]);
+                        const meta = document.getElementById('positions-meta');
+                        meta.textContent = result.message || 'خطا در دریافت پوزیشن‌ها';
+                    }
+                } catch (e) {
+                    console.error('Error:', e);
+                    this.displayOpenPositions([]);
+                }
+            }
+
+            displayOpenPositions(positions) {
+                const tbody = document.getElementById('positions-table-body');
+                
+                if (!positions || positions.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="px-4 py-8 text-center text-gray-400">
+                                <i class="fas fa-check-circle text-4xl mb-4"></i>
+                                <div>پوزیشنی باز نیست</div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                positions.forEach(pos => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-700 hover:bg-gray-700';
+                    
+                    const side = (pos.side || '').toUpperCase().includes('LONG') ? 'Long' : 'Short';
+                    const sideClass = side === 'Long' ? 'text-green-400' : 'text-red-400';
+                    const pnl = parseFloat(pos.unrealizedPnL || 0);
+                    const pnlClass = pnl > 0 ? 'text-green-400' : pnl < 0 ? 'text-red-400' : '';
+                    const margin = parseFloat(pos.margin || 0);
+                    
+                    // درصد را در 100 ضرب می‌کنیم
+                    const profitRate = parseFloat(pos.profitRate || 0) * 100;
+                    const profitRateClass = profitRate > 0 ? 'text-green-400' : profitRate < 0 ? 'text-red-400' : '';
+                    
+                    row.innerHTML = `
+                        <td class="px-4 py-3" style="font-family: 'Vazirmatn', sans-serif;">${pos.symbol || '-'}</td>
+                        <td class="px-4 py-3 ${sideClass} font-bold">${side}</td>
+                        <td class="px-4 py-3" style="font-family: 'Vazirmatn', sans-serif;">${parseFloat(pos.avgPrice || 0).toFixed(4)}</td>
+                        <td class="px-4 py-3" style="font-family: 'Vazirmatn', sans-serif;">${parseFloat(pos.available || 0).toFixed(2)}</td>
+                        <td class="px-4 py-3" style="font-family: 'Vazirmatn', sans-serif;">${pos.leverage || '-'}x</td>
+                        <td class="px-4 py-3" style="font-family: 'Vazirmatn', sans-serif;">${margin.toFixed(4)}</td>
+                        <td class="px-4 py-3 ${pnlClass}" style="font-family: 'Vazirmatn', sans-serif;">${pnl.toFixed(4)}</td>
+                        <td class="px-4 py-3 ${profitRateClass}" style="font-family: 'Vazirmatn', sans-serif;">${profitRate.toFixed(2)}%</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        // Initialize
+        const tradingManager = new TradingManager();
+    </script>
+</body>
+</html>

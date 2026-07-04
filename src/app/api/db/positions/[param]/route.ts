@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { initializeDatabase, Positions } from '@/lib/tradebot/database'
 
-// Ensure database is initialized
-initializeDatabase()
+export const runtime = 'edge'
 
 // GET /api/db/positions/[param] - Get position by symbol (param = symbol)
 export async function GET(
@@ -10,8 +9,9 @@ export async function GET(
   { params }: { params: Promise<{ param: string }> }
 ) {
   try {
+    await initializeDatabase()
     const { param: symbol } = await params
-    const position = Positions.getBySymbol(symbol)
+    const position = await Positions.getBySymbol(symbol)
     return NextResponse.json({ success: true, data: position })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
@@ -25,9 +25,10 @@ export async function PUT(
   { params }: { params: Promise<{ param: string }> }
 ) {
   try {
+    await initializeDatabase()
     const { param: id } = await params
     const body = await request.json()
-    Positions.update(parseInt(id), body)
+    await Positions.update(parseInt(id), body)
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateSignature } from '@/lib/tradebot/helpers'
+export const runtime = 'edge'
+
 
 /**
  * Fetch user trade history from Toobit.

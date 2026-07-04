@@ -1,0 +1,1734 @@
+{
+    "wallTime": 13,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186504992,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/",
+            "method": "GET",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-encoding": "gzip, br",
+                "accept-language": "en-US,en;q=0.9",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "18.234.203.23",
+                "cf-ipcountry": "US",
+                "cf-ray": "a15fe2681f3a073f",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "pragma": "no-cache",
+                "priority": "u=0, i",
+                "sec-ch-ua": "\"Chromium\";v=\"145\", \"Not:A-Brand\";v=\"99\"",
+                "sec-ch-ua-mobile": "?1",
+                "sec-ch-ua-platform": "\"Android\"",
+                "sec-fetch-dest": "document",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-site": "none",
+                "sec-fetch-user": "?1",
+                "upgrade-insecure-requests": "1",
+                "user-agent": "Mozilla/5.0 (Linux; Android 16; SM-S921U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.6 Mobile Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "18.234.203.23"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 4,
+                "colo": "IAD",
+                "asn": 14618,
+                "asOrganization": "Amazon Technologies Inc.",
+                "country": "US",
+                "isEUCountry": false,
+                "city": "Ashburn",
+                "continent": "NA",
+                "region": "Virginia",
+                "regionCode": "VA",
+                "timezone": "America/New_York",
+                "longitude": "-77.48749",
+                "latitude": "39.04372",
+                "postalCode": "20147",
+                "metroCode": "511",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "7qbudXQ1XOK8yz8yT4mYag5muJOQIyNIsvhLOZ4t0aw=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "VaBkZVVnDlkqOyYL4Qp+aT8V82c=",
+                "tlsClientExtensionsSha1Le": "sLL1vAf2XSDg3co1ZiwKouwG9+g=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "a63fae49c6f13ed83b1fff25db6a321141b6f7a3af8d76a765dd0aec994a6e04",
+                    "serverHandshake": "b735817e5429e191d82fb2d1647a8703096638d76754916212b77da875ef1f4e",
+                    "clientFinished": "5f7a08f25480b30c6f75c28a43c12c40c30185a9ceca6e8604c8577ebab82a12",
+                    "serverFinished": "5cb6807b28eebcc539ed7c3380968bd9089c6a933854bbd6dd525849d5f1ba9a"
+                },
+                "tlsClientHelloLength": "1518",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 485828
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 106,
+    "cpuTime": 6,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186504076,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/",
+            "method": "GET",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-encoding": "gzip, br",
+                "accept-language": "en-US,en;q=0.9",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "34.207.67.234",
+                "cf-ipcountry": "US",
+                "cf-ray": "a15fe2626fb4d69d",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "pragma": "no-cache",
+                "priority": "u=0, i",
+                "sec-ch-ua": "\"Chromium\";v=\"145\", \"Not:A-Brand\";v=\"99\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Windows\"",
+                "sec-fetch-dest": "document",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-site": "none",
+                "sec-fetch-user": "?1",
+                "upgrade-insecure-requests": "1",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.6 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "34.207.67.234"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 1,
+                "colo": "IAD",
+                "asn": 14618,
+                "asOrganization": "Amazon Technologies Inc.",
+                "country": "US",
+                "isEUCountry": false,
+                "city": "Ashburn",
+                "continent": "NA",
+                "region": "Virginia",
+                "regionCode": "VA",
+                "timezone": "America/New_York",
+                "longitude": "-77.48749",
+                "latitude": "39.04372",
+                "postalCode": "20147",
+                "metroCode": "511",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "NlSIEcfqUfO6++eKnOi7iYbVfxMi1+V8LkHOBDfOO5o=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "kwyyvDI/Z6M2maGosgckNwSyBR8=",
+                "tlsClientExtensionsSha1Le": "HO1D+Lg8O3/5MKBze3E5VMpsUKs=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "8f6369c5dbcbe46937102731d568ad998dc53a6846b048350b600e3ba0ab845f",
+                    "serverHandshake": "a791a2c3b07e4917533c308a7244a712391a27789a7c7cfd2967739ab7dc72a9",
+                    "clientFinished": "038135a6d866bce051c04e4f8ea49c65b7eba1a9d5346257b7e76bc16cc15607",
+                    "serverFinished": "cc9ec36ef94c8c30a7006dacfdaa40e8f35b496788a237caef5863daaa033377"
+                },
+                "tlsClientHelloLength": "1508",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1050742
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 22,
+    "cpuTime": 4,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186504652,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/index.html",
+            "method": "GET",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-encoding": "gzip, br",
+                "accept-language": "en-US,en;q=0.9",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "34.207.67.234",
+                "cf-ipcountry": "US",
+                "cf-ray": "a15fe2660ac6d69d",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "pragma": "no-cache",
+                "priority": "u=0, i",
+                "referer": "https://tradebot-b9u.pages.dev/",
+                "sec-ch-ua": "\"Chromium\";v=\"145\", \"Not:A-Brand\";v=\"99\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Windows\"",
+                "sec-fetch-dest": "iframe",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-site": "same-origin",
+                "upgrade-insecure-requests": "1",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.6 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "34.207.67.234"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 1,
+                "colo": "IAD",
+                "asn": 14618,
+                "asOrganization": "Amazon Technologies Inc.",
+                "country": "US",
+                "isEUCountry": false,
+                "city": "Ashburn",
+                "continent": "NA",
+                "region": "Virginia",
+                "regionCode": "VA",
+                "timezone": "America/New_York",
+                "longitude": "-77.48749",
+                "latitude": "39.04372",
+                "postalCode": "20147",
+                "metroCode": "511",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "NlSIEcfqUfO6++eKnOi7iYbVfxMi1+V8LkHOBDfOO5o=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "kwyyvDI/Z6M2maGosgckNwSyBR8=",
+                "tlsClientExtensionsSha1Le": "HO1D+Lg8O3/5MKBze3E5VMpsUKs=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "8f6369c5dbcbe46937102731d568ad998dc53a6846b048350b600e3ba0ab845f",
+                    "serverHandshake": "a791a2c3b07e4917533c308a7244a712391a27789a7c7cfd2967739ab7dc72a9",
+                    "clientFinished": "038135a6d866bce051c04e4f8ea49c65b7eba1a9d5346257b7e76bc16cc15607",
+                    "serverFinished": "cc9ec36ef94c8c30a7006dacfdaa40e8f35b496788a237caef5863daaa033377"
+                },
+                "tlsClientHelloLength": "1508",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1958611
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 20,
+    "cpuTime": 2,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186504729,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/public/.env",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "cf-connecting-ip": "212.8.228.114",
+                "cf-ipcountry": "RU",
+                "cf-ray": "a15fe2667ab9431d",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 (Silvy X Ran)",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "212.8.228.114"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/1.1",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 28,
+                "clientQuicRtt": 0,
+                "colo": "ARN",
+                "asn": 198610,
+                "asOrganization": "Beget LLC",
+                "country": "RU",
+                "isEUCountry": false,
+                "city": "Saint Petersburg",
+                "continent": "EU",
+                "region": "St.-Petersburg",
+                "regionCode": "SPE",
+                "timezone": "Europe/Moscow",
+                "longitude": "30.31413",
+                "latitude": "59.93863",
+                "postalCode": "195213",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES256-GCM-SHA384",
+                "tlsClientRandom": "VX4OVN6Cl4/gMONwoW1HaxchY2g/7xChPFmihg2d3Zo=",
+                "tlsClientCiphersSha1": "WUS9+h7TjVkF9aEouGuCEMjGQGA=",
+                "tlsClientExtensionsSha1": "SPOmu4tqmkIifAnsrT+EqZ7v9fw=",
+                "tlsClientExtensionsSha1Le": "WhNjp4XdFrN/QlyTtmTzis2Y2Is=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "cb5c7af389797856fa3d7962f2291c04878ba68eba5a001694d625663e7ed4a48d0dd2dc081c3fd2d5b76d7204235b04",
+                    "serverHandshake": "0bc1716134436bab8111aca3fbfef8f977f51754e64942084d4b676aa391ca1f1ae6586b68e3e4500ccb576e1312aacb",
+                    "clientFinished": "326b2366829f8cffd5a6b29e77302d27d13051b294ea5f56b1ea4bec220cb444097ba44bc90b6fd4a39c2578361ef059",
+                    "serverFinished": "a278da02f61e9e2531b90e20891384e9dc78a5a54b982450a26e7c8b843cf75165bf1915b163326794984566e4ae98bf"
+                },
+                "tlsClientHelloLength": "263",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 99868
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 404
+        }
+    }
+}
+{
+    "wallTime": 15,
+    "cpuTime": 2,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186505189,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/index.html",
+            "method": "GET",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-encoding": "gzip, br",
+                "accept-language": "en-US,en;q=0.9",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "18.234.203.23",
+                "cf-ipcountry": "US",
+                "cf-ray": "a15fe2696817073f",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "pragma": "no-cache",
+                "priority": "u=0, i",
+                "referer": "https://tradebot-b9u.pages.dev/",
+                "sec-ch-ua": "\"Chromium\";v=\"145\", \"Not:A-Brand\";v=\"99\"",
+                "sec-ch-ua-mobile": "?1",
+                "sec-ch-ua-platform": "\"Android\"",
+                "sec-fetch-dest": "iframe",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-site": "same-origin",
+                "upgrade-insecure-requests": "1",
+                "user-agent": "Mozilla/5.0 (Linux; Android 16; SM-S921U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.6 Mobile Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "18.234.203.23"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 5,
+                "colo": "IAD",
+                "asn": 14618,
+                "asOrganization": "Amazon Technologies Inc.",
+                "country": "US",
+                "isEUCountry": false,
+                "city": "Ashburn",
+                "continent": "NA",
+                "region": "Virginia",
+                "regionCode": "VA",
+                "timezone": "America/New_York",
+                "longitude": "-77.48749",
+                "latitude": "39.04372",
+                "postalCode": "20147",
+                "metroCode": "511",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "7qbudXQ1XOK8yz8yT4mYag5muJOQIyNIsvhLOZ4t0aw=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "VaBkZVVnDlkqOyYL4Qp+aT8V82c=",
+                "tlsClientExtensionsSha1Le": "sLL1vAf2XSDg3co1ZiwKouwG9+g=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "a63fae49c6f13ed83b1fff25db6a321141b6f7a3af8d76a765dd0aec994a6e04",
+                    "serverHandshake": "b735817e5429e191d82fb2d1647a8703096638d76754916212b77da875ef1f4e",
+                    "clientFinished": "5f7a08f25480b30c6f75c28a43c12c40c30185a9ceca6e8604c8577ebab82a12",
+                    "serverFinished": "5cb6807b28eebcc539ed7c3380968bd9089c6a933854bbd6dd525849d5f1ba9a"
+                },
+                "tlsClientHelloLength": "1518",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 3857898
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 13,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186504806,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/index.html",
+            "method": "GET",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-encoding": "gzip, br",
+                "accept-language": "en-US,en;q=0.9",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "34.207.67.234",
+                "cf-ipcountry": "US",
+                "cf-ray": "a15fe2670dcbd69d",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "pragma": "no-cache",
+                "priority": "u=0, i",
+                "referer": "https://tradebot-b9u.pages.dev/index.html",
+                "sec-ch-ua": "\"Chromium\";v=\"145\", \"Not:A-Brand\";v=\"99\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Windows\"",
+                "sec-fetch-dest": "iframe",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-site": "same-origin",
+                "upgrade-insecure-requests": "1",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.6 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "34.207.67.234"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 10,
+                "colo": "IAD",
+                "asn": 14618,
+                "asOrganization": "Amazon Technologies Inc.",
+                "country": "US",
+                "isEUCountry": false,
+                "city": "Ashburn",
+                "continent": "NA",
+                "region": "Virginia",
+                "regionCode": "VA",
+                "timezone": "America/New_York",
+                "longitude": "-77.48749",
+                "latitude": "39.04372",
+                "postalCode": "20147",
+                "metroCode": "511",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "NlSIEcfqUfO6++eKnOi7iYbVfxMi1+V8LkHOBDfOO5o=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "kwyyvDI/Z6M2maGosgckNwSyBR8=",
+                "tlsClientExtensionsSha1Le": "HO1D+Lg8O3/5MKBze3E5VMpsUKs=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "8f6369c5dbcbe46937102731d568ad998dc53a6846b048350b600e3ba0ab845f",
+                    "serverHandshake": "a791a2c3b07e4917533c308a7244a712391a27789a7c7cfd2967739ab7dc72a9",
+                    "clientFinished": "038135a6d866bce051c04e4f8ea49c65b7eba1a9d5346257b7e76bc16cc15607",
+                    "serverFinished": "cc9ec36ef94c8c30a7006dacfdaa40e8f35b496788a237caef5863daaa033377"
+                },
+                "tlsClientHelloLength": "1508",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 13164210
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 18,
+    "cpuTime": 2,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186505435,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/index.html",
+            "method": "GET",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-encoding": "gzip, br",
+                "accept-language": "en-US,en;q=0.9",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "18.234.203.23",
+                "cf-ipcountry": "US",
+                "cf-ray": "a15fe26ae93f073f",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "pragma": "no-cache",
+                "priority": "u=0, i",
+                "referer": "https://tradebot-b9u.pages.dev/index.html",
+                "sec-ch-ua": "\"Chromium\";v=\"145\", \"Not:A-Brand\";v=\"99\"",
+                "sec-ch-ua-mobile": "?1",
+                "sec-ch-ua-platform": "\"Android\"",
+                "sec-fetch-dest": "iframe",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-site": "same-origin",
+                "upgrade-insecure-requests": "1",
+                "user-agent": "Mozilla/5.0 (Linux; Android 16; SM-S921U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.6 Mobile Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "18.234.203.23"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 4,
+                "colo": "IAD",
+                "asn": 14618,
+                "asOrganization": "Amazon Technologies Inc.",
+                "country": "US",
+                "isEUCountry": false,
+                "city": "Ashburn",
+                "continent": "NA",
+                "region": "Virginia",
+                "regionCode": "VA",
+                "timezone": "America/New_York",
+                "longitude": "-77.48749",
+                "latitude": "39.04372",
+                "postalCode": "20147",
+                "metroCode": "511",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "7qbudXQ1XOK8yz8yT4mYag5muJOQIyNIsvhLOZ4t0aw=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "VaBkZVVnDlkqOyYL4Qp+aT8V82c=",
+                "tlsClientExtensionsSha1Le": "sLL1vAf2XSDg3co1ZiwKouwG9+g=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "a63fae49c6f13ed83b1fff25db6a321141b6f7a3af8d76a765dd0aec994a6e04",
+                    "serverHandshake": "b735817e5429e191d82fb2d1647a8703096638d76754916212b77da875ef1f4e",
+                    "clientFinished": "5f7a08f25480b30c6f75c28a43c12c40c30185a9ceca6e8604c8577ebab82a12",
+                    "serverFinished": "5cb6807b28eebcc539ed7c3380968bd9089c6a933854bbd6dd525849d5f1ba9a"
+                },
+                "tlsClientHelloLength": "1518",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 10454553
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 82,
+    "cpuTime": 4,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186505292,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/",
+            "method": "GET",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-encoding": "gzip, br",
+                "accept-language": "en-US,en;q=0.9",
+                "cf-connecting-ip": "104.164.173.87",
+                "cf-ipcountry": "US",
+                "cf-ray": "a15fe26a099c939b",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "sec-ch-ua": "Google Chrome\";v=\"111\", \"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"111",
+                "sec-fetch-mode": "navigate",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "104.164.173.87"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/1.1",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 1,
+                "clientQuicRtt": 0,
+                "colo": "SJC",
+                "asn": 18779,
+                "asOrganization": "EGIHosting",
+                "country": "US",
+                "isEUCountry": false,
+                "city": "Santa Clara",
+                "continent": "NA",
+                "region": "California",
+                "regionCode": "CA",
+                "timezone": "America/Los_Angeles",
+                "longitude": "-121.95524",
+                "latitude": "37.35411",
+                "postalCode": "95050",
+                "metroCode": "807",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "EoH9uNnlffrGPOZprw5uM8RPDeKfgZLu1ClsnSjUcIY=",
+                "tlsClientCiphersSha1": "QrF6UadKW3vtNOqdNqbd4frxxxE=",
+                "tlsClientExtensionsSha1": "VmypJ9I6O+wlbe1dI9qycuZ4Ywg=",
+                "tlsClientExtensionsSha1Le": "i+zMiC3iuMzkwC9CUcQV4FcnRkg=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "4ec7d18166d1d41237b44866a4e9aff2a08418b6b40be7a03bfb1a41ea5622b9",
+                    "serverHandshake": "1d709bcf9fd084d32a275c96ae08fe90c57f1b759cf653464b1718737f5e80a7",
+                    "clientFinished": "5310c709f12f4b156c2c068f784255a280fe94795857ff897b0f72a1b9ccb9af",
+                    "serverFinished": "05d9e477cf92a71769f6f0bcd80ce9193254fceb86e7e126b704def74e81ad56"
+                },
+                "tlsClientHelloLength": "1501",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 3777391
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 32,
+    "cpuTime": 4,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186506339,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/private/.env",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "cf-connecting-ip": "212.8.228.114",
+                "cf-ipcountry": "RU",
+                "cf-ray": "a15fe2708dc2ddf7",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 (Silvy X Ran)",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "212.8.228.114"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/1.1",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 29,
+                "clientQuicRtt": 0,
+                "colo": "ARN",
+                "asn": 198610,
+                "asOrganization": "Beget LLC",
+                "country": "RU",
+                "isEUCountry": false,
+                "city": "Saint Petersburg",
+                "continent": "EU",
+                "region": "St.-Petersburg",
+                "regionCode": "SPE",
+                "timezone": "Europe/Moscow",
+                "longitude": "30.31413",
+                "latitude": "59.93863",
+                "postalCode": "195213",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES256-GCM-SHA384",
+                "tlsClientRandom": "p+tbRLpn9hGkgDF6p1EePn2ilf9YSBQrHZu26sV13aQ=",
+                "tlsClientCiphersSha1": "WUS9+h7TjVkF9aEouGuCEMjGQGA=",
+                "tlsClientExtensionsSha1": "ATcXMeUXeFizGw2u6clCl+mS/20=",
+                "tlsClientExtensionsSha1Le": "MR8/HeG9ZNqciLAINt6H+vb9/NE=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "dcc11ce2d471457838b6b1781cdc23c64486c3298f84895c395cb6250179b0e7cd946278ab47474703d4b1a57abc8bef",
+                    "serverHandshake": "db40acb28616bb3e5f07747ecccc507e442d97beff0297e7b808fcfff934373da6bf6369104b7c2a3e348b511a734cfb",
+                    "clientFinished": "6fbb9534ee9df5566c45bd603d61060bdd67416a7d742900b855bbc4352b1295dfd9ab529d9fa0e2d1c77ed179c73a51",
+                    "serverFinished": "c7a93d42f34314fa5d624f88a720e13317740ea44bb105a6d606c59ef3f62255f5be5e8de7336cbcecbf8db5c573824d"
+                },
+                "tlsClientHelloLength": "263",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 97923
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 404
+        }
+    }
+}
+{
+    "wallTime": 57,
+    "cpuTime": 14,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186508149,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/var/.env",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "cf-connecting-ip": "212.8.228.114",
+                "cf-ipcountry": "RU",
+                "cf-ray": "a15fe27bcd5c2dc2",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 (Silvy X Ran)",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "212.8.228.114"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/1.1",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 29,
+                "clientQuicRtt": 0,
+                "colo": "ARN",
+                "asn": 198610,
+                "asOrganization": "Beget LLC",
+                "country": "RU",
+                "isEUCountry": false,
+                "city": "Saint Petersburg",
+                "continent": "EU",
+                "region": "St.-Petersburg",
+                "regionCode": "SPE",
+                "timezone": "Europe/Moscow",
+                "longitude": "30.31413",
+                "latitude": "59.93863",
+                "postalCode": "195213",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES256-GCM-SHA384",
+                "tlsClientRandom": "/vKU2MZE2zj9LYBMi0wk4p3sJzOfgoImS7dsVIjpQAY=",
+                "tlsClientCiphersSha1": "WUS9+h7TjVkF9aEouGuCEMjGQGA=",
+                "tlsClientExtensionsSha1": "mzPYlRa5x4K/lPsYAxwX7E3QHVA=",
+                "tlsClientExtensionsSha1Le": "LLetz2nnM+U/H3cB9/VYD8JVZa0=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "d2a5371b5aef1d7566eea0692153414ad8f0d5be305567d9a23166610ff233d1bc39dbf1ada7a6f30f36c20a13409b95",
+                    "serverHandshake": "30ca32360aee50e87abffc5caf665da98d716a3d62b9011fd7b79f8bf55c495723ae60d0153f7d9503f3466bcabdc28b",
+                    "clientFinished": "97123ef9263eff8b35c6b5cc8b6723cb7eb32107869d492f21c3652d25e8aedc8586afa732c82e0677b2b0ceb1dd1faf",
+                    "serverFinished": "6c7749add6ee106354db81456ac0b210f9b892effaca10d4c760ce3e44dc4878d9189bccc421b10d2309c35faecbba24"
+                },
+                "tlsClientHelloLength": "263",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 97044
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 404
+        }
+    }
+}
+{
+    "wallTime": 15,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186510265,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/docker-compose.yml",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "cf-connecting-ip": "212.8.228.114",
+                "cf-ipcountry": "RU",
+                "cf-ray": "a15fe2891f3abc2f",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 (Silvy X Ran)",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "212.8.228.114"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/1.1",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 29,
+                "clientQuicRtt": 0,
+                "colo": "ARN",
+                "asn": 198610,
+                "asOrganization": "Beget LLC",
+                "country": "RU",
+                "isEUCountry": false,
+                "city": "Saint Petersburg",
+                "continent": "EU",
+                "region": "St.-Petersburg",
+                "regionCode": "SPE",
+                "timezone": "Europe/Moscow",
+                "longitude": "30.31413",
+                "latitude": "59.93863",
+                "postalCode": "195213",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES256-GCM-SHA384",
+                "tlsClientRandom": "OOqTESKJ+whcc3/gcc3aOz0P/d9STZYuw2T9WlmSmdU=",
+                "tlsClientCiphersSha1": "WUS9+h7TjVkF9aEouGuCEMjGQGA=",
+                "tlsClientExtensionsSha1": "D4EKTZQgVR/MiROA9qOSX585kFE=",
+                "tlsClientExtensionsSha1Le": "mvzynq1Xv3W3YEuD60/ABZmAgwI=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "f160c912ade71ed671a1fe56f0c1f873b4c1781ce4aa9b10503c67e115b4a6adad664f8f91e5d055a75193c204b4986f",
+                    "serverHandshake": "b17bd9e0a1b8f4b74f41519f00e3705fecfb930f9ca66c5697dda88fec13386d637d5a0712781bdb674815b520892a50",
+                    "clientFinished": "39696dd198005d1dd12b0d680d092fba25c6a8b60d97bda5651ba4a4a5e4cb383081b2c295af9167f64350c8234f1332",
+                    "serverFinished": "8794efd52c6c8a1af1c70ef41b8e96381dcd8c3dc2e73553e6c1df0557522d1ca9037ac96b856285ba960e8cf8c833fa"
+                },
+                "tlsClientHelloLength": "263",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 97181
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 404
+        }
+    }
+}
+{
+    "wallTime": 37,
+    "cpuTime": 5,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186511886,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/docker-compose.yaml",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "cf-connecting-ip": "212.8.228.114",
+                "cf-ipcountry": "RU",
+                "cf-ray": "a15fe29338853131",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 (Silvy X Ran)",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "212.8.228.114"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/1.1",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 30,
+                "clientQuicRtt": 0,
+                "colo": "ARN",
+                "asn": 198610,
+                "asOrganization": "Beget LLC",
+                "country": "RU",
+                "isEUCountry": false,
+                "city": "Saint Petersburg",
+                "continent": "EU",
+                "region": "St.-Petersburg",
+                "regionCode": "SPE",
+                "timezone": "Europe/Moscow",
+                "longitude": "30.31413",
+                "latitude": "59.93863",
+                "postalCode": "195213",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES256-GCM-SHA384",
+                "tlsClientRandom": "a1xG7Rv7zFPyHOGz/tKO72bcPXKPWu9v5UCLjcOa0hk=",
+                "tlsClientCiphersSha1": "WUS9+h7TjVkF9aEouGuCEMjGQGA=",
+                "tlsClientExtensionsSha1": "33Vd/TX245VQuyKpKvdbozaOEUE=",
+                "tlsClientExtensionsSha1Le": "M5yM8zBhS3vowd5pHqK7YDzFnH0=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "2f4b04dfdaf510f7356468a350ac5c057f6e5ef65f9f7658da0c418104f08cce7b24ca2eb16ed6845a77c787cd900a81",
+                    "serverHandshake": "b67a6acc17296e1721a3fa8df5589a1ff472ed9c6e55fa21e8708f02c4d1ddbac8295e9d46a9d33a01ac5abee93bf3c4",
+                    "clientFinished": "8367f8822e5081a83861ea15c27dcd7c08e0988c30ed9aa20638628ff22e7f61567e3f3bd03862998359de46cfd2b8cb",
+                    "serverFinished": "954cdf843ed5b56e16538681cbf52bb5bb5870fa92aeaf666186b3d8de37d05d2badf02e981151e706810e677c4f290d"
+                },
+                "tlsClientHelloLength": "263",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 96604
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 404
+        }
+    }
+}
+{
+    "wallTime": 16,
+    "cpuTime": 2,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186513759,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/docker-compose.override.yml",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "cf-connecting-ip": "212.8.228.114",
+                "cf-ipcountry": "RU",
+                "cf-ray": "a15fe29efa45fb58",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 (Silvy X Ran)",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "212.8.228.114"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/1.1",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 29,
+                "clientQuicRtt": 0,
+                "colo": "ARN",
+                "asn": 198610,
+                "asOrganization": "Beget LLC",
+                "country": "RU",
+                "isEUCountry": false,
+                "city": "Saint Petersburg",
+                "continent": "EU",
+                "region": "St.-Petersburg",
+                "regionCode": "SPE",
+                "timezone": "Europe/Moscow",
+                "longitude": "30.31413",
+                "latitude": "59.93863",
+                "postalCode": "195213",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES256-GCM-SHA384",
+                "tlsClientRandom": "UWxWAsIJ7fROgeWVndRByEbNfBhnn/jdbhQsQ9pHzwE=",
+                "tlsClientCiphersSha1": "WUS9+h7TjVkF9aEouGuCEMjGQGA=",
+                "tlsClientExtensionsSha1": "w24qNoBekIMAYszZDSkA95mfIkA=",
+                "tlsClientExtensionsSha1Le": "TahxlOkBimLGm3a3SD9ogbHpYDs=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "3cc315ff2190fde592610656a70a5ecb3b7613aa78eaa23cc6e9188c5adbf13e915381dac1589c35ccd8b1132e4ee203",
+                    "serverHandshake": "199ce74859b1c9cd07452169414c1008842e4b4cd1ab20368efe5d50eb30ed144f7a23e1b67b32304fba675a9eada5d1",
+                    "clientFinished": "225e0b94d79e753c31cfe8d13da18b50dcb85e516986be833474c9faf4afc9b3409fef60a1ac9b3bf4eca9046718e6cd",
+                    "serverFinished": "ecaa2c6af4aa0f328184a6f3ef7a5de9c163c32af488bf99b560d19edecce62fb316e4bcf0d5ce166b61c7ee1c997afd"
+                },
+                "tlsClientHelloLength": "263",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 97890
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 404
+        }
+    }
+}
+{
+    "wallTime": 17,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186514066,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/",
+            "method": "GET",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-encoding": "gzip, br",
+                "accept-language": "en-US,en;q=0.9",
+                "cf-connecting-ip": "104.252.191.44",
+                "cf-ipcountry": "US",
+                "cf-ray": "a15fe2a0da7e0f95",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "sec-ch-ua": "Google Chrome\";v=\"111\", \"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"111",
+                "sec-fetch-mode": "navigate",
+                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "104.252.191.44"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/1.1",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 1,
+                "clientQuicRtt": 0,
+                "colo": "EWR",
+                "asn": 9009,
+                "asOrganization": "Subnet Digital LLC",
+                "country": "US",
+                "isEUCountry": false,
+                "city": "New York City",
+                "continent": "NA",
+                "region": "New York",
+                "regionCode": "NY",
+                "timezone": "America/New_York",
+                "longitude": "-74.00597",
+                "latitude": "40.71427",
+                "postalCode": "10004",
+                "metroCode": "501",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "n+1RsGG6QpDmym7qaz7P2BjG793XEy3Xif9Tx0XG6LA=",
+                "tlsClientCiphersSha1": "QrF6UadKW3vtNOqdNqbd4frxxxE=",
+                "tlsClientExtensionsSha1": "VmypJ9I6O+wlbe1dI9qycuZ4Ywg=",
+                "tlsClientExtensionsSha1Le": "i+zMiC3iuMzkwC9CUcQV4FcnRkg=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "8d33d8a697108e0f9cfba93a5f75e9072760d5b4743ebe27ac277c79b1f567ee",
+                    "serverHandshake": "ea15c74b00e4100a747394baf305635e31c9e933de7a2bd865d00d7304716a2b",
+                    "clientFinished": "52f913c6f3564df13d2a4241ba23fa893f3f4f521e69c929e70be077afe0c600",
+                    "serverFinished": "9766c3939c383c8c68293ab38f9e47bfe59816ef8dde2600f38c16bbdbe12532"
+                },
+                "tlsClientHelloLength": "1501",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 3777391
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 36,
+    "cpuTime": 5,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "ecbccdda-4883-415c-85dd-878800e5a7e1"
+    },
+    "scriptName": "pages-worker--15887620-production",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1783186513915,
+    "event": {
+        "request": {
+            "url": "https://tradebot-b9u.pages.dev/",
+            "method": "GET",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-encoding": "gzip, br",
+                "accept-language": "en-US,en;q=0.9",
+                "cf-connecting-ip": "103.196.9.79",
+                "cf-ipcountry": "US",
+                "cf-ray": "a15fe29fee766a58",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "host": "tradebot-b9u.pages.dev",
+                "sec-ch-ua": "Google Chrome\";v=\"111\", \"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"111",
+                "sec-fetch-mode": "navigate",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "103.196.9.79"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/1.1",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 1,
+                "clientQuicRtt": 0,
+                "colo": "EWR",
+                "asn": 9009,
+                "asOrganization": "UAB code200",
+                "country": "US",
+                "isEUCountry": false,
+                "city": "New York City",
+                "continent": "NA",
+                "region": "New York",
+                "regionCode": "NY",
+                "timezone": "America/New_York",
+                "longitude": "-74.00597",
+                "latitude": "40.71427",
+                "postalCode": "10004",
+                "metroCode": "501",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "jiv9HDNpa/jtQHxrCNBFXf1UuswhHTiPawtAcMWbm14=",
+                "tlsClientCiphersSha1": "QrF6UadKW3vtNOqdNqbd4frxxxE=",
+                "tlsClientExtensionsSha1": "VmypJ9I6O+wlbe1dI9qycuZ4Ywg=",
+                "tlsClientExtensionsSha1Le": "i+zMiC3iuMzkwC9CUcQV4FcnRkg=",
+                "tlsExportedAuthenticator": {
+                    "clientHandshake": "2ddb47b8f20b81e3dd6d11c5189104d072cdac3090f17cd4090e68f466725277",
+                    "serverHandshake": "782b48e72776dd47b1e1b2da1475edf5af3a6864722ff6021210f1fe0e18d7a1",
+                    "clientFinished": "1de319b01fc88cc17a19562c1e8c2d2c7367ccab625c073ca855d84d41661741",
+                    "serverFinished": "13fe3f7657a81fd1bcb97a738280f99db251013c85448817ac8abac0a92361eb"
+                },
+                "tlsClientHelloLength": "1501",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1787654
+                },
+                "pagesHostName": "tradebot-b9u.pages.dev",
+                "botManagement": {
+                    "corporateProxy": false,
+                    "verifiedBot": false,
+                    "jsDetection": {
+                        "passed": false
+                    },
+                    "staticResource": false,
+                    "detectionIds": {},
+                    "score": 99
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { AutomationState, initializeDatabase } from '@/lib/tradebot/database'
 
-// Ensure database is loaded
-initializeDatabase()
+export const runtime = 'edge'
 
 /**
  * Centralized Settings API
@@ -36,18 +35,19 @@ type SettingsKey = keyof typeof SETTINGS_KEYS | string
 
 export async function GET(request: NextRequest) {
   try {
+    await initializeDatabase()
     const key = request.nextUrl.searchParams.get('key')
 
     if (key) {
       // Return a single settings group
-      const value = AutomationState.get(key)
+      const value = await AutomationState.get(key)
       return NextResponse.json({ success: true, data: value })
     }
 
     // Return all known settings groups
     const all: Record<string, unknown> = {}
     for (const k of Object.values(SETTINGS_KEYS)) {
-      const v = AutomationState.get(k)
+      const v = await AutomationState.get(k)
       if (v !== null && v !== undefined) {
         all[k] = v
       }
@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await initializeDatabase()
     const body = await request.json()
     const { key, value } = body as { key: SettingsKey; value: unknown }
 
@@ -71,13 +72,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    AutomationState.set(key, value)
+    await AutomationState.set(key, value)
 
     // If saving marketSignalSettings, also keep a separate apiKeys entry
     // for backwards compatibility with settings.html which reads 'settings_apiKeys'
     if (key === SETTINGS_KEYS.marketSignal && value && typeof value === 'object') {
       const v = value as Record<string, string>
-      AutomationState.set(SETTINGS_KEYS.apiKeys, {
+      await AutomationState.set(SETTINGS_KEYS.apiKeys, {
         apiKey: v.apiKey || '',
         secretKey: v.secretKey || '',
         baseUrl: v.baseUrl || 'https://api.toobit.com'

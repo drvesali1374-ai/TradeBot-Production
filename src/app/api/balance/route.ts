@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buildSortedQuery, generateSignature, getSettingsFromRequest } from '@/lib/tradebot/helpers'
+export const runtime = 'edge'
+
 
 export async function GET(request: NextRequest) {
   try {

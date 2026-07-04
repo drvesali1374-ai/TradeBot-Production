@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buildSortedQuery, generateSignature } from '@/lib/tradebot/helpers'
+export const runtime = 'edge'
+
 
 export async function POST(request: NextRequest) {
   try {

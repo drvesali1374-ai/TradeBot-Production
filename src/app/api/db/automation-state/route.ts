@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { AutomationState, initializeDatabase } from '@/lib/tradebot/database'
 
-// Ensure database is loaded
-initializeDatabase()
+export const runtime = 'edge'
 
 /**
  * Automation State API
@@ -24,15 +23,16 @@ initializeDatabase()
 // GET: retrieve a single key or all state
 export async function GET(request: NextRequest) {
   try {
+    await initializeDatabase()
     const key = request.nextUrl.searchParams.get('key')
 
     if (key) {
-      const value = AutomationState.get(key)
+      const value = await AutomationState.get(key)
       return NextResponse.json({ success: true, data: value })
     }
 
     // No key provided — return all state
-    const all = AutomationState.getAll()
+    const all = await AutomationState.getAll()
     return NextResponse.json({ success: true, data: all })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
 // POST: set a key-value pair
 export async function POST(request: NextRequest) {
   try {
+    await initializeDatabase()
     const body = await request.json()
     const { key, value } = body
 
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    AutomationState.set(key, value)
+    await AutomationState.set(key, value)
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
 // DELETE: remove a key
 export async function DELETE(request: NextRequest) {
   try {
+    await initializeDatabase()
     const key = request.nextUrl.searchParams.get('key')
 
     if (!key) {
@@ -71,7 +73,7 @@ export async function DELETE(request: NextRequest) {
       try {
         const body = await request.json()
         if (body && body.key) {
-          AutomationState.delete(body.key)
+          await AutomationState.delete(body.key)
           return NextResponse.json({ success: true })
         }
       } catch {
@@ -83,7 +85,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    AutomationState.delete(key)
+    await AutomationState.delete(key)
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'

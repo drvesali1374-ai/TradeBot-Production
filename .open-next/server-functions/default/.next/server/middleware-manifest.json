@@ -1,0 +1,578 @@
+{
+  "version": 3,
+  "middleware": {},
+  "sortedMiddleware": [],
+  "functions": {
+    "/api/balance/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/balance/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_balance_route_actions_53a7357f.js",
+        "server/edge/chunks/_0e3441c6._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_3b85c9fb.js"
+      ],
+      "name": "app/api/balance/route",
+      "page": "/api/balance/route",
+      "matchers": [
+        {
+          "regexp": "^/api/balance(?:/)?$",
+          "originalSource": "/api/balance"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/bale-send/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/bale-send/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_bale-send_route_actions_b04febc0.js",
+        "server/edge/chunks/node_modules_next_dist_esm_a0ef1498._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_7f435cf5.js"
+      ],
+      "name": "app/api/bale-send/route",
+      "page": "/api/bale-send/route",
+      "matchers": [
+        {
+          "regexp": "^/api/bale-send(?:/)?$",
+          "originalSource": "/api/bale-send"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/close-position/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/close-position/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_close-position_route_actions_601e08e3.js",
+        "server/edge/chunks/_34413ef8._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_b4d41dd3.js"
+      ],
+      "name": "app/api/close-position/route",
+      "page": "/api/close-position/route",
+      "matchers": [
+        {
+          "regexp": "^/api/close-position(?:/)?$",
+          "originalSource": "/api/close-position"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/create-position/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/create-position/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_create-position_route_actions_918143e4.js",
+        "server/edge/chunks/_3ed08df6._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_fb92880b.js"
+      ],
+      "name": "app/api/create-position/route",
+      "page": "/api/create-position/route",
+      "matchers": [
+        {
+          "regexp": "^/api/create-position(?:/)?$",
+          "originalSource": "/api/create-position"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/db/automation-state/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/db/automation-state/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_db_automation-state_route_actions_281a3ba6.js",
+        "server/edge/chunks/_7acb5b1a._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_37cff90a.js"
+      ],
+      "name": "app/api/db/automation-state/route",
+      "page": "/api/db/automation-state/route",
+      "matchers": [
+        {
+          "regexp": "^/api/db/automation-state(?:/)?$",
+          "originalSource": "/api/db/automation-state"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/db/logs/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/db/logs/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_db_logs_route_actions_ea7a539e.js",
+        "server/edge/chunks/_69a8fad0._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_3a17a5ed.js"
+      ],
+      "name": "app/api/db/logs/route",
+      "page": "/api/db/logs/route",
+      "matchers": [
+        {
+          "regexp": "^/api/db/logs(?:/)?$",
+          "originalSource": "/api/db/logs"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/db/positions/[param]/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/db/positions/[param]/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_db_positions_[param]_route_actions_4aabc5d3.js",
+        "server/edge/chunks/_3bc97ec5._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_be913d34.js"
+      ],
+      "name": "app/api/db/positions/[param]/route",
+      "page": "/api/db/positions/[param]/route",
+      "matchers": [
+        {
+          "regexp": "^/api/db/positions/(?P<nxtPparam>[^/]+?)(?:/)?$",
+          "originalSource": "/api/db/positions/[param]"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/db/positions/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/db/positions/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_db_positions_route_actions_07f38ee6.js",
+        "server/edge/chunks/_be5cdb22._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_9ccde574.js"
+      ],
+      "name": "app/api/db/positions/route",
+      "page": "/api/db/positions/route",
+      "matchers": [
+        {
+          "regexp": "^/api/db/positions(?:/)?$",
+          "originalSource": "/api/db/positions"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/db/signals/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/db/signals/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_db_signals_route_actions_1b9cafd0.js",
+        "server/edge/chunks/_25ec31c7._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_2452b21f.js"
+      ],
+      "name": "app/api/db/signals/route",
+      "page": "/api/db/signals/route",
+      "matchers": [
+        {
+          "regexp": "^/api/db/signals(?:/)?$",
+          "originalSource": "/api/db/signals"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/db/stats/[symbol]/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/db/stats/[symbol]/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_db_stats_[symbol]_route_actions_b1e7cf97.js",
+        "server/edge/chunks/_ccc37791._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_eccdf4f3.js"
+      ],
+      "name": "app/api/db/stats/[symbol]/route",
+      "page": "/api/db/stats/[symbol]/route",
+      "matchers": [
+        {
+          "regexp": "^/api/db/stats/(?P<nxtPsymbol>[^/]+?)(?:/)?$",
+          "originalSource": "/api/db/stats/[symbol]"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/db/stats/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/db/stats/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_db_stats_route_actions_12e6f78e.js",
+        "server/edge/chunks/_acee7b72._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_59867470.js"
+      ],
+      "name": "app/api/db/stats/route",
+      "page": "/api/db/stats/route",
+      "matchers": [
+        {
+          "regexp": "^/api/db/stats(?:/)?$",
+          "originalSource": "/api/db/stats"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/db/trades/[param]/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/db/trades/[param]/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_db_trades_[param]_route_actions_e96da575.js",
+        "server/edge/chunks/_dfe4ec96._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_5280a774.js"
+      ],
+      "name": "app/api/db/trades/[param]/route",
+      "page": "/api/db/trades/[param]/route",
+      "matchers": [
+        {
+          "regexp": "^/api/db/trades/(?P<nxtPparam>[^/]+?)(?:/)?$",
+          "originalSource": "/api/db/trades/[param]"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/db/trades/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/db/trades/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_db_trades_route_actions_a860fd85.js",
+        "server/edge/chunks/_e2e30c82._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_7769c2df.js"
+      ],
+      "name": "app/api/db/trades/route",
+      "page": "/api/db/trades/route",
+      "matchers": [
+        {
+          "regexp": "^/api/db/trades(?:/)?$",
+          "originalSource": "/api/db/trades"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/history/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/history/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_history_route_actions_613dac95.js",
+        "server/edge/chunks/_52823a8b._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_4193d788.js"
+      ],
+      "name": "app/api/history/route",
+      "page": "/api/history/route",
+      "matchers": [
+        {
+          "regexp": "^/api/history(?:/)?$",
+          "originalSource": "/api/history"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/open-positions/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/open-positions/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_open-positions_route_actions_caeec772.js",
+        "server/edge/chunks/_38caada6._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_c735f837.js"
+      ],
+      "name": "app/api/open-positions/route",
+      "page": "/api/open-positions/route",
+      "matchers": [
+        {
+          "regexp": "^/api/open-positions(?:/)?$",
+          "originalSource": "/api/open-positions"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_route_actions_ff157ba0.js",
+        "server/edge/chunks/node_modules_next_dist_esm_6df3c75b._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_acf90f18.js"
+      ],
+      "name": "app/api/route",
+      "page": "/api/route",
+      "matchers": [
+        {
+          "regexp": "^/api(?:/)?$",
+          "originalSource": "/api"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/run-cycle/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/run-cycle/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_run-cycle_route_actions_412b4560.js",
+        "server/edge/chunks/_40f2f256._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/node_modules_next_dist_esm_build_templates_edge-app-route_eae7a461.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_06637415.js"
+      ],
+      "name": "app/api/run-cycle/route",
+      "page": "/api/run-cycle/route",
+      "matchers": [
+        {
+          "regexp": "^/api/run-cycle(?:/)?$",
+          "originalSource": "/api/run-cycle"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/settings/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/settings/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_settings_route_actions_26007c96.js",
+        "server/edge/chunks/_dbb84903._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_dd25227c.js"
+      ],
+      "name": "app/api/settings/route",
+      "page": "/api/settings/route",
+      "matchers": [
+        {
+          "regexp": "^/api/settings(?:/)?$",
+          "originalSource": "/api/settings"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    },
+    "/api/toobit-proxy/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/toobit-proxy/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_toobit-proxy_route_actions_6f470435.js",
+        "server/edge/chunks/node_modules_next_dist_esm_000c2676._.js",
+        "server/edge/chunks/[root-of-the-server]__04458a80._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_bbcc9923.js"
+      ],
+      "name": "app/api/toobit-proxy/route",
+      "page": "/api/toobit-proxy/route",
+      "matchers": [
+        {
+          "regexp": "^/api/toobit-proxy(?:/)?$",
+          "originalSource": "/api/toobit-proxy"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "Ir_Jcey3pj4RaI9fFM_tY",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "o0zLGu3FLx2MeYXhfY+jXRXppINZg9QPXOe284NepAY=",
+        "__NEXT_PREVIEW_MODE_ID": "99acb34b8062f9867cda07ee3c87e801",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "184e7eb6a56db4600f95f10f8353233d9116d6b37b1157a926ff706c636d50ca",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "7fe534a12d52582503abad9678ee2a65e8004949e59e1ea930ed206fe064fff3"
+      }
+    }
+  }
+}

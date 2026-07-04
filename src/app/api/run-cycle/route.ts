@@ -2,16 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { initializeDatabase } from '@/lib/tradebot/database'
 import { runCycle } from '@/lib/tradebot/cycle-engine'
 
-// Ensure database is loaded
-initializeDatabase()
+export const runtime = 'edge'
 
 /**
  * Server-Side Run Cycle API
  * ==========================
  *
  * Executes one full automation cycle on the server — identical to clicking the
- * "یک چرخه" (Run Once) button in the browser, but without requiring the browser
- * tab to stay open.
+ * "یک چرخه" (Run Once) button in the browser, but without requiring the
+ * browser tab to stay open.
  *
  * This endpoint is what the Cloudflare Cron Worker calls every 5 minutes to
  * keep automation running 24/7.
@@ -57,6 +56,9 @@ async function handleRunCycle(request: NextRequest) {
       )
     }
   }
+
+  // ✓ Initialize database (async — KV or JSON file)
+  await initializeDatabase()
 
   // Determine the base URL for internal API calls.
   // In local dev: http://localhost:3000

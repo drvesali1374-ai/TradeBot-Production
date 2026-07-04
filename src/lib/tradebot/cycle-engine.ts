@@ -331,25 +331,22 @@ export async function runCycle(
     const entry: CycleLogEntry = { message, type, symbol, timestamp: new Date().toISOString() }
     logs.push(entry)
     // Also persist to the AutomationLogs collection so the UI can display them
-    try {
-      AutomationLogs.add({
-        message,
-        type,
-        symbol: symbol || '',
-        source: options.triggerSource || 'server',
-        timestamp: entry.timestamp
-      })
-    } catch {
-      /* ignore log persistence errors */
-    }
+    // (fire-and-forget — don't block the cycle on log persistence)
+    AutomationLogs.add({
+      message,
+      type,
+      symbol: symbol || '',
+      source: options.triggerSource || 'server',
+      timestamp: entry.timestamp
+    }).catch(() => { /* ignore log persistence errors */ })
     console.log(`[CycleEngine${options.triggerSource ? `:${options.triggerSource}` : ''}] ${type.toUpperCase()} ${symbol ? `[${symbol}] ` : ''}${message}`)
   }
 
   try {
     // -------------------------------------------------------------------
-    // Load settings + symbols from the permanent database
+    // Load settings + symbols from the permanent database (async — KV)
     // -------------------------------------------------------------------
-    const dbAutomationSettings = AutomationState.get('automation_settings')
+    const dbAutomationSettings = await AutomationState.get('automation_settings')
     const automationSettings: AutomationSettings = {
       ...getDefaultAutomationSettings(),
       ...(typeof dbAutomationSettings === 'string'
@@ -357,13 +354,13 @@ export async function runCycle(
         : (dbAutomationSettings as Record<string, unknown>) || {})
     }
 
-    const dbMarketSettings = AutomationState.get('marketSignalSettings')
+    const dbMarketSettings = await AutomationState.get('marketSignalSettings')
     const marketSettings: MarketSignalSettings =
       typeof dbMarketSettings === 'string'
         ? JSON.parse(dbMarketSettings)
         : (dbMarketSettings as MarketSignalSettings) || {}
 
-    const dbSymbols = AutomationState.get('automation_symbols')
+    const dbSymbols = await AutomationState.get('automation_symbols')
     const symbols: SymbolEntry[] = (() => {
       const parsed =
         typeof dbSymbols === 'string' ? JSON.parse(dbSymbols) : (dbSymbols as SymbolEntry[]) || []
@@ -422,7 +419,8 @@ export async function runCycle(
       const idx = symbols.findIndex((s) => s.id === symbol!.id)
       if (idx >= 0) {
         symbols[idx] = { ...symbols[idx], ...updates }
-        AutomationState.set('automation_symbols', symbols)
+        // ✓ async DB write (fire-and-forget for state updates)
+        AutomationState.set('automation_symbols', symbols).catch(() => {})
       }
     }
 
@@ -872,8 +870,8 @@ export async function runCycle(
     const freeBalance = parseFloat(balance.free)
     log(`${symbol.name}: کل دارایی = ${totalAssets} USDT, آزاد = ${freeBalance} USDT`, 'success', symbol.name)
 
-    // Persist balance to DB (so the UI can display it)
-    AutomationState.set('balance', balance)
+    // Persist balance to DB (so the UI can display it) — async, fire-and-forget
+    AutomationState.set('balance', balance).catch(() => {})
 
     // -------------------------------------------------------------------
     // Step 11: calculateNewMargin()
@@ -1205,7 +1203,7 @@ export async function runCycle(
 
     // Try to update the symbol's error count if we have a symbol
     try {
-      const dbSymbols = AutomationState.get('automation_symbols')
+      const dbSymbols = await AutomationState.get('automation_symbols')
       const symbols: SymbolEntry[] =
         typeof dbSymbols === 'string' ? JSON.parse(dbSymbols) : (dbSymbols as SymbolEntry[]) || []
       // Find the symbol that was running (status === 'running')
@@ -1213,7 +1211,7 @@ export async function runCycle(
       if (idx >= 0) {
         symbols[idx].errorCount = (symbols[idx].errorCount || 0) + 1
         const automationSettings = getDefaultAutomationSettings()
-        const dbAuto = AutomationState.get('automation_settings')
+        const dbAuto = await AutomationState.get('automation_settings')
         const autoSettings = {
           ...automationSettings,
           ...(typeof dbAuto === 'string' ? JSON.parse(dbAuto) : (dbAuto as Record<string, unknown>) || {})
@@ -1227,7 +1225,7 @@ export async function runCycle(
           symbols[idx].status = 'error'
           log(`${symbols[idx].name}: خطا - ${message} (تلاش ${symbols[idx].errorCount}/${autoSettings.allowedErrors})`, 'error', symbols[idx].name)
         }
-        AutomationState.set('automation_symbols', symbols)
+        await AutomationState.set('automation_symbols', symbols)
         return {
           success: false,
           symbol: symbols[idx].name,
