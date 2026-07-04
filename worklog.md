@@ -298,3 +298,42 @@ Stage Summary:
 - ✅ Full flow verified: Cron (5 min) → Worker scheduled() → fetch /api/run-cycle?source=cron → full 14-step automation cycle → logs stored in KV
 - ✅ Cycle logs from cron triggers appear on the automation page's "گزارش چرخه‌ها" section
 - ✅ No browser tab needed — automation runs 24/7 server-side
+
+---
+Task ID: 5
+Agent: Main Orchestrator
+Task: Fix blank page issue on Cloudflare deployment (iframe recursion)
+
+Work Log:
+- User reported https://tradebot-b9u.pages.dev/ not loading
+- Investigated: main page (/) returned HTTP 200 with 9692 bytes (Next.js page)
+- Found root cause: /index.html was serving the Next.js page (not the static file)
+  - src/app/page.tsx renders <iframe src="/index.html">
+  - @cloudflare/next-on-pages routes /index.html to Next.js page handler (conflicts with / route)
+  - This caused INFINITE IFRAME RECURSION: page loads → iframe loads /index.html → which is the same page → another iframe → blank screen
+- Also discovered: public/index.html on disk had been OVERWRITTEN by Next.js build output (9692 bytes of Next.js HTML instead of original 7465-byte static file)
+- Fix applied:
+  1. Restored original static index.html from tradebot-source/extracted/public/index.html
+  2. Renamed it to public/home.html (avoids conflict with Next.js / route)
+  3. Updated src/app/page.tsx: iframe src changed from "/index.html" to "/home.html"
+  4. Updated all links in automation.html, settings.html, market_signal.html, trading.html, home.html: href="index.html" → href="home.html"
+  5. Rebuilt with @cloudflare/next-on-pages
+  6. Redeployed to Cloudflare Pages
+- Verified fix:
+  - / → HTTP 200 (Next.js page with iframe src="/home.html" — no recursion) ✓
+  - /home.html → HTTP 200 (7464 bytes — original static file with main.js, init-settings.js) ✓
+  - All pages load correctly: /, /home.html, /automation.html, /settings.html, /market_signal.html, /trading.html ✓
+  - Agent Browser test: homepage shows all nav links + feature cards ✓
+  - Automation page: symbols (DYDX, DOT, XRP) loaded from KV, logs displayed, data restored ✓
+  - "بروزرسانی" button works: fetched 1000 candles, generated signals ✓
+  - API endpoints all working (/api/db/automation-state, /api/settings) ✓
+  - No console errors ✓
+
+Stage Summary:
+- ✅ Blank page issue FIXED — site now loads correctly on Cloudflare
+- ✅ Root cause: /index.html conflicted with Next.js / route in @cloudflare/next-on-pages
+- ✅ Solution: renamed static file to home.html, updated all references
+- ✅ All 5 pages load and function correctly
+- ✅ All API endpoints work
+- ✅ Data persistence (KV) works across page navigation
+- ✅ Cron Trigger still active (not affected by this fix)

@@ -19,7 +19,7 @@ export default function Home() {
   return (
     <div className="w-screen h-screen overflow-hidden">
       <iframe
-        src="/index.html"
+        src="/home.html"
         className="w-full h-full border-0"
         title="سیستم اتوماسیون هوشمند - تحلیل تکنیکال"
         style={{ display: 'block' }}
