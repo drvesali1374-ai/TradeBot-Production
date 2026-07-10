@@ -896,47 +896,112 @@ export async function runCycle(
     }
 
     // -------------------------------------------------------------------
-    // Step 9: getSymbolMargin() — existing same-direction margin
+    // ✓ Step 9 (NEW): Refresh "سوابق پوزیشن‌ها" (position history) table
+    // Fetch fresh history AFTER closing opposite positions so the history
+    // reflects the latest state (including any newly-closed positions).
+    // This history is used to compute the "آخرین ورود" column in step 10.
     // -------------------------------------------------------------------
-    let existingSymbolMargin = 0
-    let hasSameDirectionPosition = false
+    log(`${symbol.name}: بروزرسانی جدول سوابق پوزیشن‌ها...`, 'info', symbol.name)
+    // ✓ Re-fetch fresh history (currentSymbolHistory was already declared in step 5)
+    currentSymbolHistory = []
     if (apiKey && secretKey) {
       try {
-        const signalDirection = selectedSignal.type === 'Long' ? 'long' : 'short'
-        const symMarginResponse = await fetch(`${baseUrl}/api/open-positions`, {
-          headers: {
-            'X-API-Key': apiKey,
-            'X-Secret-Key': secretKey,
-            'X-Base-Url': toobitBaseUrl,
-            'X-Symbol': fullSymbol
-          }
+        const historyResponse = await fetch(`${baseUrl}/api/history`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: fullSymbol,
+            apiKey,
+            secretKey,
+            baseUrl: toobitBaseUrl,
+            limit: 100
+          })
         })
-        if (symMarginResponse.ok) {
-          const symMarginData = await symMarginResponse.json()
-          const positions = symMarginData.positions || symMarginData.data || []
-          const targetSide = signalDirection === 'long' ? 'LONG' : 'SHORT'
-          const sameDirection = (positions as Record<string, unknown>[]).filter((pos) => {
-            const sideStr = String(pos.side || '').toUpperCase()
-            return sideStr === targetSide || sideStr.includes(targetSide)
-          })
-          sameDirection.forEach((pos) => {
-            const markPrice = parseFloat(String(pos.markPrice || pos.avgPrice || 0))
-            const available = parseFloat(String(pos.available || 0))
-            const leverage = parseInt(String(pos.leverage || 1))
-            if (markPrice > 0 && leverage > 0) {
-              existingSymbolMargin += (available * markPrice) / leverage
-            }
-          })
-          existingSymbolMargin = parseFloat(existingSymbolMargin.toFixed(2))
-          hasSameDirectionPosition = existingSymbolMargin > 0
+        if (historyResponse.ok) {
+          const historyData = await historyResponse.json()
+          let histories: unknown[] = []
+          if (Array.isArray(historyData)) {
+            histories = historyData
+          } else if (historyData.data && Array.isArray(historyData.data)) {
+            histories = historyData.data
+          } else if (historyData.result && Array.isArray(historyData.result)) {
+            histories = historyData.result
+          } else if (typeof historyData === 'object' && historyData !== null) {
+            const values = Object.values(historyData).find((v) => Array.isArray(v))
+            histories = values || []
+          }
+          currentSymbolHistory = (histories as Record<string, unknown>[]).map((item) => ({
+            time: new Date(parseInt(String(item.time || 0))),
+            symbol: String(item.symbol || '-'),
+            price: parseFloat(String(item.price || 0)),
+            qty: parseFloat(String(item.qty || 0)),
+            commission: parseFloat(String(item.commission || 0)),
+            side: String(item.side || '-'),
+            realizedPnl: parseFloat(String(item.realizedPnl || 0))
+          }))
+          log(`${symbol.name}: جدول سوابق پوزیشن‌ها بروزرسانی شد (${currentSymbolHistory.length} ردیف)`, 'success', symbol.name)
         }
       } catch (e) {
-        log(`${symbol.name}: خطا در دریافت پوزیشن‌های باز`, 'warning', symbol.name)
+        log(`${symbol.name}: خطا در بروزرسانی سوابق پوزیشن‌ها - ${e instanceof Error ? e.message : 'unknown'}`, 'warning', symbol.name)
       }
     }
 
     // -------------------------------------------------------------------
-    // Step 10: fetchBalance()
+    // ✓ Step 10 (NEW): Refresh "پوزیشن‌های باز" (open positions) table +
+    //   compute "آخرین ورود" column from the fresh history (step 9).
+    //   This replaces the old getSymbolMargin() call.
+    //   The open positions data is stored in `freshOpenPositions` for
+    //   use by the risk controls in step 12.
+    // -------------------------------------------------------------------
+    log(`${symbol.name}: بروزرسانی جدول پوزیشن‌های باز...`, 'info', symbol.name)
+    let freshOpenPositions: Record<string, unknown>[] = []
+    // ✓ lastEntryPriceCache for this symbol (computed from fresh history)
+    let symbolLastEntryPrice: number | null = null
+    if (apiKey && secretKey) {
+      try {
+        const opResponse = await fetch(`${baseUrl}/api/open-positions`, {
+          headers: {
+            'X-API-Key': apiKey,
+            'X-Secret-Key': secretKey,
+            'X-Base-Url': toobitBaseUrl
+          }
+        })
+        if (opResponse.ok) {
+          const opData = await opResponse.json()
+          freshOpenPositions = (opData.positions || opData.data || []) as Record<string, unknown>[]
+
+          // ✓ Compute "آخرین ورود" for the current cycle symbol from the fresh history
+          // Logic: find the latest row (newest time) in currentSymbolHistory.
+          //   - If its side is OPEN (BUY_OPEN or SELL_OPEN) → use its price as "آخرین ورود"
+          //   - If its side is CLOSE (BUY_CLOSE or SELL_CLOSE) → null (no open position)
+          if (currentSymbolHistory.length > 0) {
+            const signalDirection = selectedSignal.type === 'Long' ? 'long' : 'short'
+            const sidePrefix = signalDirection === 'long' ? 'BUY' : 'SELL'
+            // Sort chronologically (ascending by time)
+            const sortedHistory = [...currentSymbolHistory].sort((a, b) => a.time.getTime() - b.time.getTime())
+            // Find the LATEST OPEN trade matching direction
+            let latestOpen: HistoryEntry | null = null
+            for (let i = sortedHistory.length - 1; i >= 0; i--) {
+              const t = sortedHistory[i]
+              if (t.side && t.side.includes(sidePrefix) && t.side.includes('OPEN')) {
+                latestOpen = t
+                break
+              }
+            }
+            symbolLastEntryPrice = latestOpen ? latestOpen.price : null
+          }
+
+          // Persist open positions to DB (so the UI can display them)
+          AutomationState.set('openPositions', freshOpenPositions).catch(() => {})
+          log(`${symbol.name}: جدول پوزیشن‌های باز بروزرسانی شد (${freshOpenPositions.length} پوزیشن)`, 'success', symbol.name)
+        }
+      } catch (e) {
+        log(`${symbol.name}: خطا در بروزرسانی پوزیشن‌های باز - ${e instanceof Error ? e.message : 'unknown'}`, 'warning', symbol.name)
+      }
+    }
+
+    // -------------------------------------------------------------------
+    // ✓ Step 11: fetchBalance()
     // -------------------------------------------------------------------
     log(`${symbol.name}: دریافت موجودی حساب...`, 'info', symbol.name)
     let balance: BalanceInfo
@@ -963,15 +1028,12 @@ export async function runCycle(
     AutomationState.set('balance', balance).catch(() => {})
 
     // -------------------------------------------------------------------
-    // Step 11: calculateNewMargin()
+    // ✓ Step 12: calculateNewMargin() + Risk Controls
     // -------------------------------------------------------------------
     log(`${symbol.name}: محاسبه مارجین (${automationSettings.entryMarginPercent}% از کل دارایی)...`, 'info', symbol.name)
     const newMargin = parseFloat((totalAssets * (automationSettings.entryMarginPercent / 100)).toFixed(2))
     log(`${symbol.name}: مارجین محاسبه شده = ${newMargin} USDT`, 'success', symbol.name)
 
-    // -------------------------------------------------------------------
-    // Step 12: Risk Controls
-    // -------------------------------------------------------------------
     // Helper to send Bale notification for risk-control blocks
     const sendBaleNotification = async (text: string) => {
       const token = automationSettings.baleToken
@@ -1010,7 +1072,9 @@ export async function runCycle(
       return sendBaleNotification(text)
     }
 
-    // Control 2: Safe Asset Check
+    // ===================================================================
+    // ✓ Control 2 (الف): Safe Asset Check — ALWAYS runs
+    // ===================================================================
     const safeAmount = totalAssets * (automationSettings.safeAssetPercent / 100)
     const projectedFree = freeBalance - newMargin
     if (projectedFree < safeAmount) {
@@ -1044,40 +1108,47 @@ export async function runCycle(
       }
     }
 
-    // Controls 3-5 only if same-direction position exists
-    if (hasSameDirectionPosition) {
-      const signalDirection = selectedSignal.type === 'Long' ? 'long' : 'short'
+    // ===================================================================
+    // ✓ Controls 3 & 4: Price Distance + Max Margin Per Symbol
+    //   NEW LOGIC: Only run if the current cycle symbol is in the open
+    //   positions table (freshOpenPositions from step 10).
+    //   If the symbol is NOT in open positions → skip both controls.
+    // ===================================================================
+    const symbolPosition = freshOpenPositions.find((pos) => {
+      const posSymbol = String(pos.symbol || '').toUpperCase()
+      return posSymbol === fullSymbol.toUpperCase()
+    })
 
-      // Control 3: Price Distance Check
-      const sidePrefix = signalDirection === 'long' ? 'BUY' : 'SELL'
-      const sorted = [...currentSymbolHistory].sort((a, b) => a.time.getTime() - b.time.getTime())
-      const openTrades = sorted.filter((t) => t.side && t.side.includes(sidePrefix) && t.side.includes('OPEN'))
-      const lastEntry = openTrades.length > 0 ? openTrades[openTrades.length - 1].price : null
+    if (symbolPosition) {
+      // Symbol IS in open positions table → run controls 3 & 4
+      log(`${symbol.name}: نماد در پوزیشن‌های باز یافت شد — اجرای کنترل‌های فاصله قیمت و سقف مارجین`, 'info', symbol.name)
 
-      if (lastEntry !== null) {
+      // ── Control 3: Price Distance Check ──────────────────────────────
+      // ✓ Read "آخرین ورود" from symbolLastEntryPrice (computed in step 10)
+      if (symbolLastEntryPrice !== null && symbolLastEntryPrice !== undefined) {
         let distancePercent: number
         if (selectedSignal.type === 'Long') {
-          distancePercent = ((lastEntry - price) / lastEntry) * 100
+          distancePercent = ((symbolLastEntryPrice - price) / symbolLastEntryPrice) * 100
         } else {
-          distancePercent = ((price - lastEntry) / lastEntry) * 100
+          distancePercent = ((price - symbolLastEntryPrice) / symbolLastEntryPrice) * 100
         }
         if (distancePercent < automationSettings.minPriceDistancePercent) {
           log(
-            `${symbol.name}: فاصله قیمت کافی نیست (آخرین ورود: ${lastEntry}, فعلی: ${price}, فاصله: ${distancePercent.toFixed(2)}% < ${automationSettings.minPriceDistancePercent}%) — رد شد`,
+            `${symbol.name}: فاصله قیمت کافی نیست (آخرین ورود: ${symbolLastEntryPrice}, فعلی: ${price}, فاصله: ${distancePercent.toFixed(2)}% < ${automationSettings.minPriceDistancePercent}%) — رد شد`,
             'warning',
             symbol.name
           )
           const distanceFormula =
             selectedSignal.type === 'Long'
-              ? `فاصله = (آخرین ورود - فعلی) / آخرین ورود × 100\nفاصله = (${lastEntry} - ${price}) / ${lastEntry} × 100`
-              : `فاصله = (فعلی - آخرین ورود) / آخرین ورود × 100\nفاصله = (${price} - ${lastEntry}) / ${lastEntry} × 100`
+              ? `فاصله = (آخرین ورود - فعلی) / آخرین ورود × 100\nفاصله = (${symbolLastEntryPrice} - ${price}) / ${symbolLastEntryPrice} × 100`
+              : `فاصله = (فعلی - آخرین ورود) / آخرین ورود × 100\nفاصله = (${price} - ${symbolLastEntryPrice}) / ${symbolLastEntryPrice} × 100`
           await notifyRiskControlBlocked(
             'فاصله قیمت (Price Distance)',
             `قیمت فعلی باید فاصله کافی از آخرین نقطه ورود هم‌جهت داشته باشد.\n` +
               `برای لانگ: قیمت فعلی باید ارزان‌تر از آخرین ورود باشد\n` +
               `برای شورت: قیمت فعلی باید گران‌تر از آخرین ورود باشد\n` +
               `شرط عبور: فاصله ≥ حداقل فاصله قیمت`,
-            `آخرین قیمت ورود هم‌جهت = ${lastEntry}\n` +
+            `آخرین قیمت ورود هم‌جهت = ${symbolLastEntryPrice} (از ستون «آخرین ورود» جدول پوزیشن‌های باز)\n` +
               `قیمت فعلی = ${price}\n` +
               `جهت سیگنال = ${selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'}\n` +
               `${distanceFormula}\n` +
@@ -1097,9 +1168,13 @@ export async function runCycle(
           }
         }
         log(`${symbol.name}: فاصله قیمت OK (${distancePercent.toFixed(2)}% ≥ ${automationSettings.minPriceDistancePercent}%)`, 'success', symbol.name)
+      } else {
+        log(`${symbol.name}: آخرین ورود هم‌جهت در تاریخچه یافت نشد — کنترل قیمت انجام نشد`, 'info', symbol.name)
       }
 
-      // Control 4: Max Margin Per Symbol
+      // ── Control 4: Max Margin Per Symbol ────────────────────────────
+      // ✓ Read "مارجین موجود نماد" from the "مارجین" column of the open positions table
+      const existingSymbolMargin = parseFloat(String(symbolPosition.margin || 0))
       const maxMarginPerSymbol = totalAssets * (automationSettings.maxMarginPerSymbolPercent / 100)
       const totalSymbolMargin = existingSymbolMargin + newMargin
       if (totalSymbolMargin > maxMarginPerSymbol) {
@@ -1116,7 +1191,7 @@ export async function runCycle(
           `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
             `درصد سقف مارجین نماد = ${automationSettings.maxMarginPerSymbolPercent}%\n` +
             `سقف مارجین نماد = ${totalAssets.toFixed(4)} × ${automationSettings.maxMarginPerSymbolPercent}% = ${maxMarginPerSymbol.toFixed(4)} USDT\n` +
-            `مارجین موجود نماد = ${existingSymbolMargin.toFixed(4)} USDT\n` +
+            `مارجین موجود نماد = ${existingSymbolMargin.toFixed(4)} USDT (از ستون «مارجین» جدول پوزیشن‌های باز)\n` +
             `مارجین ورودی جدید = ${newMargin.toFixed(4)} USDT\n` +
             `مجموع مارجین نماد = ${existingSymbolMargin.toFixed(4)} + ${newMargin.toFixed(4)} = ${totalSymbolMargin.toFixed(4)} USDT\n` +
             `${totalSymbolMargin.toFixed(4)} > ${maxMarginPerSymbol.toFixed(4)} ✗`,
@@ -1133,9 +1208,14 @@ export async function runCycle(
         }
       }
       log(`${symbol.name}: مارجین نماد OK (${totalSymbolMargin.toFixed(2)} ≤ ${maxMarginPerSymbol.toFixed(2)} USDT)`, 'success', symbol.name)
+    } else {
+      // Symbol NOT in open positions table → skip controls 3 & 4
+      log(`${symbol.name}: نماد در پوزیشن‌های باز یافت نشد — کنترل‌های فاصله قیمت و سقف مارجین skip شدند`, 'info', symbol.name)
     }
 
-    // Control 5: Positive margin
+    // ===================================================================
+    // ✓ Control 5 (Fallback): Ensure margin is positive — ALWAYS runs
+    // ===================================================================
     const finalMargin = Math.max(newMargin, 0)
     if (finalMargin <= 0) {
       log(`${symbol.name}: مارجین نهایی صفر یا منفی — رد شد`, 'warning', symbol.name)

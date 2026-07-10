@@ -43,9 +43,10 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "no-unreachable": "off",
     "no-useless-escape": "off",
     "@typescript-eslint/no-this-alias": "off",
+    "@typescript-eslint/no-require-imports": "off",
   },
 }, {
-  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills", "cloudflare/**", "tradebot-source/**", "mini-services/**"]
+  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills", "cloudflare/**", "tradebot-source/**", "mini-services/**", ".open-next/**", ".vercel/**"]
 }];
 
 export default eslintConfig;

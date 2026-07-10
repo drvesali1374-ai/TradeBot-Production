@@ -379,3 +379,88 @@ Stage Summary:
 - ✅ Fix: `lastCycleLogs` key for complete per-cycle logs (no race) + batch write to shared logs
 - ✅ All cycle logs now visible on automation page via /api/db/logs
 - ✅ Cycles complete all 14 steps — the "Failed to create order" is a Toobit exchange error, not a system error
+
+---
+Task ID: 7
+Agent: Main Orchestrator
+Task: Implement 4 cycle improvements + race condition fix (all approved by user)
+
+Work Log:
+- [1] Fixed Race Condition in loadHistoryForOpenPositions():
+  - Root cause: method overwrote this.currentSymbolHistory with each symbol's history
+  - Fix: method now passes history as parameter to getLastEntryPrice(symbol, direction, history)
+  - Updated getLastEntryPrice to accept optional historyParam (uses this.currentSymbolHistory as fallback)
+  - New logic: find latest row by time, if side is OPEN (BUY_OPEN/SELL_OPEN) → use price, if CLOSE → null
+  - Updated init() comment to clarify the race-condition-free ordering
+
+- [2] Sorted all 4 tables by time DESC (newest first):
+  - populateMarketDataTable(): sort by timestamp DESC
+  - populateHistoryTable(): sort by time DESC (replaced old .reverse())
+  - loadLogsFromDatabase(): sort by created_at DESC (replaced old .reverse())
+  - displayOpenPositions(): sort by open time DESC
+
+- [3] New "آخرین ورود" calculation logic (in getLastEntryPrice):
+  - Find latest row (newest time) in history
+  - If side is OPEN (BUY_OPEN/SELL_OPEN) → return its price as "آخرین ورود"
+  - If side is CLOSE (BUY_CLOSE/SELL_CLOSE) → return null (no open position)
+  - Also caches with full symbol name (DOT-SWAP-USDT)
+
+- [4] Reordered runCycle steps 8-12 (BOTH client-side automation-manager.js AND server-side cycle-engine.ts):
+  OLD order:                    NEW order:
+  Step 8: closeOpposite         Step 8: closeOpposite (same position)
+  Step 9: getSymbolMargin       Step 9 (NEW): Refresh history table (fetch fresh)
+  Step 10: fetchBalance         Step 10 (NEW): Refresh open positions table + compute "آخرین ورود"
+  Step 11: calculateNewMargin   Step 11: fetchBalance
+  Step 12: Risk controls        Step 12: calculateNewMargin + Risk controls (new logic)
+
+- [5] New risk control logic (controls 3 & 4):
+  - Only run if current cycle symbol is in the fresh open positions table
+  - If symbol NOT in open positions → skip both controls (log: "نماد در پوزیشن‌های باز یافت نشد — کنترل‌های فاصله قیمت و سقف مارجین skip شدند")
+  - Control 3 (Price Distance): reads "آخرین ورود" from lastEntryPriceCache (computed in step 10)
+  - Control 4 (Max Margin): reads "مارجین موجود نماد" from the "مارجین" column of open positions table (symbolPosition.margin)
+  - Control 2 (Safe Asset) and Control 5 (Positive Margin): always run (unchanged)
+
+- [6] Mobile touch drag-and-drop for symbols table:
+  - Added setupTouchDragAndDrop(tbody) method
+  - Uses touchstart, touchmove, touchend events
+  - Only starts drag if vertical movement > 10px (avoids accidental drags on tap)
+  - Creates a visual clone that follows the finger
+  - Highlights target row under finger
+  - Reorders symbols array on touchend
+  - Preserves existing mouse-based drag-and-drop for desktop
+
+- [7] Updated eslint config to ignore .open-next/** and .vercel/** build directories
+
+- [8] Build + deploy to Cloudflare Pages (successful)
+  - Fixed a build error: redeclared currentSymbolHistory in cycle-engine.ts (line 905) — changed `let` to reassignment since the variable was already declared in step 5
+
+- [9] Regenerated RUN_CYCLE_SECRET and set on both Pages app and Cron Worker (old secret file was lost)
+
+Testing (Agent Browser on https://tradebot-b9u.pages.dev):
+  - Page loads correctly with all data for one symbol (XRP): market=1000, signals=44, history=22 ✓
+  - Data consistency after navigation: went to settings.html → returned to automation.html → all data still for XRP ✓
+  - Table sorting verified:
+    * Market data: 14:00, 13:00, 12:00, 11:00, 10:00 (DESC) ✓
+    * History: 18/4, 17/4, 14/4, 14/4, 13/4 (DESC) ✓
+    * Logs: 22:11:46, 22:10:49, 22:05:50 (DESC) ✓
+  - "یک چرخه" button test — full cycle ran with new steps:
+    * "بروزرسانی جدول سوابق پوزیشن‌ها..." → "جدول سوابق پوزیشن‌ها بروزرسانی شد (22 ردیف)" ✓
+    * "بروزرسانی جدول پوزیشن‌های باز..." → "جدول پوزیشن‌های باز بروزرسانی شد (1 پوزیشن)" ✓
+    * "نماد در پوزیشن‌های باز یافت نشد — کنترل‌های فاصله قیمت و سقف مارجین skip شدند" ✓ (new skip logic works!)
+    * "باز کردن پوزیشن جدید..." → "پوزیشن باز شد (سفارش: 2256414323269253632)" ✓
+    * "چرخه XRP با موفقیت انجام شد" ✓
+  - Open positions table shows "آخرین ورود" column (value: 0.889 for DOT) ✓
+  - For DYDX (which had open position): "فاصله قیمت کافی نیست (آخرین ورود: 0.1284, فعلی: 0.1337, فاصله: -4.13% < 5%) — رد شد" ✓ (control ran because symbol WAS in open positions)
+  - No console errors ✓
+  - Cron worker manual trigger works (returned "no_ready_symbol" because all symbols recently cycled — expected)
+
+Stage Summary:
+- ✅ Race condition fixed — data for all tables now belongs to the same symbol
+- ✅ All 4 tables sorted by time DESC (newest first)
+- ✅ "آخرین ورود" computed from latest OPEN row in history (null if latest is CLOSE)
+- ✅ Cycle steps reordered: closeOpposite → refresh history → refresh open positions → fetchBalance → controls
+- ✅ Controls 3 & 4 only run if symbol is in open positions table (skip otherwise)
+- ✅ Control 4 reads margin from table column (not calculated)
+- ✅ Mobile touch drag-and-drop added for symbols table
+- ✅ Changes applied to BOTH client-side (automation-manager.js) and server-side (cycle-engine.ts)
+- ✅ Deployed to Cloudflare, tested, working

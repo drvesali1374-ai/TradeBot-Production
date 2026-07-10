@@ -49,11 +49,10 @@ class AutomationManager {
         this.updateUIState();
 
         // Load balance and open positions display (top bar + positions table)
-        // ✓ Issue #6: Position history must load BEFORE open positions
-        // because the "آخرین ورود" column in open positions table needs fresh history data
         this.loadBalanceFromDB();
         this.fetchBalanceForBar();
         // First load position history for all symbols (needed for last entry price cache)
+        // ✓ loadHistoryForOpenPositions no longer modifies currentSymbolHistory (race condition fixed)
         this.loadHistoryForOpenPositions().then(() => {
             // Then load and display open positions (which uses the history cache)
             this.loadOpenPositionsFromDB();
@@ -62,7 +61,9 @@ class AutomationManager {
         
         // ✓ Try to load previous data for the last used symbol
         //   lastUsedSymbol is read from DB first (priority), then localStorage as fallback.
-        //   This ensures cross-device/cross-browser restoration in Cloudflare deployment.
+        //   This runs AFTER loadHistoryForOpenPositions to avoid race condition:
+        //   loadHistoryForOpenPositions populates lastEntryPriceCache without touching currentSymbolHistory,
+        //   then loadAutomationData sets currentSymbolHistory/Signals/marketData for lastUsedSymbol.
         const dbLastUsedSymbol = await this.dbGet('lastUsedSymbol');
         this.lastUsedSymbol = dbLastUsedSymbol || localStorage.getItem('automationLastUsedSymbol');
         
@@ -1103,12 +1104,26 @@ class AutomationManager {
 
     /**
      * جدول داده‌های بازار با ۱۲ ستون (دقیقاً مثل داشبورد)
+     * ✓ سورت بر حسب زمان به صورت نزولی (جدیدترین در بالا)
      */
     populateMarketDataTable() {
         const tbody = document.getElementById('market-data-body');
+        if (!tbody) return;
         tbody.innerHTML = '';
         
-        this.currentSymbolData.forEach(candle => {
+        if (!this.currentSymbolData || this.currentSymbolData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="12" class="px-4 py-8 text-center text-gray-400">داده‌ای برای نمایش وجود ندارد</td></tr>';
+            return;
+        }
+        
+        // ✓ Sort by timestamp DESC (newest first)
+        const sortedData = [...this.currentSymbolData].sort((a, b) => {
+            const ta = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+            const tb = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+            return tb - ta; // descending
+        });
+        
+        sortedData.forEach(candle => {
             const row = document.createElement('tr');
             row.className = 'border-b border-gray-700 hover:bg-gray-700';
             const signalClass = candle.signal === 'Long' ? 'text-green-400 font-bold' : 
@@ -1134,6 +1149,7 @@ class AutomationManager {
 
     /**
      * جدول سوابق پوزیشن‌ها
+     * ✓ سورت بر حسب زمان به صورت نزولی (جدیدترین در بالا)
      */
     populateHistoryTable() {
         const tbody = document.getElementById('history-table-body');
@@ -1160,8 +1176,14 @@ class AutomationManager {
         let successCount = 0;
         let errorCount = 0;
         
-        // Reverse to show newest first (like dashboard)
-        historyData.slice().reverse().forEach((item, index) => {
+        // ✓ Sort by time DESC (newest first)
+        const sortedHistory = [...historyData].sort((a, b) => {
+            const ta = a.time instanceof Date ? a.time.getTime() : new Date(a.time).getTime();
+            const tb = b.time instanceof Date ? b.time.getTime() : new Date(b.time).getTime();
+            return tb - ta; // descending
+        });
+        
+        sortedHistory.forEach((item, index) => {
             try {
                 const row = document.createElement('tr');
                 row.className = 'border-b border-gray-700 hover:bg-gray-700';
@@ -1742,7 +1764,12 @@ class AutomationManager {
             const price = await this.fetchPrice(symbol.name);
             this.log(`${symbol.name}: قیمت فعلی = ${price}`, 'success', symbol.name);
 
-            // 9. Close opposite positions
+            // ===================================================================
+            // ✓ Step 8: Close opposite positions (بستن پوزیشن‌های مخالف)
+            // This MUST happen BEFORE refreshing the tables so the tables reflect
+            // the post-close state (the symbol we're about to control may have been
+            // closed here, meaning it no longer has an open position to check).
+            // ===================================================================
             this.log(`${symbol.name}: بررسی پوزیشن‌های مخالف...`, 'info', symbol.name);
             const closeResult = await this.closeOppositePositions(symbol.name, this.selectedSignal.type);
             const closedCount = closeResult.closed || 0;
@@ -1753,19 +1780,77 @@ class AutomationManager {
                 this.log(`${symbol.name}: پوزیشن مخالفی یافت نشد`, 'info', symbol.name);
             }
 
-            // 9.5: Fetch open positions for controls
-            this.log(`${symbol.name}: دریافت پوزیشن‌های باز...`, 'info', symbol.name);
-            let existingSymbolMargin = 0;
-            let hasSameDirectionPosition = false;
+            // ===================================================================
+            // ✓ Step 9 (NEW): Refresh "سوابق پوزیشن‌ها" (position history) table
+            // Fetch fresh history AFTER closing opposite positions so the history
+            // reflects the latest state (including any newly-closed positions).
+            // This history is used to compute the "آخرین ورود" column in step 10.
+            // ===================================================================
+            this.log(`${symbol.name}: بروزرسانی جدول سوابق پوزیشن‌ها...`, 'info', symbol.name);
             try {
-                const signalDirection = this.selectedSignal.type === 'Long' ? 'long' : 'short';
-                existingSymbolMargin = await this.getSymbolMargin(symbol.name, signalDirection);
-                hasSameDirectionPosition = existingSymbolMargin > 0;
+                const freshHistory = await this.fetchPositionHistory(symbol.name);
+                this.currentSymbolHistory = Array.isArray(freshHistory) ? freshHistory : [];
+                this.populateHistoryTable();
+                this.log(`${symbol.name}: جدول سوابق پوزیشن‌ها بروزرسانی شد (${this.currentSymbolHistory.length} ردیف)`, 'success', symbol.name);
             } catch (e) {
-                this.log(`${symbol.name}: خطا در دریافت پوزیشن‌های باز — کنترل‌های مرتبط skip می‌شوند`, 'warning', symbol.name);
+                this.log(`${symbol.name}: خطا در بروزرسانی سوابق پوزیشن‌ها - ${e.message}`, 'warning', symbol.name);
             }
 
-            // 10. Fetch balance (for margin calculation)
+            // ===================================================================
+            // ✓ Step 10 (NEW): Refresh "پوزیشن‌های باز" (open positions) table +
+            //   compute "آخرین ورود" column from the fresh history (step 9).
+            //   This replaces the old getSymbolMargin() call.
+            //   The open positions data is stored in `this.freshOpenPositions` for
+            //   use by the risk controls in step 12.
+            // ===================================================================
+            this.log(`${symbol.name}: بروزرسانی جدول پوزیشن‌های باز...`, 'info', symbol.name);
+            let freshOpenPositions = [];
+            try {
+                const settings = JSON.parse(localStorage.getItem('marketSignalSettings')) || {};
+                const opResponse = await fetch('/api/open-positions', {
+                    headers: {
+                        'X-API-Key': settings.apiKey,
+                        'X-Secret-Key': settings.secretKey,
+                        'X-Base-Url': settings.baseUrl || 'https://api.toobit.com'
+                    }
+                });
+                if (opResponse.ok) {
+                    const opData = await opResponse.json();
+                    freshOpenPositions = opData.positions || opData.data || [];
+                    // ✓ Compute "آخرین ورود" for each position from the fresh history
+                    // Populate lastEntryPriceCache for all symbols in open positions
+                    const opSymbols = [...new Set(freshOpenPositions.map(p => {
+                        const sym = p.symbol || '';
+                        return sym.replace('-SWAP-USDT', '').replace('USDT', '');
+                    }).filter(s => s))];
+                    for (const sym of opSymbols) {
+                        // Fetch history for this symbol if different from current cycle symbol
+                        if (sym === symbol.name) {
+                            // Use the already-fetched currentSymbolHistory
+                            this.getLastEntryPrice(sym, 'long', this.currentSymbolHistory);
+                            this.getLastEntryPrice(sym, 'short', this.currentSymbolHistory);
+                        } else {
+                            // Fetch history for other symbols
+                            const hist = await this.fetchPositionHistory(sym);
+                            if (Array.isArray(hist) && hist.length > 0) {
+                                this.getLastEntryPrice(sym, 'long', hist);
+                                this.getLastEntryPrice(sym, 'short', hist);
+                            }
+                        }
+                    }
+                    // Display the fresh open positions (with computed "آخرین ورود")
+                    this.displayOpenPositions(freshOpenPositions);
+                    // Save to DB
+                    await this.dbSet('openPositions', freshOpenPositions);
+                    this.log(`${symbol.name}: جدول پوزیشن‌های باز بروزرسانی شد (${freshOpenPositions.length} پوزیشن)`, 'success', symbol.name);
+                }
+            } catch (e) {
+                this.log(`${symbol.name}: خطا در بروزرسانی پوزیشن‌های باز - ${e.message}`, 'warning', symbol.name);
+            }
+
+            // ===================================================================
+            // ✓ Step 11: Fetch balance (for margin calculation)
+            // ===================================================================
             this.log(`${symbol.name}: دریافت موجودی حساب...`, 'info', symbol.name);
             const balanceForMargin = await this.fetchBalance();
             const totalAssets = balanceForMargin.total;
@@ -1783,16 +1868,19 @@ class AutomationManager {
             // Save balance to DB
             await this.dbSet('balance', balanceForMargin);
 
-            // 10.5: Calculate new margin based on percentage of total assets
+            // ===================================================================
+            // ✓ Step 12: Calculate new margin + Risk Controls
+            // ===================================================================
             this.log(`${symbol.name}: محاسبه مارجین (${this.settings.entryMarginPercent}% از کل دارایی)...`, 'info', symbol.name);
             const newMargin = this.calculateNewMargin(totalAssets);
             this.log(`${symbol.name}: مارجین محاسبه شده = ${newMargin} USDT`, 'success', symbol.name);
 
-            // 10.6: Control 2 — Safe Asset Check
+            // ===================================================================
+            // ✓ Control 2 (الف): Safe Asset Check — ALWAYS runs
+            // ===================================================================
             const safeCheck = this.checkSafeAsset(totalAssets, freeBalance, newMargin);
             if (!safeCheck.safe) {
                 this.log(`${symbol.name}: دارایی امن کافی نیست (آزاد ${freeBalance} - مارجین ${newMargin} = ${safeCheck.projectedFree.toFixed(2)} < دارایی امن ${safeCheck.safeAmount.toFixed(2)}) — رد شد`, 'warning', symbol.name);
-                // ✓ Send Bale notification with full risk control details
                 await this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, {
                     controlName: 'دارایی امن (Safe Asset)',
                     description:
@@ -1818,13 +1906,28 @@ class AutomationManager {
                 return false;
             }
 
-            // 10.7: Controls 3-5 only if same-direction position exists
-            if (hasSameDirectionPosition) {
-                const signalDirection = this.selectedSignal.type === 'Long' ? 'long' : 'short';
+            // ===================================================================
+            // ✓ Controls 3 & 4: Price Distance + Max Margin Per Symbol
+            //   NEW LOGIC: Only run if the current cycle symbol is in the open
+            //   positions table (freshOpenPositions from step 10).
+            //   If the symbol is NOT in open positions → skip both controls.
+            // ===================================================================
+            const fullSymbolName = `${symbol.name}-SWAP-USDT`;
+            const symbolPosition = freshOpenPositions.find(p => {
+                const posSymbol = (p.symbol || '').toString().toUpperCase();
+                return posSymbol === fullSymbolName.toUpperCase();
+            });
 
-                // Control 3: Price Distance Check
-                const lastEntryPrice = this.getLastEntryPrice(symbol.name, signalDirection);
-                if (lastEntryPrice !== null) {
+            if (symbolPosition) {
+                // Symbol IS in open positions table → run controls 3 & 4
+                this.log(`${symbol.name}: نماد در پوزیشن‌های باز یافت شد — اجرای کنترل‌های فاصله قیمت و سقف مارجین`, 'info', symbol.name);
+
+                // ── Control 3: Price Distance Check ──────────────────────────────
+                // ✓ Read "آخرین ورود" from lastEntryPriceCache (populated in step 10)
+                const signalDirection = this.selectedSignal.type === 'Long' ? 'long' : 'short';
+                const lastEntryPrice = this.lastEntryPriceCache[symbol.name] || this.lastEntryPriceCache[fullSymbolName] || null;
+
+                if (lastEntryPrice !== null && lastEntryPrice !== undefined) {
                     const currentPrice = price;
                     let distancePercent;
                     if (this.selectedSignal.type === 'Long') {
@@ -1837,7 +1940,6 @@ class AutomationManager {
                     
                     if (distancePercent < this.settings.minPriceDistancePercent) {
                         this.log(`${symbol.name}: فاصله قیمت کافی نیست (آخرین ورود: ${lastEntryPrice}, فعلی: ${currentPrice}, فاصله: ${distancePercent.toFixed(2)}% < ${this.settings.minPriceDistancePercent}%) — رد شد`, 'warning', symbol.name);
-                        // ✓ Send Bale notification with full risk control details
                         const distanceFormula = this.selectedSignal.type === 'Long'
                             ? `فاصله = (آخرین ورود - فعلی) / آخرین ورود × 100\nفاصله = (${lastEntryPrice} - ${currentPrice}) / ${lastEntryPrice} × 100`
                             : `فاصله = (فعلی - آخرین ورود) / آخرین ورود × 100\nفاصله = (${currentPrice} - ${lastEntryPrice}) / ${lastEntryPrice} × 100`;
@@ -1849,7 +1951,7 @@ class AutomationManager {
                                 `برای شورت: قیمت فعلی باید گران‌تر از آخرین ورود باشد\n` +
                                 `شرط عبور: فاصله ≥ حداقل فاصله قیمت`,
                             math:
-                                `آخرین قیمت ورود هم‌جهت = ${lastEntryPrice}\n` +
+                                `آخرین قیمت ورود هم‌جهت = ${lastEntryPrice} (از ستون «آخرین ورود» جدول پوزیشن‌های باز)\n` +
                                 `قیمت فعلی = ${currentPrice}\n` +
                                 `جهت سیگنال = ${this.selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'}\n` +
                                 `${distanceFormula}\n` +
@@ -1871,12 +1973,13 @@ class AutomationManager {
                     this.log(`${symbol.name}: آخرین ورود هم‌جهت در تاریخچه یافت نشد — کنترل قیمت انجام نشد`, 'info', symbol.name);
                 }
 
-                // Control 4: Max Margin Per Symbol
+                // ── Control 4: Max Margin Per Symbol ────────────────────────────
+                // ✓ Read "مارجین موجود نماد" from the "مارجین" column of the open positions table
+                const existingSymbolMargin = parseFloat(symbolPosition.margin || 0);
                 const maxMarginPerSymbol = totalAssets * (this.settings.maxMarginPerSymbolPercent / 100);
                 const totalSymbolMargin = existingSymbolMargin + newMargin;
                 if (totalSymbolMargin > maxMarginPerSymbol) {
                     this.log(`${symbol.name}: سقف مارجین نماد (${totalSymbolMargin.toFixed(2)} > ${maxMarginPerSymbol.toFixed(2)} USDT) — رد شد`, 'warning', symbol.name);
-                    // ✓ Send Bale notification with full risk control details
                     await this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, {
                         controlName: 'سقف مارجین نماد (Max Margin Per Symbol)',
                         description:
@@ -1887,7 +1990,7 @@ class AutomationManager {
                             `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
                             `درصد سقف مارجین نماد = ${this.settings.maxMarginPerSymbolPercent}%\n` +
                             `سقف مارجین نماد = ${totalAssets.toFixed(4)} × ${this.settings.maxMarginPerSymbolPercent}% = ${maxMarginPerSymbol.toFixed(4)} USDT\n` +
-                            `مارجین موجود نماد = ${existingSymbolMargin.toFixed(4)} USDT\n` +
+                            `مارجین موجود نماد = ${existingSymbolMargin.toFixed(4)} USDT (از ستون «مارجین» جدول پوزیشن‌های باز)\n` +
                             `مارجین ورودی جدید = ${newMargin.toFixed(4)} USDT\n` +
                             `مجموع مارجین نماد = ${existingSymbolMargin.toFixed(4)} + ${newMargin.toFixed(4)} = ${totalSymbolMargin.toFixed(4)} USDT\n` +
                             `${totalSymbolMargin.toFixed(4)} > ${maxMarginPerSymbol.toFixed(4)} ✗`,
@@ -1902,13 +2005,17 @@ class AutomationManager {
                     return false;
                 }
                 this.log(`${symbol.name}: مارجین نماد OK (${totalSymbolMargin.toFixed(2)} ≤ ${maxMarginPerSymbol.toFixed(2)} USDT)`, 'success', symbol.name);
+            } else {
+                // Symbol NOT in open positions table → skip controls 3 & 4
+                this.log(`${symbol.name}: نماد در پوزیشن‌های باز یافت نشد — کنترل‌های فاصله قیمت و سقف مارجین skip شدند`, 'info', symbol.name);
             }
 
-            // Control 5 (Fallback): Ensure margin is positive
+            // ===================================================================
+            // ✓ Control 5 (Fallback): Ensure margin is positive — ALWAYS runs
+            // ===================================================================
             const finalMargin = Math.max(newMargin, 0);
             if (finalMargin <= 0) {
                 this.log(`${symbol.name}: مارجین نهایی صفر یا منفی — رد شد`, 'warning', symbol.name);
-                // ✓ Send Bale notification with full risk control details
                 await this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, {
                     controlName: 'مارجین مثبت (Positive Margin)',
                     description:
@@ -1932,23 +2039,9 @@ class AutomationManager {
                 return false;
             }
 
-            // Save open positions to DB after balance fetch
-            try {
-                const opSettings = JSON.parse(localStorage.getItem('marketSignalSettings')) || {};
-                const opResponse = await fetch('/api/open-positions', {
-                    headers: {
-                        'X-API-Key': opSettings.apiKey,
-                        'X-Secret-Key': opSettings.secretKey,
-                        'X-Base-Url': opSettings.baseUrl || 'https://api.toobit.com'
-                    }
-                });
-                if (opResponse.ok) {
-                    const opData = await opResponse.json();
-                    await this.dbSet('openPositions', opData.positions || opData.data || []);
-                }
-            } catch (e) { /* ignore */ }
-
-            // 12. Open position
+            // ===================================================================
+            // ✓ Step 13: Open position
+            // ===================================================================
             this.log(`${symbol.name}: باز کردن پوزیشن جدید...`, 'info', symbol.name);
             const signalType = this.selectedSignal.type === 'Long' ? 'long' : 'short';
             const result = await this.openPosition(symbol.name, {
@@ -1959,7 +2052,9 @@ class AutomationManager {
             }, finalMargin);
             this.log(`${symbol.name}: پوزیشن باز شد (سفارش: ${result.orderId}, مقدار: ${result.quantity})`, 'success', symbol.name);
             
-            // 13. Fetch balance AFTER opening position (for updated balance info in notification)
+            // ===================================================================
+            // ✓ Step 14: Fetch updated balance + Send Bale notification
+            // ===================================================================
             let updatedBalance = balanceForMargin;
             try {
                 updatedBalance = await this.fetchBalance();
@@ -2345,7 +2440,10 @@ class AutomationManager {
 
     /**
      * ✓ بارگذاری تاریخچه پوزیشن‌ها برای تکمیل ستون «آخرین ورود» در جدول پوزیشن‌های باز
-     * پیش از نمایش پوزیشن‌های باز فراخوانی می‌شود
+     *
+     * ✓ اصلاح Race Condition: این متد دیگر this.currentSymbolHistory را بازنویسی نمی‌کند.
+     *   به جای آن، تاریخچه هر نماد را به getLastEntryPrice به‌عنوان پارامتر پاس می‌دهد.
+     *   این از تداخل داده‌های نمادهای مختلف جلوگیری می‌کند.
      */
     async loadHistoryForOpenPositions() {
         try {
@@ -2375,20 +2473,14 @@ class AutomationManager {
             }).filter(s => s))];
             
             // Fetch history for each symbol and populate lastEntryPriceCache
+            // ✓ IMPORTANT: do NOT modify this.currentSymbolHistory — use local variable
             for (const symbol of symbols) {
                 try {
                     const history = await this.fetchPositionHistory(symbol);
                     if (Array.isArray(history) && history.length > 0) {
-                        // Store in currentSymbolHistory temporarily
-                        this.currentSymbolHistory = history;
-                        // Populate cache for both Long and Short directions
-                        this.getLastEntryPrice(symbol, 'long');
-                        this.getLastEntryPrice(symbol, 'short');
-                        // Also cache with full symbol name
-                        const fullSym = `${symbol}-SWAP-USDT`;
-                        if (this.lastEntryPriceCache[symbol]) {
-                            this.lastEntryPriceCache[fullSym] = this.lastEntryPriceCache[symbol];
-                        }
+                        // ✓ Pass history as parameter — do NOT overwrite this.currentSymbolHistory
+                        this.getLastEntryPrice(symbol, 'long', history);
+                        this.getLastEntryPrice(symbol, 'short', history);
                     }
                 } catch (e) {
                     console.warn(`[loadHistoryForOpenPositions] Failed to load history for ${symbol}:`, e);
@@ -2590,7 +2682,9 @@ class AutomationManager {
     }
 
     /**
-     * نمایش پوزیشن‌های باز در جدول فشرده صفحه اتوماسیون
+     * ✓ نمایش پوزیشن‌های باز در جدول فشرده صفحه اتوماسیون
+     * ✓ سورت بر حسب زمان باز شدن پوزیشن به صورت نزولی (جدیدترین در بالا)
+     * ✓ ستون «آخرین ورود» از lastEntryPriceCache محاسبه می‌شود
      */
     displayOpenPositions(positions) {
         const tbody = document.getElementById('positions-table-body');
@@ -2619,15 +2713,20 @@ class AutomationManager {
             return;
         }
 
+        // ✓ Sort positions by open time DESC (newest first)
+        // Toobit positions have 'time' or 'updateTime' or 'openTime' field
+        const sortedPositions = [...positions].sort((a, b) => {
+            const ta = new Date(a.time || a.openTime || a.updateTime || a.createdTime || 0).getTime();
+            const tb = new Date(b.time || b.openTime || b.updateTime || b.createdTime || 0).getTime();
+            return tb - ta; // descending
+        });
+
         tbody.innerHTML = '';
-        positions.forEach(pos => {
+        sortedPositions.forEach(pos => {
             const row = document.createElement('tr');
             row.className = 'border-b border-gray-700 hover:bg-gray-700';
 
             // ✓ Fix direction detection: use pos.side field from Toobit API
-            // Toobit open positions have: side ("LONG"/"SHORT") or posSide ("LONG"/"SHORT")
-            // The dashboard (trading.html) uses: (pos.side || '').toUpperCase().includes('LONG') → Long else Short
-            // We follow the same logic for consistency
             let side;
             const sideStr = (pos.side || '').toUpperCase();
             const posSide = (pos.posSide || '').toUpperCase();
@@ -2637,7 +2736,6 @@ class AutomationManager {
             } else if (sideStr === 'SHORT' || sideStr.includes('SHORT') || posSide === 'SHORT') {
                 side = 'Short';
             } else {
-                // Fallback: infer from amount being positive/negative (short positions have negative qty)
                 const qty = parseFloat(pos.available || pos.amount || pos.positionAmt || 0);
                 if (qty < 0) {
                     side = 'Short';
@@ -2653,9 +2751,8 @@ class AutomationManager {
             const profitRate = parseFloat(pos.profitRate || 0) * 100;
             const profitRateClass = profitRate > 0 ? 'text-green-400' : profitRate < 0 ? 'text-red-400' : '';
             
-            // ✓ Get last entry price from position history for this symbol
+            // ✓ Get last entry price from lastEntryPriceCache (populated by loadHistoryForOpenPositions)
             const symbolName = (pos.symbol || '').replace('-SWAP-USDT', '').replace('USDT', '');
-            const direction = side === 'Long' ? 'long' : 'short';
             const lastEntry = this.lastEntryPriceCache[pos.symbol] || this.lastEntryPriceCache[symbolName] || '-';
 
             row.innerHTML = `
@@ -2694,22 +2791,52 @@ class AutomationManager {
     }
 
     /**
-     * آخرین قیمت ورود هم‌جهت از تاریخچه
-     * مرتب‌سازی chronological، فیلتر OPEN هم‌جهت
+     * ✓ آخرین قیمت ورود هم‌جهت از تاریخچه (منطق جدید)
+     *
+     * نحوه محاسبه جدید:
+     *   ۱. آخرین ردیف جدول «سوابق پوزیشن‌ها» (جدیدترین/بزرگ‌ترین مقدار در ستون «زمان») را پیدا کن
+     *   ۲. مقدار ستون «سمت» آن ردیف را بررسی کن:
+     *      - اگر از جنس OPEN بود (BUY_OPEN یا SELL_OPEN) → مقدار ستون «قیمت» آن ردیف را برگردان
+     *      - اگر از جنس CLOSE بود (BUY_CLOSE یا SELL_CLOSE) → null برگردان (پوزیشن بازی وجود ندارد)
+     *
+     * @param symbol - نماد (برای cache)
+     * @param direction - جهت ('long' یا 'short') — برای فیلتر BUY/SELL
+     * @param historyParam - آرایه تاریخچه (اختیاری — اگر ارائه نشود از this.currentSymbolHistory استفاده می‌شود)
      */
-    getLastEntryPrice(symbol, direction) {
-        if (!this.currentSymbolHistory || this.currentSymbolHistory.length === 0) return null;
-        
+    getLastEntryPrice(symbol, direction, historyParam) {
+        const history = historyParam || this.currentSymbolHistory;
+        if (!history || history.length === 0) return null;
+
         const sidePrefix = direction === 'long' ? 'BUY' : 'SELL';
-        // Sort chronologically (ascending by time)
-        const sorted = [...this.currentSymbolHistory].sort((a, b) => a.time - b.time);
-        // Find last OPEN trade matching direction
-        const openTrades = sorted.filter(t => t.side && t.side.includes(sidePrefix) && t.side.includes('OPEN'));
-        if (openTrades.length === 0) return null;
-        
-        const lastEntry = openTrades[openTrades.length - 1];
-        this.lastEntryPriceCache[symbol] = lastEntry.price;
-        return lastEntry.price;
+
+        // Sort chronologically (ascending by time) to find the latest row
+        const sorted = [...history].sort((a, b) => {
+            const ta = a.time instanceof Date ? a.time.getTime() : new Date(a.time).getTime();
+            const tb = b.time instanceof Date ? b.time.getTime() : new Date(b.time).getTime();
+            return ta - tb;
+        });
+
+        // Find the LATEST row (newest time) that matches the direction (BUY for long, SELL for short)
+        // and is an OPEN trade (BUY_OPEN or SELL_OPEN)
+        let latestOpen = null;
+        for (let i = sorted.length - 1; i >= 0; i--) {
+            const t = sorted[i];
+            if (t.side && t.side.includes(sidePrefix) && t.side.includes('OPEN')) {
+                latestOpen = t;
+                break;
+            }
+        }
+
+        if (latestOpen) {
+            this.lastEntryPriceCache[symbol] = latestOpen.price;
+            // Also cache with full symbol name (DOT-SWAP-USDT)
+            const fullSym = `${symbol}-SWAP-USDT`;
+            this.lastEntryPriceCache[fullSym] = latestOpen.price;
+            return latestOpen.price;
+        }
+
+        // No OPEN trade found → no open position → return null
+        return null;
     }
 
     /**
@@ -2884,6 +3011,7 @@ class AutomationManager {
 
     /**
      * راه‌اندازی drag & drop برای جدول نمادها
+     * ✓ پشتیبانی از mouse (desktop) و touch (موبایل)
      */
     setupDragAndDrop() {
         const tbody = document.getElementById('symbols-table-body');
@@ -2891,6 +3019,7 @@ class AutomationManager {
 
         let draggedRow = null;
 
+        // ── Desktop: HTML5 Drag and Drop API (mouse) ────────────────────
         tbody.querySelectorAll('tr[draggable]').forEach(row => {
             row.addEventListener('dragstart', (e) => {
                 draggedRow = row;
@@ -2939,6 +3068,128 @@ class AutomationManager {
                 this.renderSymbolsTable();
                 this.log('ترتیب نمادها تغییر کرد', 'info');
             });
+        });
+
+        // ── Mobile: Touch Events API ────────────────────────────────────
+        // HTML5 Drag and Drop doesn't work on touch devices, so we add
+        // touch event handlers to enable drag-and-drop on mobile.
+        this.setupTouchDragAndDrop(tbody);
+    }
+
+    /**
+     * ✓ راه‌اندازی drag & drop لمسی برای جدول نمادها (موبایل)
+     * از touchstart, touchmove, touchend استفاده می‌کند
+     */
+    setupTouchDragAndDrop(tbody) {
+        if (!tbody) return;
+
+        let touchDraggedRow = null;
+        let touchClone = null;
+        let touchStartY = 0;
+        let touchStartX = 0;
+        let touchMoved = false;
+
+        tbody.querySelectorAll('tr[draggable]').forEach(row => {
+            // ✓ Prevent default drag behavior on touch (allows our custom touch handling)
+            row.addEventListener('touchstart', (e) => {
+                // Only handle single-touch (not multi-touch/zoom)
+                if (e.touches.length !== 1) return;
+
+                const touch = e.touches[0];
+                touchStartY = touch.clientY;
+                touchStartX = touch.clientX;
+                touchMoved = false;
+                touchDraggedRow = row;
+
+                // Don't prevent default on touchstart — allow scrolling to start
+                // We'll only prevent default if the user moves enough to indicate a drag
+            }, { passive: true });
+
+            row.addEventListener('touchmove', (e) => {
+                if (!touchDraggedRow || e.touches.length !== 1) return;
+
+                const touch = e.touches[0];
+                const deltaY = touch.clientY - touchStartY;
+                const deltaX = touch.clientX - touchStartX;
+
+                // ✓ Only start drag if vertical movement is dominant (not horizontal scroll)
+                // and movement is more than 10px (avoid accidental drags on tap)
+                if (!touchMoved && Math.abs(deltaY) > 10 && Math.abs(deltaY) > Math.abs(deltaX)) {
+                    touchMoved = true;
+                    // Now prevent default to stop scrolling
+                    e.preventDefault();
+
+                    // Create a visual clone that follows the finger
+                    if (touchClone) touchClone.remove();
+                    touchClone = row.cloneNode(true);
+                    touchClone.style.position = 'fixed';
+                    touchClone.style.pointerEvents = 'none';
+                    touchClone.style.zIndex = '9999';
+                    touchClone.style.opacity = '0.8';
+                    touchClone.style.background = 'rgba(30, 30, 60, 0.95)';
+                    touchClone.style.width = row.offsetWidth + 'px';
+                    document.body.appendChild(touchClone);
+
+                    row.classList.add('dragging');
+                }
+
+                if (touchMoved && touchClone) {
+                    e.preventDefault();
+                    // Position the clone under the finger
+                    touchClone.style.left = (touch.clientX - row.offsetWidth / 2) + 'px';
+                    touchClone.style.top = (touch.clientY - 20) + 'px';
+
+                    // Highlight the row under the finger
+                    const elementUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+                    const targetRow = elementUnder ? elementUnder.closest('tr[draggable]') : null;
+
+                    // Clear previous highlights
+                    tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over'));
+                    if (targetRow && targetRow !== touchDraggedRow) {
+                        targetRow.classList.add('drag-over');
+                    }
+                }
+            }, { passive: false });
+
+            row.addEventListener('touchend', (e) => {
+                if (!touchDraggedRow) return;
+
+                if (touchClone) {
+                    touchClone.remove();
+                    touchClone = null;
+                }
+
+                touchDraggedRow.classList.remove('dragging');
+                tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over'));
+
+                if (touchMoved) {
+                    // Find the row where the finger was released
+                    const touch = e.changedTouches[0];
+                    if (touch) {
+                        const elementUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+                        const targetRow = elementUnder ? elementUnder.closest('tr[draggable]') : null;
+
+                        if (targetRow && targetRow !== touchDraggedRow) {
+                            const draggedId = parseInt(touchDraggedRow.dataset.symbolId);
+                            const targetId = parseInt(targetRow.dataset.symbolId);
+
+                            const draggedIndex = this.symbols.findIndex(s => s.id === draggedId);
+                            const targetIndex = this.symbols.findIndex(s => s.id === targetId);
+
+                            if (draggedIndex !== -1 && targetIndex !== -1) {
+                                const [moved] = this.symbols.splice(draggedIndex, 1);
+                                this.symbols.splice(targetIndex, 0, moved);
+                                this.saveSymbols();
+                                this.renderSymbolsTable();
+                                this.log('ترتیب نمادها تغییر کرد (لمسی)', 'info');
+                            }
+                        }
+                    }
+                }
+
+                touchDraggedRow = null;
+                touchMoved = false;
+            }, { passive: true });
         });
     }
 
@@ -3083,7 +3334,14 @@ class AutomationManager {
                     'SUCCESS': { text: 'موفق', color: 'text-green-400', icon: 'fa-check-circle' }
                 };
 
-                result.data.reverse().forEach(log => {
+                // ✓ Sort by created_at DESC (newest first)
+                const sortedLogs = [...result.data].sort((a, b) => {
+                    const ta = new Date(a.created_at || 0).getTime();
+                    const tb = new Date(b.created_at || 0).getTime();
+                    return tb - ta; // descending
+                });
+
+                sortedLogs.forEach(log => {
                     const type = statusMap[log.status] || { text: 'اطلاع', color: 'text-blue-400', icon: 'fa-info-circle' };
                     const timestamp = new Date(log.created_at).toLocaleString('fa-IR', {
                         year: 'numeric', month: '2-digit', day: '2-digit',
