@@ -155,6 +155,12 @@ class AutomationManager {
             allowedErrors: 3,
             leverage: 4,
             signalExpirationHours: 6,
+            // ✓ مورد ۶: حداقل تعداد کندل هم‌جهت بعد از سیگنال (0 = غیرفعال)
+            minSameDirectionCandles: 0,
+            // ✓ مورد ۷: تعداد چرخه در هر بار زدن دکمه «یک چرخه» (1 = فقط یک چرخه)
+            cyclesPerRun: 1,
+            // ✓ مورد ۸: تعداد رکوردهای ارسالی در نوتیف تاریخچه پوزیشن‌های بسته
+            closedPositionsNotifyCount: 10,
             baleToken: '',
             baleChatId: ''
         };
@@ -210,6 +216,12 @@ class AutomationManager {
             allowedErrors: parseInt(document.getElementById('allowed-errors').value),
             leverage: parseInt(document.getElementById('leverage').value),
             signalExpirationHours: parseInt(document.getElementById('signal-expiration').value) || 6,
+            // ✓ مورد ۶: حداقل تعداد کندل هم‌جهت
+            minSameDirectionCandles: parseInt(document.getElementById('min-same-direction-candles').value) || 0,
+            // ✓ مورد ۷: تعداد چرخه در هر بار زدن دکمه
+            cyclesPerRun: parseInt(document.getElementById('cycles-per-run').value) || 1,
+            // ✓ مورد ۸: تعداد رکوردهای نوتیف تاریخچه
+            closedPositionsNotifyCount: parseInt(document.getElementById('closed-positions-notify-count').value) || 10,
             baleToken: document.getElementById('bale-token').value.trim(),
             baleChatId: document.getElementById('bale-chat-id').value.trim()
         };
@@ -242,6 +254,10 @@ class AutomationManager {
         document.getElementById('allowed-errors').value = this.settings.allowedErrors;
         document.getElementById('leverage').value = this.settings.leverage;
         document.getElementById('signal-expiration').value = this.settings.signalExpirationHours;
+        // ✓ فیلدهای جدید
+        document.getElementById('min-same-direction-candles').value = this.settings.minSameDirectionCandles || 0;
+        document.getElementById('cycles-per-run').value = this.settings.cyclesPerRun || 1;
+        document.getElementById('closed-positions-notify-count').value = this.settings.closedPositionsNotifyCount || 10;
         document.getElementById('bale-token').value = this.settings.baleToken || '';
         document.getElementById('bale-chat-id').value = this.settings.baleChatId || '';
 
@@ -559,7 +575,9 @@ class AutomationManager {
                     tp: data[i].tp,
                     sl: data[i].sl,
                     orderId: data[i].clientOrderId,
-                    symbol: symbol
+                    symbol: symbol,
+                    // ✓ مورد ۶: candle index — used by min-same-direction-candles risk control
+                    candleIndex: i
                 });
             } else if (condShort) {
                 data[i].signal = 'Short';
@@ -581,7 +599,9 @@ class AutomationManager {
                     tp: data[i].tp,
                     sl: data[i].sl,
                     orderId: data[i].clientOrderId,
-                    symbol: symbol
+                    symbol: symbol,
+                    // ✓ مورد ۶: candle index — used by min-same-direction-candles risk control
+                    candleIndex: i
                 });
             }
         }
@@ -598,10 +618,21 @@ class AutomationManager {
      * محاسبه وضعیت سیگنال (در انتظار / باز شده / بسته شده)
      * (کپی از داشبورد)
      */
+    /**
+     * ✓ محاسبه وضعیت سیگنال (در انتظار / باز شده / باز نشده / منقضی شده)
+     *
+     * ✓ منطق انقضای سیگنال (مورد ۴):
+     *   اگر اختلاف زمان فعلی و زمان صدور سیگنال بیشتر از signalExpirationHours باشد
+     *   و پوزیشن هم‌جهتی برای آن نماد باز نشده باشد → وضعیت: «منقضی شده»
+     */
     calculateSignalStatus(signal) {
         // Handle case where currentSymbolHistory is not yet loaded
         if (!this.currentSymbolHistory || !Array.isArray(this.currentSymbolHistory)) {
             const isLatest = this.signals.indexOf(signal) === this.signals.length - 1;
+            // ✓ Check expiration even without history
+            if (isLatest && this.isSignalExpired(signal)) {
+                return { text: 'منقضی شده', color: 'text-orange-400' };
+            }
             return {
                 text: isLatest ? 'در انتظار' : 'باز نشده',
                 color: isLatest ? 'text-yellow-400' : 'text-gray-400'
@@ -614,14 +645,6 @@ class AutomationManager {
         const openPositions = this.currentSymbolHistory.filter(pos => 
             pos.side && pos.side.includes('OPEN') && pos.side.includes(signalDirection)
         );
-        
-        if (openPositions.length === 0) {
-            const isLatest = this.signals.indexOf(signal) === this.signals.length - 1;
-            return {
-                text: isLatest ? 'در انتظار' : 'باز نشده',
-                color: isLatest ? 'text-yellow-400' : 'text-gray-400'
-            };
-        }
         
         const currentIndex = this.signals.indexOf(signal);
         const nextSignal = currentIndex < this.signals.length - 1 ? this.signals[currentIndex + 1] : null;
@@ -636,7 +659,14 @@ class AutomationManager {
         });
         
         if (matchingPositions.length === 0) {
+            // No matching position found
             const isLatest = currentIndex === this.signals.length - 1;
+            
+            // ✓ Check if signal is expired (مورد ۴)
+            if (isLatest && this.isSignalExpired(signal)) {
+                return { text: 'منقضی شده', color: 'text-orange-400' };
+            }
+            
             return {
                 text: isLatest ? 'در انتظار' : 'باز نشده',
                 color: isLatest ? 'text-yellow-400' : 'text-gray-400'
@@ -657,6 +687,21 @@ class AutomationManager {
             }),
             color: 'text-green-400'
         };
+    }
+
+    /**
+     * ✓ بررسی انقضای سیگنال (مورد ۴)
+     *
+     * اگر اختلاف زمان فعلی و زمان صدور سیگنال بیشتر از signalExpirationHours باشد → true
+     */
+    isSignalExpired(signal) {
+        if (!signal || !signal.timestamp) return false;
+        const signalTime = signal.timestamp instanceof Date 
+            ? signal.timestamp.getTime() 
+            : new Date(signal.timestamp).getTime();
+        const now = Date.now();
+        const expirationMs = (this.settings.signalExpirationHours || 6) * 60 * 60 * 1000;
+        return (now - signalTime) > expirationMs;
     }
 
     /**
@@ -888,13 +933,17 @@ class AutomationManager {
             signalType: latestSignal.type,
             signalTime: latestSignal.timestamp,
             statusText: status.text,
-            isPending: status.text === 'در انتظار'
+            isPending: status.text === 'در انتظار',
+            isExpired: status.text === 'منقضی شده'
         });
         
         // Only select if the latest signal is in "در انتظار" status
+        // ✓ Expired signals ("منقضی شده") are NOT selected — they can't be traded
         if (status.text === 'در انتظار') {
             this.selectedSignal = latestSignal;
             console.log('[UpdateSelectedSignal] Signal selected for entry');
+        } else if (status.text === 'منقضی شده') {
+            console.log('[UpdateSelectedSignal] Signal is expired — not selected for entry');
         } else {
             console.log('[UpdateSelectedSignal] No signal ready - status is not "در انتظار"');
         }
@@ -1781,6 +1830,113 @@ class AutomationManager {
             }
 
             // ===================================================================
+            // ✓ مورد ۶: Min Same-Direction Candles Control
+            //   When minSameDirectionCandles > 0, check that the N candles AFTER
+            //   the signal candle are all the same direction as the signal:
+            //     - Long signal  → all N candles must be GREEN (close > open)
+            //     - Short signal → all N candles must be RED   (close < open)
+            //   If NOT enough candles exist after the signal (signal too recent)
+            //   → REJECT (wait for more candles to form).
+            //   If even one candle is opposite → REJECT.
+            //   Placement: AFTER closeOppositePositions (step 8) and BEFORE step 9
+            //   (refresh history). This control only blocks position OPENING.
+            // ===================================================================
+            const minSameDir = this.settings.minSameDirectionCandles || 0;
+            if (minSameDir > 0) {
+                const sigIdx = typeof this.selectedSignal.candleIndex === 'number' ? this.selectedSignal.candleIndex : -1;
+                if (sigIdx < 0) {
+                    this.log(`${symbol.name}: شماره کندل سیگنال نامشخص — کنترل کندل هم‌جهت skip شد`, 'warning', symbol.name);
+                } else {
+                    const candlesAfterSignal = (this.currentSymbolData ? this.currentSymbolData.length : 0) - sigIdx - 1;
+                    if (candlesAfterSignal < minSameDir) {
+                        // Not enough candles after the signal yet
+                        const checkedIdxsNotEnough = [];
+                        for (let k = 1; k <= candlesAfterSignal; k++) checkedIdxsNotEnough.push(sigIdx + k);
+                        const checkedListNotEnough = checkedIdxsNotEnough.length > 0 ? checkedIdxsNotEnough.join('، ') : '—';
+                        const mathNotEnough =
+                            `سیگنال روی کندل ${sigIdx} صادر شده\n` +
+                            `حداقل کندل هم‌جهت مورد نیاز = ${minSameDir}\n` +
+                            `کندل‌های موجود بعد از سیگنال: ${candlesAfterSignal} (کندل ${checkedListNotEnough})\n` +
+                            `نتیجه: تعداد کندل کافی نیست — صبر کنید تا کندل‌های بیشتری تشکیل شوند`;
+                        this.log(`${symbol.name}: کندل‌های هم‌جهت کافی نیست (${candlesAfterSignal} < ${minSameDir}) — رد شد`, 'warning', symbol.name);
+                        await this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, {
+                            controlName: 'حداقل کندل هم‌جهت (Min Same-Direction Candles)',
+                            math: mathNotEnough
+                        });
+                        symbol.status = 'waiting';
+                        symbol.lastCycleTime = Date.now();
+                        symbol.errorCount = 0;
+                        this.saveSymbols();
+                        this.renderSymbolsTable();
+                        this.currentCycleSymbol = null;
+                        return false;
+                    }
+
+                    // Check each of the N candles after the signal
+                    const checkedIdxs = [];
+                    for (let k = 1; k <= minSameDir; k++) checkedIdxs.push(sigIdx + k);
+                    const candleLines = [];
+                    let failedIdx = null;
+                    let failedReason = '';
+                    for (let k = 1; k <= minSameDir; k++) {
+                        const ci = sigIdx + k;
+                        const c = this.currentSymbolData[ci];
+                        if (!c) {
+                            // Should not happen, but guard
+                            candleLines.push(`کندل ${ci}: موجود نیست ✗`);
+                            failedIdx = ci;
+                            failedReason = 'موجود نیست';
+                            break;
+                        }
+                        const isGreen = c.close > c.open;
+                        const isRed = c.close < c.open;
+                        if (this.selectedSignal.type === 'Long') {
+                            if (isGreen) {
+                                candleLines.push(`کندل ${ci}: سبز (close > open) ✓`);
+                            } else {
+                                candleLines.push(`کندل ${ci}: قرمز (close < open) ✗ — کندل مخالف سیگنال لانگ`);
+                                failedIdx = ci;
+                                failedReason = 'قرمز (close < open) — کندل مخالف سیگنال لانگ';
+                                break;
+                            }
+                        } else {
+                            if (isRed) {
+                                candleLines.push(`کندل ${ci}: قرمز (close < open) ✓`);
+                            } else {
+                                candleLines.push(`کندل ${ci}: سبز (close > open) ✗ — کندل مخالف سیگنال شورت`);
+                                failedIdx = ci;
+                                failedReason = 'سبز (close > open) — کندل مخالف سیگنال شورت';
+                                break;
+                            }
+                        }
+                    }
+
+                    if (failedIdx !== null) {
+                        const mathFail =
+                            `سیگنال روی کندل ${sigIdx} صادر شده\n` +
+                            `حداقل کندل هم‌جهت مورد نیاز = ${minSameDir}\n` +
+                            `کندل‌های بررسی شده: ${checkedIdxs.join('، ')}\n` +
+                            `${candleLines.join('\n')}\n` +
+                            `نتیجه: شرایط برقرار نیست — پوزیشن باز نشد`;
+                        this.log(`${symbol.name}: کندل مخالف سیگنال یافت شد (کندل ${failedIdx}: ${failedReason}) — رد شد`, 'warning', symbol.name);
+                        await this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, {
+                            controlName: 'حداقل کندل هم‌جهت (Min Same-Direction Candles)',
+                            math: mathFail
+                        });
+                        symbol.status = 'waiting';
+                        symbol.lastCycleTime = Date.now();
+                        symbol.errorCount = 0;
+                        this.saveSymbols();
+                        this.renderSymbolsTable();
+                        this.currentCycleSymbol = null;
+                        return false;
+                    }
+
+                    this.log(`${symbol.name}: ${minSameDir} کندل هم‌جهت تأیید شد (کندل‌های ${checkedIdxs.join('، ')})`, 'success', symbol.name);
+                }
+            }
+
+            // ===================================================================
             // ✓ Step 9 (NEW): Refresh "سوابق پوزیشن‌ها" (position history) table
             // Fetch fresh history AFTER closing opposite positions so the history
             // reflects the latest state (including any newly-closed positions).
@@ -1883,19 +2039,14 @@ class AutomationManager {
                 this.log(`${symbol.name}: دارایی امن کافی نیست (آزاد ${freeBalance} - مارجین ${newMargin} = ${safeCheck.projectedFree.toFixed(2)} < دارایی امن ${safeCheck.safeAmount.toFixed(2)}) — رد شد`, 'warning', symbol.name);
                 await this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, {
                     controlName: 'دارایی امن (Safe Asset)',
-                    description:
-                        `موجودی آزاد حساب پس از کسر مارجین ورودی باید حداقل برابر با دارایی امن باشد.\n` +
-                        `دارایی امن = کل دارایی × درصد دارایی امن\n` +
-                        `شرط عبور: موجودی آزاد پیش‌بینی‌شده ≥ دارایی امن`,
-                    math:
+                                        math:
                         `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
                         `موجودی آزاد = ${freeBalance.toFixed(4)} USDT\n` +
                         `مارجین ورودی جدید = ${newMargin.toFixed(4)} USDT\n` +
                         `درصد دارایی امن = ${this.settings.safeAssetPercent}%\n` +
                         `دارایی امن = ${totalAssets.toFixed(4)} × ${this.settings.safeAssetPercent}% = ${safeCheck.safeAmount.toFixed(4)} USDT\n` +
                         `موجودی آزاد پیش‌بینی‌شده = ${freeBalance.toFixed(4)} - ${newMargin.toFixed(4)} = ${safeCheck.projectedFree.toFixed(4)} USDT\n` +
-                        `${safeCheck.projectedFree.toFixed(4)} < ${safeCheck.safeAmount.toFixed(4)} ✗`,
-                    result: 'موجودی آزاد پس از کسر مارجین کمتر از دارایی امن است — پوزیشن باز نشد'
+                        `${safeCheck.projectedFree.toFixed(4)} < ${safeCheck.safeAmount.toFixed(4)} ✗`
                 });
                 symbol.status = 'waiting';
                 symbol.lastCycleTime = Date.now();
@@ -1923,9 +2074,9 @@ class AutomationManager {
                 this.log(`${symbol.name}: نماد در پوزیشن‌های باز یافت شد — اجرای کنترل‌های فاصله قیمت و سقف مارجین`, 'info', symbol.name);
 
                 // ── Control 3: Price Distance Check ──────────────────────────────
-                // ✓ Read "آخرین ورود" from lastEntryPriceCache (populated in step 10)
+                // ✓ Read "آخرین ورود" from lastEntryPriceCache (keyed by symbol:direction)
                 const signalDirection = this.selectedSignal.type === 'Long' ? 'long' : 'short';
-                const lastEntryPrice = this.lastEntryPriceCache[symbol.name] || this.lastEntryPriceCache[fullSymbolName] || null;
+                const lastEntryPrice = this.lastEntryPriceCache[`${symbol.name}:${signalDirection}`] || this.lastEntryPriceCache[`${fullSymbolName}:${signalDirection}`] || null;
 
                 if (lastEntryPrice !== null && lastEntryPrice !== undefined) {
                     const currentPrice = price;
@@ -1945,20 +2096,14 @@ class AutomationManager {
                             : `فاصله = (فعلی - آخرین ورود) / آخرین ورود × 100\nفاصله = (${currentPrice} - ${lastEntryPrice}) / ${lastEntryPrice} × 100`;
                         await this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, {
                             controlName: 'فاصله قیمت (Price Distance)',
-                            description:
-                                `قیمت فعلی باید فاصله کافی از آخرین نقطه ورود هم‌جهت داشته باشد.\n` +
-                                `برای لانگ: قیمت فعلی باید ارزان‌تر از آخرین ورود باشد\n` +
-                                `برای شورت: قیمت فعلی باید گران‌تر از آخرین ورود باشد\n` +
-                                `شرط عبور: فاصله ≥ حداقل فاصله قیمت`,
-                            math:
+                                                        math:
                                 `آخرین قیمت ورود هم‌جهت = ${lastEntryPrice} (از ستون «آخرین ورود» جدول پوزیشن‌های باز)\n` +
                                 `قیمت فعلی = ${currentPrice}\n` +
                                 `جهت سیگنال = ${this.selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'}\n` +
                                 `${distanceFormula}\n` +
                                 `فاصله = ${distancePercent.toFixed(4)}%\n` +
                                 `حداقل فاصله قیمت = ${this.settings.minPriceDistancePercent}%\n` +
-                                `${distancePercent.toFixed(4)}% < ${this.settings.minPriceDistancePercent}% ✗`,
-                            result: 'فاصله قیمت فعلی از آخرین ورود هم‌جهت کمتر از حد مجاز است — پوزیشن باز نشد'
+                                `${distancePercent.toFixed(4)}% < ${this.settings.minPriceDistancePercent}% ✗`
                         });
                         symbol.status = 'waiting';
                         symbol.lastCycleTime = Date.now();
@@ -1982,19 +2127,14 @@ class AutomationManager {
                     this.log(`${symbol.name}: سقف مارجین نماد (${totalSymbolMargin.toFixed(2)} > ${maxMarginPerSymbol.toFixed(2)} USDT) — رد شد`, 'warning', symbol.name);
                     await this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, {
                         controlName: 'سقف مارجین نماد (Max Margin Per Symbol)',
-                        description:
-                            `مجموع مارجین پوزیشن‌های باز هم‌جهت یک نماد به علاوه مارجین ورودی جدید نباید از سقف مجاز فراتر کند.\n` +
-                            `سقف مارجین نماد = کل دارایی × درصد سقف مارجین نماد\n` +
-                            `شرط عبور: مجموع مارجین نماد ≤ سقف مارجین نماد`,
-                        math:
+                                                math:
                             `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
                             `درصد سقف مارجین نماد = ${this.settings.maxMarginPerSymbolPercent}%\n` +
                             `سقف مارجین نماد = ${totalAssets.toFixed(4)} × ${this.settings.maxMarginPerSymbolPercent}% = ${maxMarginPerSymbol.toFixed(4)} USDT\n` +
                             `مارجین موجود نماد = ${existingSymbolMargin.toFixed(4)} USDT (از ستون «مارجین» جدول پوزیشن‌های باز)\n` +
                             `مارجین ورودی جدید = ${newMargin.toFixed(4)} USDT\n` +
                             `مجموع مارجین نماد = ${existingSymbolMargin.toFixed(4)} + ${newMargin.toFixed(4)} = ${totalSymbolMargin.toFixed(4)} USDT\n` +
-                            `${totalSymbolMargin.toFixed(4)} > ${maxMarginPerSymbol.toFixed(4)} ✗`,
-                        result: 'مجموع مارجین نماد از سقف مجاز فراتر رفته — پوزیشن باز نشد'
+                            `${totalSymbolMargin.toFixed(4)} > ${maxMarginPerSymbol.toFixed(4)} ✗`
                     });
                     symbol.status = 'waiting';
                     symbol.lastCycleTime = Date.now();
@@ -2018,17 +2158,12 @@ class AutomationManager {
                 this.log(`${symbol.name}: مارجین نهایی صفر یا منفی — رد شد`, 'warning', symbol.name);
                 await this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, {
                     controlName: 'مارجین مثبت (Positive Margin)',
-                    description:
-                        `مارجین ورودی محاسبه‌شده باید بزرگتر از صفر باشد.\n` +
-                        `مارجین = کل دارایی × درصد مارجین ورودی\n` +
-                        `شرط عبور: مارجین نهایی > 0`,
-                    math:
+                                        math:
                         `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
                         `درصد مارجین ورودی = ${this.settings.entryMarginPercent}%\n` +
                         `مارجین محاسبه‌شده = ${totalAssets.toFixed(4)} × ${this.settings.entryMarginPercent}% = ${newMargin.toFixed(4)} USDT\n` +
                         `مارجین نهایی = max(${newMargin.toFixed(4)}, 0) = ${finalMargin.toFixed(4)} USDT\n` +
-                        `${finalMargin.toFixed(4)} ≤ 0 ✗`,
-                    result: 'مارجین نهایی صفر یا منفی است — پوزیشن باز نشد'
+                        `${finalMargin.toFixed(4)} ≤ 0 ✗`
                 });
                 symbol.status = 'waiting';
                 symbol.lastCycleTime = Date.now();
@@ -2515,13 +2650,9 @@ class AutomationManager {
             this.currentSymbolHistory = Array.isArray(history) ? history : [];
             this.log(`${symbol}: ${this.currentSymbolHistory.length} معامله یافت شد`, 'success', symbol);
             
-            // Populate last entry price cache from history
+            // ✓ Populate last entry price cache from history (keyed by symbol:direction)
             this.getLastEntryPrice(symbol, 'long');
             this.getLastEntryPrice(symbol, 'short');
-            const fullSym = `${symbol}-SWAP-USDT`;
-            if (this.lastEntryPriceCache[symbol]) {
-                this.lastEntryPriceCache[fullSym] = this.lastEntryPriceCache[symbol];
-            }
             
             // Populate history table
             this.populateHistoryTable();
@@ -2751,9 +2882,13 @@ class AutomationManager {
             const profitRate = parseFloat(pos.profitRate || 0) * 100;
             const profitRateClass = profitRate > 0 ? 'text-green-400' : profitRate < 0 ? 'text-red-400' : '';
             
-            // ✓ Get last entry price from lastEntryPriceCache (populated by loadHistoryForOpenPositions)
+            // ✓ Get last entry price from lastEntryPriceCache (keyed by symbol:direction)
+            // The direction is determined by the position's side (Long/Short)
             const symbolName = (pos.symbol || '').replace('-SWAP-USDT', '').replace('USDT', '');
-            const lastEntry = this.lastEntryPriceCache[pos.symbol] || this.lastEntryPriceCache[symbolName] || '-';
+            const posDirection = side === 'Long' ? 'long' : 'short';
+            const lastEntry = this.lastEntryPriceCache[`${pos.symbol}:${posDirection}`] 
+                || this.lastEntryPriceCache[`${symbolName}:${posDirection}`] 
+                || '-';
 
             row.innerHTML = `
                 <td class="px-2 py-2" style="font-family: 'Vazirmatn', sans-serif;">${pos.symbol || '-'}</td>
@@ -2799,6 +2934,8 @@ class AutomationManager {
      *      - اگر از جنس OPEN بود (BUY_OPEN یا SELL_OPEN) → مقدار ستون «قیمت» آن ردیف را برگردان
      *      - اگر از جنس CLOSE بود (BUY_CLOSE یا SELL_CLOSE) → null برگردان (پوزیشن بازی وجود ندارد)
      *
+     * ✓ Cache با کلید symbol:direction ذخیره می‌شود تا long و short یکدیگر را بازنویسی نکنند
+     *
      * @param symbol - نماد (برای cache)
      * @param direction - جهت ('long' یا 'short') — برای فیلتر BUY/SELL
      * @param historyParam - آرایه تاریخچه (اختیاری — اگر ارائه نشود از this.currentSymbolHistory استفاده می‌شود)
@@ -2828,10 +2965,11 @@ class AutomationManager {
         }
 
         if (latestOpen) {
-            this.lastEntryPriceCache[symbol] = latestOpen.price;
-            // Also cache with full symbol name (DOT-SWAP-USDT)
-            const fullSym = `${symbol}-SWAP-USDT`;
-            this.lastEntryPriceCache[fullSym] = latestOpen.price;
+            // ✓ Cache with symbol:direction key to prevent long/short from overwriting each other
+            const cacheKey = `${symbol}:${direction}`;
+            const fullSymKey = `${symbol}-SWAP-USDT:${direction}`;
+            this.lastEntryPriceCache[cacheKey] = latestOpen.price;
+            this.lastEntryPriceCache[fullSymKey] = latestOpen.price;
             return latestOpen.price;
         }
 
@@ -3478,7 +3616,7 @@ class AutomationManager {
             const closedPnLColor = closedPositionInfo.unrealizedPnL >= 0 ? '📈' : '📉';
             
             text += `🔒 بسته شدن پوزیشن معکوس\n` +
-                `📌 نماد: ${closedPositionInfo.symbol || symbol}\n` +
+                `⭐ نماد: ${closedPositionInfo.symbol || symbol}\n` +
                 `${closedDirectionIcon} جهت: ${closedDirectionText}\n` +
                 `🔢 اهرم: ${closedPositionInfo.leverage || leverage}x\n` +
                 `💵 مارجین: ${closedMargin} USDT\n` +
@@ -3486,7 +3624,7 @@ class AutomationManager {
         } else if (hadClosedPosition) {
             // Fallback if position details not available
             text += `🔒 بسته شدن پوزیشن معکوس\n` +
-                `📌 نماد: ${symbol}\n` +
+                `⭐ نماد: ${symbol}\n` +
                 `${closedDirectionIcon} جهت: ${closedDirectionText}\n` +
                 `🔢 اهرم: ${leverage}x\n\n`;
         } else {
@@ -3495,7 +3633,7 @@ class AutomationManager {
 
         // بخش دوم: اطلاعات پوزیشن باز شده
         text += `🚀 ورود به پوزیشن جدید\n` +
-            `📌 نماد: ${symbol}\n` +
+            `⭐ نماد: ${symbol}\n` +
             `${directionIcon} جهت: ${directionText}\n` +
             `💰 قیمت ورود: ${signal.entryPrice || signal.price}\n` +
             `🎯 حد سود: ${signal.tp.toFixed(4)}\n` +
@@ -3505,7 +3643,8 @@ class AutomationManager {
             `🏦 موجودی کل: ${balance.total || '-'} USDT\n` +
             `🏦 موجودی آزاد: ${balance.free || '-'} USDT\n` +
             `🕐 زمان صدور سیگنال: ${signalTime}\n` +
-            `🕐 زمان رویداد: ${eventTime}`;
+            `🕐 زمان رویداد: ${eventTime}\n` +
+            `#ورود_پوزیشن`;
 
         return this.sendBaleNotification(text);
     }
@@ -3516,9 +3655,10 @@ class AutomationManager {
     async notifyError(symbol, errorMessage) {
         const eventTime = this.toJalali(new Date());
         const text = `❌ خطای اتوماسیون\n` +
-            `📌 نماد: ${symbol || '-'}\n` +
+            `⭐ نماد: ${symbol || '-'}\n` +
             `📝 پیام: ${errorMessage}\n` +
-            `🕐 زمان رویداد: ${eventTime}`;
+            `🕐 زمان رویداد: ${eventTime}\n` +
+            `#خطا`;
         return this.sendBaleNotification(text);
     }
 
@@ -3528,31 +3668,49 @@ class AutomationManager {
     async notifySymbolSkipped(symbol) {
         const eventTime = this.toJalali(new Date());
         const text = `⏭️ عبور از نماد\n` +
-            `📌 نماد: ${symbol}\n` +
+            `⭐ نماد: ${symbol}\n` +
             `📝 تعداد خطاها به حد مجاز رسید - خطاها ریست شد و به نماد بعدی پرش شد\n` +
-            `🕐 زمان رویداد: ${eventTime}`;
+            `🕐 زمان رویداد: ${eventTime}\n` +
+            `#عبور_نماد`;
         return this.sendBaleNotification(text);
     }
 
     /**
      * ✓ ارسال نوتیفیکیشن بله هنگام جلوگیری از باز شدن پوزیشن به دلیل کنترل ریسک
-     * شامل جزئیات کامل منطق کنترل و قیاس‌های ریاضی
+     *
+     * ✓ ساختار جدید (ساده‌سازی شده):
+     *   - حذف بخش «جزئیات کنترل» (description)
+     *   - حذف بخش «نتیجه» (result)
+     *   - تغییر ایموجی‌ها: 🚫 ⭐ 🚦 🕐
+     *   - اضافه شدن هشتگ در انتهای پیام
      */
     async notifyRiskControlBlocked(symbol, signal, controlDetails) {
         const eventTime = this.toJalali(new Date());
         const directionIcon = signal.type === 'Long' ? '🔵' : '🔴';
         const directionText = signal.type === 'Long' ? 'لانگ' : 'شورت';
 
-        let text = `🛑 جلوگیری از باز شدن پوزیشن\n` +
-            `📌 نماد: ${symbol}\n` +
+        // ✓ تعیین هشتگ بر اساس نوع کنترل
+        let hashtag = '#کنترل_ریسک';
+        if (controlDetails.controlName.includes('فاصله قیمت')) {
+            hashtag = '#فاصله_قیمت';
+        } else if (controlDetails.controlName.includes('دارایی امن')) {
+            hashtag = '#دارایی_امن';
+        } else if (controlDetails.controlName.includes('سقف مارجین')) {
+            hashtag = '#سقف_مارجین';
+        } else if (controlDetails.controlName.includes('مارجین مثبت')) {
+            hashtag = '#مارجین_مثبت';
+        } else if (controlDetails.controlName.includes('کندل هم‌جهت') || controlDetails.controlName.includes('کندل هم جهت')) {
+            hashtag = '#کندل_هم‌جهت';
+        }
+
+        let text = `🚫 جلوگیری از باز شدن پوزیشن\n` +
+            `⭐ نماد: ${symbol}\n` +
             `${directionIcon} جهت سیگنال: ${directionText}\n` +
-            `📝 کنترل فعال: ${controlDetails.controlName}\n\n` +
-            `📊 جزئیات کنترل:\n` +
-            `${controlDetails.description}\n\n` +
+            `🚦 کنترل فعال: ${controlDetails.controlName}\n\n` +
             `📐 قیاس ریاضی:\n` +
             `${controlDetails.math}\n\n` +
-            `❌ نتیجه: ${controlDetails.result}\n` +
-            `🕐 زمان رویداد: ${eventTime}`;
+            `🕐 زمان رویداد: ${eventTime}\n` +
+            `${hashtag}`;
 
         return this.sendBaleNotification(text);
     }
@@ -3641,7 +3799,18 @@ class AutomationManager {
                 this.log('اتوماسیون در حال اجرا است. لطفاً ابتدا آن را متوقف کنید', 'warning');
                 return;
             }
-            await this.runCycle();
+            // ✓ مورد ۷: Run cyclesPerRun cycles sequentially
+            const cyclesPerRun = this.settings.cyclesPerRun || 1;
+            this.log(`شروع ${cyclesPerRun} چرخه متوالی...`, 'info');
+            for (let i = 0; i < cyclesPerRun; i++) {
+                this.log(`چرخه ${i + 1} از ${cyclesPerRun}`, 'info');
+                await this.runCycle();
+                // ✓ Delay between cycles (1 second) to avoid exchange rate-limits
+                if (i < cyclesPerRun - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+            this.log(`${cyclesPerRun} چرخه تکمیل شد`, 'success');
         }.bind(this));
 
         bindIfExists('toggle-settings-btn', 'click', () => {

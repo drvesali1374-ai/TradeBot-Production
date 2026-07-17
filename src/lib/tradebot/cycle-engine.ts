@@ -77,6 +77,10 @@ export interface AutomationSettings {
   allowedErrors: number
   leverage: number
   signalExpirationHours: number
+  // ✓ مورد ۶: حداقل تعداد کندل هم‌جهت بعد از سیگنال (0 = غیرفعال)
+  minSameDirectionCandles: number
+  // ✓ مورد ۸: تعداد رکوردهای ارسالی در نوتیف تاریخچه پوزیشن‌های بسته
+  closedPositionsNotifyCount: number
   baleToken: string
   baleChatId: string
 }
@@ -112,6 +116,10 @@ export interface Signal {
   sl: number
   orderId: string
   symbol: string
+  // ✓ Index of the candle in `data[]` that this signal was generated on.
+  //   Used by the min-same-direction-candles risk control (مورد ۶) to look
+  //   up the N candles after the signal candle.
+  candleIndex?: number
 }
 
 export interface HistoryEntry {
@@ -165,6 +173,10 @@ function getDefaultAutomationSettings(): AutomationSettings {
     allowedErrors: 3,
     leverage: 4,
     signalExpirationHours: 6,
+    // ✓ مورد ۶: حداقل تعداد کندل هم‌جهت بعد از سیگنال (0 = غیرفعال)
+    minSameDirectionCandles: 0,
+    // ✓ مورد ۸: تعداد رکوردهای ارسالی در نوتیف تاریخچه پوزیشن‌های بسته
+    closedPositionsNotifyCount: 10,
     baleToken: '',
     baleChatId: ''
   }
@@ -456,6 +468,128 @@ export async function runCycle(
       return Array.isArray(parsed) ? parsed : []
     })()
 
+    // -------------------------------------------------------------------
+    // ✓ Step 0 (NEW, مورد ۸): Global Closed Positions History Check
+    //   At the very start of each cycle, fetch ALL closed positions from
+    //   Toobit (no symbol filter) and compare the latest id with the
+    //   lastPositionId stored in KV. If different → new positions detected
+    //   → send Bale notification with the last N records
+    //   (N = closedPositionsNotifyCount).
+    //   Non-blocking: wrapped in try-catch, logs warning on failure,
+    //   continues cycle regardless.
+    // -------------------------------------------------------------------
+    try {
+      const cpApiKey = marketSettings.apiKey || ''
+      const cpSecretKey = marketSettings.secretKey || ''
+      const cpBaseUrl = marketSettings.baseUrl || 'https://api.toobit.com'
+
+      if (cpApiKey && cpSecretKey) {
+        const cpResponse = await fetch(`${baseUrl}/api/history-positions`, {
+          headers: {
+            'X-API-Key': cpApiKey,
+            'X-Secret-Key': cpSecretKey,
+            'X-Base-Url': cpBaseUrl
+          }
+        })
+
+        if (cpResponse.ok) {
+          const cpData = await cpResponse.json()
+          // Normalize — Toobit returns either an array or { data: [...] } / { result: [...] }
+          let cpRecords: Record<string, unknown>[] = []
+          if (Array.isArray(cpData)) {
+            cpRecords = cpData
+          } else if (cpData && Array.isArray(cpData.data)) {
+            cpRecords = cpData.data
+          } else if (cpData && Array.isArray(cpData.result)) {
+            cpRecords = cpData.result
+          } else if (cpData && typeof cpData === 'object') {
+            const found = Object.values(cpData).find((v) => Array.isArray(v))
+            cpRecords = (found as Record<string, unknown>[]) || []
+          }
+
+          if (cpRecords.length > 0) {
+            // Sort by closeTime DESC (newest first)
+            cpRecords.sort((a, b) => {
+              const ta = parseInt(String(a.closeTime || 0))
+              const tb = parseInt(String(b.closeTime || 0))
+              return tb - ta
+            })
+
+            const firstRecord = cpRecords[0]
+            const firstId = String(firstRecord.id || '')
+
+            // Compare with lastPositionId from KV
+            const lastPosIdRaw = await AutomationState.get('lastPositionId')
+            const lastIdStr =
+              lastPosIdRaw === null || lastPosIdRaw === undefined ? '' : String(lastPosIdRaw)
+
+            if (firstId && firstId !== lastIdStr) {
+              // New positions detected — build Bale notification
+              const notifyCount = automationSettings.closedPositionsNotifyCount || 10
+              const toNotify = cpRecords.slice(0, notifyCount)
+
+              // Persian numeral helper (for index numbering)
+              const persianNum = (n: number | string): string => {
+                const map = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
+                return String(n).replace(/\d/g, (d) => map[parseInt(d)])
+              }
+
+              const lines: string[] = ['📋 تاریخچه پوزیشن‌های بسته‌شده', '']
+              toNotify.forEach((pos, idx) => {
+                const sym = String(pos.symbol || '-')
+                const sideRaw = String(pos.side || '').toUpperCase()
+                const sideText = sideRaw === 'SHORT' ? 'Short' : 'Long'
+                const sideIcon = sideRaw === 'SHORT' ? '🔴' : '🔵'
+                const closePrice = String(pos.closeAvgPrice || '-')
+                const closeTimeMs = parseInt(String(pos.closeTime || 0))
+                const timeStr = closeTimeMs > 0 ? toJalali(closeTimeMs) : '-'
+                lines.push(
+                  `${persianNum(idx + 1)}. ⭐ نماد: ${sym} | ${sideIcon} جهت: ${sideText} | 💰 قیمت بسته: ${closePrice} | 🕐 زمان: ${timeStr}`
+                )
+              })
+              lines.push('')
+              lines.push(`🕐 زمان رویداد: ${toJalali(new Date())}`)
+              lines.push(`#تاریخچه_بسته`)
+
+              const text = lines.join('\n')
+
+              // Send notification (best-effort)
+              const token = automationSettings.baleToken
+              const chatId = automationSettings.baleChatId
+              if (token && chatId) {
+                try {
+                  await fetch(`${baseUrl}/api/bale-send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, chatId, text })
+                  })
+                  log(`تاریخچه پوزیشن‌های بسته: ${toNotify.length} رکورد جدید به بله ارسال شد (firstId=${firstId})`, 'success')
+                } catch (e) {
+                  log(
+                    `تاریخچه پوزیشن‌های بسته: خطا در ارسال به بله - ${e instanceof Error ? e.message : 'unknown'}`,
+                    'warning'
+                  )
+                }
+              } else {
+                log('تاریخچه پوزیشن‌های بسته: توکن/چت‌آیدی بله پیکربندی نشده — نوتیف ارسال نشد', 'warning')
+              }
+
+              // ✓ Save the new firstId to KV (regardless of whether Bale succeeded)
+              //   so we don't keep re-notifying on every cycle.
+              await AutomationState.set('lastPositionId', firstId)
+            }
+          }
+        } else {
+          log(`تاریخچه پوزیشن‌های بسته: خطا در دریافت (HTTP ${cpResponse.status})`, 'warning')
+        }
+      }
+    } catch (e) {
+      log(
+        `تاریخچه پوزیشن‌های بسته: خطا - ${e instanceof Error ? e.message : 'unknown'}`,
+        'warning'
+      )
+    }
+
     if (symbols.length === 0) {
       log('هیچ نمادی در لیست اتوماسیون وجود ندارد', 'warning')
       return {
@@ -657,7 +791,9 @@ export async function runCycle(
           tp: data[i].tp as number,
           sl: data[i].sl as number,
           orderId: data[i].clientOrderId as string,
-          symbol: symbol.name
+          symbol: symbol.name,
+          // ✓ مورد ۶: candle index — used by min-same-direction-candles risk control
+          candleIndex: i
         })
       } else if (condShort) {
         data[i].signal = 'Short'
@@ -679,7 +815,9 @@ export async function runCycle(
           tp: data[i].tp as number,
           sl: data[i].sl as number,
           orderId: data[i].clientOrderId as string,
-          symbol: symbol.name
+          symbol: symbol.name,
+          // ✓ مورد ۶: candle index — used by min-same-direction-candles risk control
+          candleIndex: i
         })
       }
     }
@@ -753,20 +891,30 @@ export async function runCycle(
     // -------------------------------------------------------------------
     // Step 6: updateSelectedSignal() — only latest signal with "در انتظار" status
     // -------------------------------------------------------------------
-    // calculateSignalStatus (verbatim port)
+    // calculateSignalStatus — ✓ includes signal expiration logic (مورد ۴)
+    const isSignalExpired = (signal: Signal): boolean => {
+      if (!signal || !signal.timestamp) return false
+      const signalTime = signal.timestamp instanceof Date
+        ? signal.timestamp.getTime()
+        : new Date(signal.timestamp).getTime()
+      const now = Date.now()
+      const expirationMs = (automationSettings.signalExpirationHours || 6) * 60 * 60 * 1000
+      return (now - signalTime) > expirationMs
+    }
+
     const calculateSignalStatus = (signal: Signal): { text: string } => {
       if (!currentSymbolHistory || !Array.isArray(currentSymbolHistory)) {
         const isLatest = signals.indexOf(signal) === signals.length - 1
+        // ✓ Check expiration even without history
+        if (isLatest && isSignalExpired(signal)) {
+          return { text: 'منقضی شده' }
+        }
         return { text: isLatest ? 'در انتظار' : 'باز نشده' }
       }
       const signalDirection = signal.type === 'Long' ? 'BUY' : 'SELL'
       const openPositions = currentSymbolHistory.filter(
         (pos) => pos.side && pos.side.includes('OPEN') && pos.side.includes(signalDirection)
       )
-      if (openPositions.length === 0) {
-        const isLatest = signals.indexOf(signal) === signals.length - 1
-        return { text: isLatest ? 'در انتظار' : 'باز نشده' }
-      }
       const currentIndex = signals.indexOf(signal)
       const nextSignal = currentIndex < signals.length - 1 ? signals[currentIndex + 1] : null
       const currentTime = signal.timestamp.getTime()
@@ -777,6 +925,10 @@ export async function runCycle(
       })
       if (matchingPositions.length === 0) {
         const isLatest = currentIndex === signals.length - 1
+        // ✓ Check if signal is expired (مورد ۴)
+        if (isLatest && isSignalExpired(signal)) {
+          return { text: 'منقضی شده' }
+        }
         return { text: isLatest ? 'در انتظار' : 'باز نشده' }
       }
       return { text: 'باز شده' }
@@ -784,10 +936,15 @@ export async function runCycle(
 
     const latestSignal = signals[signals.length - 1]
     const status = calculateSignalStatus(latestSignal)
+    // ✓ Expired signals are NOT selected — they can't be traded
     const selectedSignal = status.text === 'در انتظار' ? latestSignal : null
 
     if (!selectedSignal) {
-      log(`${symbol.name}: هیچ سیگنالی برای ورود آماده نیست - از این نماد عبو میشود`, 'warning', symbol.name)
+      if (status.text === 'منقضی شده') {
+        log(`${symbol.name}: سیگنال منقضی شده است (بیش از ${automationSettings.signalExpirationHours} ساعت از صدور گذشته) - از این نماد عبور میشود`, 'warning', symbol.name)
+      } else {
+        log(`${symbol.name}: هیچ سیگنالی برای ورود آماده نیست - از این نماد عبو میشود`, 'warning', symbol.name)
+      }
       updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
       return {
         success: false,
@@ -893,6 +1050,115 @@ export async function runCycle(
       log(`${symbol.name}: ${closedCount} پوزیشن مخالف بسته شد`, 'success', symbol.name)
     } else {
       log(`${symbol.name}: پوزیشن مخالفی یافت نشد`, 'info', symbol.name)
+    }
+
+    // ===================================================================
+    // ✓ مورد ۶: Min Same-Direction Candles Control
+    //   When minSameDirectionCandles > 0, check that the N candles AFTER
+    //   the signal candle are all the same direction as the signal:
+    //     - Long signal  → all N candles must be GREEN (close > open)
+    //     - Short signal → all N candles must be RED   (close < open)
+    //   If NOT enough candles exist after the signal (signal too recent)
+    //   → REJECT (wait for more candles to form).
+    //   If even one candle is opposite → REJECT.
+    //   Placement: AFTER closeOppositePositions (step 8) and BEFORE step 9
+    //   (refresh history). This control only blocks position OPENING.
+    // ===================================================================
+    const minSameDir = automationSettings.minSameDirectionCandles || 0
+    if (minSameDir > 0) {
+      const sigIdx = typeof selectedSignal.candleIndex === 'number' ? selectedSignal.candleIndex : -1
+      if (sigIdx < 0) {
+        // Should not happen — but guard anyway
+        log(`${symbol.name}: شماره کندل سیگنال نامشخص — کنترل کندل هم‌جهت skip شد`, 'warning', symbol.name)
+      } else {
+        const candlesAfterSignal = data.length - sigIdx - 1
+        if (candlesAfterSignal < minSameDir) {
+          // Not enough candles after the signal yet
+          const checkedIdxs: number[] = []
+          for (let k = 1; k <= candlesAfterSignal; k++) checkedIdxs.push(sigIdx + k)
+          const checkedList = checkedIdxs.length > 0
+            ? checkedIdxs.join('، ')
+            : '—'
+          const math =
+            `سیگنال روی کندل ${sigIdx} صادر شده\n` +
+            `حداقل کندل هم‌جهت مورد نیاز = ${minSameDir}\n` +
+            `کندل‌های موجود بعد از سیگنال: ${candlesAfterSignal} (کندل ${checkedList})\n` +
+            `نتیجه: تعداد کندل کافی نیست — صبر کنید تا کندل‌های بیشتری تشکیل شوند`
+          log(`${symbol.name}: کندل‌های هم‌جهت کافی نیست (${candlesAfterSignal} < ${minSameDir}) — رد شد`, 'warning', symbol.name)
+          await notifyRiskControlBlocked(
+            'حداقل کندل هم‌جهت (Min Same-Direction Candles)',
+            math
+          )
+          updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+          return {
+            success: false,
+            symbol: symbol.name,
+            action: 'risk_blocked',
+            logs,
+            errorCount: 0,
+            duration: Date.now() - startTime
+          }
+        }
+
+        // Check each of the N candles after the signal
+        const checkedIdxs: number[] = []
+        for (let k = 1; k <= minSameDir; k++) checkedIdxs.push(sigIdx + k)
+        const candleLines: string[] = []
+        let failedIdx: number | null = null
+        let failedReason = ''
+        for (let k = 1; k <= minSameDir; k++) {
+          const ci = sigIdx + k
+          const c = data[ci]
+          const isGreen = c.close > c.open
+          const isRed = c.close < c.open
+          if (selectedSignal.type === 'Long') {
+            // Need GREEN candles
+            if (isGreen) {
+              candleLines.push(`کندل ${ci}: سبز (close > open) ✓`)
+            } else {
+              candleLines.push(`کندل ${ci}: قرمز (close < open) ✗ — کندل مخالف سیگنال لانگ`)
+              failedIdx = ci
+              failedReason = 'قرمز (close < open) — کندل مخالف سیگنال لانگ'
+              break
+            }
+          } else {
+            // Short — need RED candles
+            if (isRed) {
+              candleLines.push(`کندل ${ci}: قرمز (close < open) ✓`)
+            } else {
+              candleLines.push(`کندل ${ci}: سبز (close > open) ✗ — کندل مخالف سیگنال شورت`)
+              failedIdx = ci
+              failedReason = 'سبز (close > open) — کندل مخالف سیگنال شورت'
+              break
+            }
+          }
+        }
+
+        if (failedIdx !== null) {
+          const math =
+            `سیگنال روی کندل ${sigIdx} صادر شده\n` +
+            `حداقل کندل هم‌جهت مورد نیاز = ${minSameDir}\n` +
+            `کندل‌های بررسی شده: ${checkedIdxs.join('، ')}\n` +
+            `${candleLines.join('\n')}\n` +
+            `نتیجه: شرایط برقرار نیست — پوزیشن باز نشد`
+          log(`${symbol.name}: کندل مخالف سیگنال یافت شد (کندل ${failedIdx}: ${failedReason}) — رد شد`, 'warning', symbol.name)
+          await notifyRiskControlBlocked(
+            'حداقل کندل هم‌جهت (Min Same-Direction Candles)',
+            math
+          )
+          updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+          return {
+            success: false,
+            symbol: symbol.name,
+            action: 'risk_blocked',
+            logs,
+            errorCount: 0,
+            duration: Date.now() - startTime
+          }
+        }
+
+        log(`${symbol.name}: ${minSameDir} کندل هم‌جهت تأیید شد (کندل‌های ${checkedIdxs.join('، ')})`, 'success', symbol.name)
+      }
     }
 
     // -------------------------------------------------------------------
@@ -1053,22 +1319,34 @@ export async function runCycle(
 
     const notifyRiskControlBlocked = async (
       controlName: string,
-      description: string,
-      math: string,
-      result: string
+      math: string
     ) => {
       const eventTime = toJalali(new Date())
       const directionIcon = selectedSignal.type === 'Long' ? '🔵' : '🔴'
       const directionText = selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'
+
+      // ✓ Determine hashtag based on control name
+      let hashtag = '#کنترل_ریسک'
+      if (controlName.includes('فاصله قیمت')) {
+        hashtag = '#فاصله_قیمت'
+      } else if (controlName.includes('دارایی امن')) {
+        hashtag = '#دارایی_امن'
+      } else if (controlName.includes('سقف مارجین')) {
+        hashtag = '#سقف_مارجین'
+      } else if (controlName.includes('مارجین مثبت')) {
+        hashtag = '#مارجین_مثبت'
+      } else if (controlName.includes('کندل هم‌جهت') || controlName.includes('کندل هم جهت')) {
+        hashtag = '#کندل_هم‌جهت'
+      }
+
       const text =
-        `🛑 جلوگیری از باز شدن پوزیشن\n` +
-        `📌 نماد: ${symbol!.name}\n` +
+        `🚫 جلوگیری از باز شدن پوزیشن\n` +
+        `⭐ نماد: ${symbol!.name}\n` +
         `${directionIcon} جهت سیگنال: ${directionText}\n` +
-        `📝 کنترل فعال: ${controlName}\n\n` +
-        `📊 جزئیات کنترل:\n${description}\n\n` +
+        `🚦 کنترل فعال: ${controlName}\n\n` +
         `📐 قیاس ریاضی:\n${math}\n\n` +
-        `❌ نتیجه: ${result}\n` +
-        `🕐 زمان رویداد: ${eventTime}`
+        `🕐 زمان رویداد: ${eventTime}\n` +
+        `${hashtag}`
       return sendBaleNotification(text)
     }
 
@@ -1085,17 +1363,13 @@ export async function runCycle(
       )
       await notifyRiskControlBlocked(
         'دارایی امن (Safe Asset)',
-        `موجودی آزاد حساب پس از کسر مارجین ورودی باید حداقل برابر با دارایی امن باشد.\n` +
-          `دارایی امن = کل دارایی × درصد دارایی امن\n` +
-          `شرط عبور: موجودی آزاد پیش‌بینی‌شده ≥ دارایی امن`,
         `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
           `موجودی آزاد = ${freeBalance.toFixed(4)} USDT\n` +
           `مارجین ورودی جدید = ${newMargin.toFixed(4)} USDT\n` +
           `درصد دارایی امن = ${automationSettings.safeAssetPercent}%\n` +
           `دارایی امن = ${totalAssets.toFixed(4)} × ${automationSettings.safeAssetPercent}% = ${safeAmount.toFixed(4)} USDT\n` +
           `موجودی آزاد پیش‌بینی‌شده = ${freeBalance.toFixed(4)} - ${newMargin.toFixed(4)} = ${projectedFree.toFixed(4)} USDT\n` +
-          `${projectedFree.toFixed(4)} < ${safeAmount.toFixed(4)} ✗`,
-        'موجودی آزاد پس از کسر مارجین کمتر از دارایی امن است — پوزیشن باز نشد'
+          `${projectedFree.toFixed(4)} < ${safeAmount.toFixed(4)} ✗`
       )
       updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
       return {
@@ -1144,18 +1418,13 @@ export async function runCycle(
               : `فاصله = (فعلی - آخرین ورود) / آخرین ورود × 100\nفاصله = (${price} - ${symbolLastEntryPrice}) / ${symbolLastEntryPrice} × 100`
           await notifyRiskControlBlocked(
             'فاصله قیمت (Price Distance)',
-            `قیمت فعلی باید فاصله کافی از آخرین نقطه ورود هم‌جهت داشته باشد.\n` +
-              `برای لانگ: قیمت فعلی باید ارزان‌تر از آخرین ورود باشد\n` +
-              `برای شورت: قیمت فعلی باید گران‌تر از آخرین ورود باشد\n` +
-              `شرط عبور: فاصله ≥ حداقل فاصله قیمت`,
             `آخرین قیمت ورود هم‌جهت = ${symbolLastEntryPrice} (از ستون «آخرین ورود» جدول پوزیشن‌های باز)\n` +
               `قیمت فعلی = ${price}\n` +
               `جهت سیگنال = ${selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'}\n` +
               `${distanceFormula}\n` +
               `فاصله = ${distancePercent.toFixed(4)}%\n` +
               `حداقل فاصله قیمت = ${automationSettings.minPriceDistancePercent}%\n` +
-              `${distancePercent.toFixed(4)}% < ${automationSettings.minPriceDistancePercent}% ✗`,
-            'فاصله قیمت فعلی از آخرین ورود هم‌جهت کمتر از حد مجاز است — پوزیشن باز نشد'
+              `${distancePercent.toFixed(4)}% < ${automationSettings.minPriceDistancePercent}% ✗`
           )
           updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
           return {
@@ -1185,17 +1454,13 @@ export async function runCycle(
         )
         await notifyRiskControlBlocked(
           'سقف مارجین نماد (Max Margin Per Symbol)',
-          `مجموع مارجین پوزیشن‌های باز هم‌جهت یک نماد به علاوه مارجین ورودی جدید نباید از سقف مجاز فراتر کند.\n` +
-            `سقف مارجین نماد = کل دارایی × درصد سقف مارجین نماد\n` +
-            `شرط عبور: مجموع مارجین نماد ≤ سقف مارجین نماد`,
           `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
             `درصد سقف مارجین نماد = ${automationSettings.maxMarginPerSymbolPercent}%\n` +
             `سقف مارجین نماد = ${totalAssets.toFixed(4)} × ${automationSettings.maxMarginPerSymbolPercent}% = ${maxMarginPerSymbol.toFixed(4)} USDT\n` +
             `مارجین موجود نماد = ${existingSymbolMargin.toFixed(4)} USDT (از ستون «مارجین» جدول پوزیشن‌های باز)\n` +
             `مارجین ورودی جدید = ${newMargin.toFixed(4)} USDT\n` +
             `مجموع مارجین نماد = ${existingSymbolMargin.toFixed(4)} + ${newMargin.toFixed(4)} = ${totalSymbolMargin.toFixed(4)} USDT\n` +
-            `${totalSymbolMargin.toFixed(4)} > ${maxMarginPerSymbol.toFixed(4)} ✗`,
-          'مجموع مارجین نماد از سقف مجاز فراتر رفته — پوزیشن باز نشد'
+            `${totalSymbolMargin.toFixed(4)} > ${maxMarginPerSymbol.toFixed(4)} ✗`
         )
         updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
         return {
@@ -1221,15 +1486,11 @@ export async function runCycle(
       log(`${symbol.name}: مارجین نهایی صفر یا منفی — رد شد`, 'warning', symbol.name)
       await notifyRiskControlBlocked(
         'مارجین مثبت (Positive Margin)',
-        `مارجین ورودی محاسبه‌شده باید بزرگتر از صفر باشد.\n` +
-          `مارجین = کل دارایی × درصد مارجین ورودی\n` +
-          `شرط عبور: مارجین نهایی > 0`,
         `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
           `درصد مارجین ورودی = ${automationSettings.entryMarginPercent}%\n` +
           `مارجین محاسبه‌شده = ${totalAssets.toFixed(4)} × ${automationSettings.entryMarginPercent}% = ${newMargin.toFixed(4)} USDT\n` +
           `مارجین نهایی = max(${newMargin.toFixed(4)}, 0) = ${finalMargin.toFixed(4)} USDT\n` +
-          `${finalMargin.toFixed(4)} ≤ 0 ✗`,
-        'مارجین نهایی صفر یا منفی است — پوزیشن باز نشد'
+          `${finalMargin.toFixed(4)} ≤ 0 ✗`
       )
       updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
       return {
@@ -1307,7 +1568,7 @@ export async function runCycle(
       const closedPnLColor = closedPositionInfo.unrealizedPnL >= 0 ? '📈' : '📉'
       baleText +=
         `🔒 بسته شدن پوزیشن معکوس\n` +
-        `📌 نماد: ${closedPositionInfo.symbol || symbol.name}\n` +
+        `⭐ نماد: ${closedPositionInfo.symbol || symbol.name}\n` +
         `${closedDirectionIcon} جهت: ${closedDirectionText}\n` +
         `🔢 اهرم: ${closedPositionInfo.leverage || automationSettings.leverage}x\n` +
         `💵 مارجین: ${closedMargin} USDT\n` +
@@ -1315,7 +1576,7 @@ export async function runCycle(
     } else if (closedCount > 0) {
       baleText +=
         `🔒 بسته شدن پوزیشن معکوس\n` +
-        `📌 نماد: ${symbol.name}\n` +
+        `⭐ نماد: ${symbol.name}\n` +
         `${closedDirectionIcon} جهت: ${closedDirectionText}\n` +
         `🔢 اهرم: ${automationSettings.leverage}x\n\n`
     } else {
@@ -1324,7 +1585,7 @@ export async function runCycle(
 
     baleText +=
       `🚀 ورود به پوزیشن جدید\n` +
-      `📌 نماد: ${symbol.name}\n` +
+      `⭐ نماد: ${symbol.name}\n` +
       `${directionIcon} جهت: ${directionText}\n` +
       `💰 قیمت ورود: ${price}\n` +
       `🎯 حد سود: ${selectedSignal.tp.toFixed(4)}\n` +
@@ -1334,7 +1595,8 @@ export async function runCycle(
       `🏦 موجودی کل: ${updatedBalance.total || '-'} USDT\n` +
       `🏦 موجودی آزاد: ${updatedBalance.free || '-'} USDT\n` +
       `🕐 زمان صدور سیگنال: ${signalTime}\n` +
-      `🕐 زمان رویداد: ${eventTime}`
+      `🕐 زمان رویداد: ${eventTime}\n` +
+      `#ورود_پوزیشن`
 
     await sendBaleNotification(baleText)
 
@@ -1385,14 +1647,59 @@ export async function runCycle(
           ...automationSettings,
           ...(typeof dbAuto === 'string' ? JSON.parse(dbAuto) : (dbAuto as Record<string, unknown>) || {})
         }
+
+        // ✓ Local Bale notification helper for catch block
+        //   (the try block's sendBaleNotification is out of scope here)
+        const sendBaleNotificationCatch = async (text: string) => {
+          const token = autoSettings.baleToken as string
+          const chatId = autoSettings.baleChatId as string
+          if (!token || !chatId) return { ok: false, error: 'Not configured' }
+          try {
+            const res = await fetch(`${baseUrl}/api/bale-send`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token, chatId, text })
+            })
+            return await res.json()
+          } catch {
+            return { ok: false, error: 'fetch failed' }
+          }
+        }
+
+        // ✓ Bale notification for cycle errors (mirrors client-side notifyError)
+        const notifyError = async (symbolName: string, errorMessage: string) => {
+          const eventTime = toJalali(new Date())
+          const text =
+            `❌ خطای اتوماسیون\n` +
+            `⭐ نماد: ${symbolName}\n` +
+            `📝 پیام: ${errorMessage}\n` +
+            `🕐 زمان رویداد: ${eventTime}\n` +
+            `#خطا`
+          return sendBaleNotificationCatch(text)
+        }
+
+        // ✓ Bale notification for symbol skip (mirrors client-side notifySymbolSkipped)
+        const notifySymbolSkipped = async (symbolName: string) => {
+          const eventTime = toJalali(new Date())
+          const text =
+            `⏭️ عبور از نماد\n` +
+            `⭐ نماد: ${symbolName}\n` +
+            `📝 تعداد خطاها به حد مجاز رسید - خطاها ریست شد و به نماد بعدی پرش شد\n` +
+            `🕐 زمان رویداد: ${eventTime}\n` +
+            `#عبور_نماد`
+          return sendBaleNotificationCatch(text)
+        }
+
         if (symbols[idx].errorCount >= autoSettings.allowedErrors) {
           symbols[idx].errorCount = 0
           symbols[idx].status = 'waiting'
           symbols[idx].lastCycleTime = Date.now()
           log(`${symbols[idx].name}: خطا به حد مجاز رسید - عبور از نماد`, 'error', symbols[idx].name)
+          await notifySymbolSkipped(symbols[idx].name)
         } else {
           symbols[idx].status = 'error'
           log(`${symbols[idx].name}: خطا - ${message} (تلاش ${symbols[idx].errorCount}/${autoSettings.allowedErrors})`, 'error', symbols[idx].name)
+          await notifyError(symbols[idx].name, message)
         }
         await AutomationState.set('automation_symbols', symbols)
         return {

@@ -464,3 +464,195 @@ Stage Summary:
 - ✅ Mobile touch drag-and-drop added for symbols table
 - ✅ Changes applied to BOTH client-side (automation-manager.js) and server-side (cycle-engine.ts)
 - ✅ Deployed to Cloudflare, tested, working
+
+---
+Task ID: 8-a
+Agent: Sub-agent (general-purpose)
+Task: Simplify Bale messages in cycle-engine.ts + add hashtags + change emojis
+
+Work Log:
+- Read worklog.md to understand project context (Cloudflare migration + cycle-engine.ts is server-side port of client-side runCycle)
+- Read /home/z/my-project/src/lib/tradebot/cycle-engine.ts (1467 lines) — located notifyRiskControlBlocked function (line 1054) and its 4 callers (Safe Asset, Price Distance, Max Margin, Positive Margin) plus the inline notifyOpenPosition block in Step 14 (lines 1297-1335)
+- Confirmed client-side automation-manager.js already has notifyError and notifySymbolSkipped functions with the new format (⭐ + hashtags) — these were MISSING from server-side cycle-engine.ts
+- Changes to notifyRiskControlBlocked function:
+  - Removed `description: string` and `result: string` parameters (signature is now `(controlName: string, math: string)`)
+  - Removed `📊 جزئیات کنترل:\n${description}\n\n` section
+  - Removed `❌ نتیجه: ${result}\n` line
+  - Changed 🛑 → 🚫 in header line
+  - Changed 📌 → ⭐ in symbol line
+  - Changed 📝 → 🚦 in control line
+  - Added hashtag-selection logic: #کنترل_ریسک (default), #فاصله_قیمت, #دارایی_امن, #سقف_مارجین, #مارجین_مثبت, #کندل_هم‌جهت — selected by string-matching controlName
+  - Appended `${hashtag}` after `🕐 زمان رویداد` line
+- Updated all 4 callers of notifyRiskControlBlocked to pass only (controlName, math) — removed the `description` (2nd arg, multi-line string starting with "موجودی آزاد حساب پس از کسر مارجین..." etc.) and the `result` (4th arg, single quoted string like 'موجودی آزاد پس از کسر مارجین کمتر از دارایی امن است — پوزیشن باز نشد'):
+  - Caller 1 (Safe Asset) at line 1098
+  - Caller 2 (Price Distance) at line 1153
+  - Caller 3 (Max Margin Per Symbol) at line 1189
+  - Caller 4 (Positive Margin) at line 1221
+- Updated notifyOpenPosition (inline block in Step 14):
+  - Changed 📌 → ⭐ in 3 places: closed-position section with closedPositionInfo (line 1305), closed-position section without closedPositionInfo (line 1313), and new-position section (line 1322)
+  - Appended `#ورود_پوزیشن` hashtag at the end of baleText (line 1333)
+  - Note: left `🛑 حد ضرر:` (stop-loss line, line 1326) unchanged — that emoji semantically marks stop-loss, not "blocked"; user's "🛑→🚫" change applies only to the "جلوگیری از باز شدن پوزیشن" header in notifyRiskControlBlocked
+- Added notifyError function in catch block (lines 1403-1413):
+  - Defined local `sendBaleNotificationCatch` helper (the try block's `sendBaleNotification` is out of scope in catch) — reads baleToken/baleChatId from autoSettings (re-loaded from DB in catch block)
+  - notifyError(symbolName, errorMessage) sends: `❌ خطای اتوماسیون\n⭐ نماد: ${symbolName}\n📝 پیام: ${errorMessage}\n🕐 زمان رویداد: ${eventTime}\n#خطا`
+  - Called after `log(...)` in the `else` branch (when errorCount < allowedErrors) at line 1436
+- Added notifySymbolSkipped function in catch block (lines 1415-1425):
+  - notifySymbolSkipped(symbolName) sends: `⏭️ عبور از نماد\n⭐ نماد: ${symbolName}\n📝 تعداد خطاها به حد مجاز رسید - خطاها ریست شد و به نماد بعدی پرش شد\n🕐 زمان رویداد: ${eventTime}\n#عبور_نماد`
+  - Called after `log(...)` in the `if` branch (when errorCount >= allowedErrors) at line 1432
+- Verification:
+  - `bun run lint` passes with 0 errors (only 2 pre-existing warnings in database.js, unrelated)
+  - grep confirms NO remaining `📌` in cycle-engine.ts (all replaced with ⭐)
+  - grep confirms NO remaining `🛑 جلوگیری`, `📝 کنترل فعال`, `📊 جزئیات کنترل`, or `❌ نتیجه:` (all old notifyRiskControlBlocked sections removed)
+  - grep confirms new structure present: `🚫 جلوگیری`, `⭐ نماد` (5 occurrences across notifications), `🚦 کنترل فعال`, plus 8 hashtags (#کنترل_ریسک, #فاصله_قیمت, #دارایی_امن, #سقف_مارجین, #مارجین_مثبت, #ورود_پوزیشن, #خطا, #عبور_نماد)
+  - Confirmed notifyRiskControlBlocked signature is now `(controlName: string, math: string)` — 2 params, not 4
+  - Confirmed all 4 callers pass only 2 arguments (controlName string literal + math template string)
+- No business logic changed — only notification message format, emojis, and added error/skip notifications that previously only logged to DB without sending to Bale
+
+Stage Summary:
+- ✅ notifyRiskControlBlocked simplified: signature reduced from 4 params to 2, body uses new format with hashtags and updated emojis (🚫 ⭐ 🚦)
+- ✅ All 4 risk-control callers updated to match new 2-arg signature (description and result strings removed)
+- ✅ notifyOpenPosition (Step 14 inline) updated: 📌→⭐ in 3 places, #ورود_پوزیشن hashtag appended
+- ✅ notifyError added in catch block (NEW — did not exist server-side before) with ⭐ + #خطa hashtag, mirrors client-side format
+- ✅ notifySymbolSkipped added in catch block (NEW — did not exist server-side before) with ⭐ + #عبور_نماد hashtag, mirrors client-side format
+- ✅ Local `sendBaleNotificationCatch` helper added in catch block (the try-block sendBaleNotification is out of scope in catch) — uses same fetch logic with autoSettings (re-loaded from DB)
+- ✅ Hashtag-selection logic in notifyRiskControlBlocked picks a control-specific hashtag (#فاصله_قیمت, #دارایی_امن, #سقف_مارجین, #مارجین_مثبت, #کندل_هم‌جهت) or falls back to #کنترل_ریسک
+- ✅ Lint passes with 0 errors
+- ✅ Server-side cycle-engine.ts Bale notifications now mirror the client-side automation-manager.js format (already updated client-side in earlier task)
+
+---
+Task ID: 8-b
+Agent: Sub-agent (general-purpose)
+Task: Implement TWO features — (1) Min Same-Direction Candles control (مورد ۶) + (2) Global Closed Positions History notification (مورد ۸)
+
+Work Log:
+- Read worklog.md to understand full project context (Cloudflare migration, cycle-engine.ts is server-side port of client-side runCycle, recent task 8-a simplified Bale messages + hashtags, prior tasks 7 reordered steps 8-12 and added controls 3 & 4)
+- Read /home/z/my-project/src/lib/tradebot/cycle-engine.ts (full file, ~1486 lines pre-change) to understand existing structure:
+  * AutomationSettings interface + getDefaultAutomationSettings() — only had 9 fields, no minSameDirectionCandles / closedPositionsNotifyCount
+  * Signal interface — no candleIndex field
+  * analyzeMarketData() generates signals in `for (let i = 1; i < N - 1; i++)` loop, pushes to `signals[]` without candleIndex
+  * runCycle() steps: 1 selectNextSymbol → 2-3 fetchMarketData → 4 analyzeMarketData → 5 fetchPositionHistory → 6 updateSelectedSignal → 7 fetchPrice → 8 closeOppositePositions → 9 refresh history → 10 refresh open positions → 11 fetchBalance → 12 calculateNewMargin + Risk controls → 13 openPosition → 14 notifyOpenPosition
+  * notifyRiskControlBlocked(controlName, math) — already 2-arg signature (simplified in task 8-a), hashtag-selection includes '#کندل_هم‌جهت' for matching control names
+  * Catch block has local sendBaleNotificationCatch + notifyError + notifySymbolSkipped helpers (added in task 8-a)
+- Read /home/z/my-project/public/js/automation-manager.js (full file, ~3790 lines pre-change):
+  * getDefaultSettings() (line 148) — ALREADY has minSameDirectionCandles: 0, cyclesPerRun: 1, closedPositionsNotifyCount: 10 (UI fields exist)
+  * analyzeMarketData() (line 445) — generates signals in same `for (let i = 1; i < N - 1; i++)` loop, pushes to this.signals without candleIndex
+  * runCycle() (line 1727) — same step ordering as server-side
+  * notifyRiskControlBlocked(symbol, signal, controlDetails) — takes 3 args, controlDetails.controlName + controlDetails.math, hashtag-selection includes '#کندل_هم‌جهت'
+- Read /home/z/my-project/src/app/api/open-positions/route.ts + balance/route.ts to learn Edge-runtime Toobit-proxy pattern (use getSettingsFromRequest + buildSortedQuery + generateSignature, return 401 if no API keys, return raw response)
+- Read /home/z/my-project/src/lib/tradebot/helpers.ts — generateSignature uses Web Crypto API (Edge-compatible), buildSortedQuery + getSettingsFromRequest helpers
+
+=== Feature 1: Min Same-Direction Candles Control (مورد ۶) ===
+
+Server-side changes (/home/z/my-project/src/lib/tradebot/cycle-engine.ts):
+- Added `minSameDirectionCandles: number` and `closedPositionsNotifyCount: number` to AutomationSettings interface (lines 80-83)
+- Added same fields with defaults (0 and 10) to getDefaultAutomationSettings() (lines 176-179)
+- Added `candleIndex?: number` to Signal interface with comment explaining its purpose (lines 119-122)
+- Added `candleIndex: i` to both Long signal push (line 674) and Short signal push (line 698) in analyzeMarketData() loop
+- Inserted new control block AFTER step 8 (closeOppositePositions) and BEFORE step 9 (refresh history), at lines 1056-1040:
+  * Reads `minSameDir = automationSettings.minSameDirectionCandles || 0`
+  * Skips entirely if `minSameDir === 0` (control disabled)
+  * Reads `sigIdx = selectedSignal.candleIndex` (with -1 fallback for safety)
+  * Computes `candlesAfterSignal = data.length - sigIdx - 1`
+  * If `candlesAfterSignal < minSameDir` → REJECT: builds math text listing the available candle indices, calls `notifyRiskControlBlocked('حداقل کندل هم‌جهت (Min Same-Direction Candles)', math)`, updates symbol state, returns risk_blocked
+  * Else iterates `k = 1..minSameDir`, checks candle at `data[sigIdx + k]`:
+    - Long signal → needs GREEN (close > open); on RED → break with failedIdx + failedReason
+    - Short signal → needs RED (close < open); on GREEN → break with failedIdx + failedReason
+  * If any candle failed → REJECT: builds math text listing all checked indices + per-candle status (✓/✗), calls notifyRiskControlBlocked, updates symbol state, returns risk_blocked
+  * If all N candles pass → logs success and continues to step 9
+- The notifyRiskControlBlocked call automatically picks hashtag '#کندل_هم‌جهت' (added in task 8-a) based on controlName containing 'کندل هم‌جهت'
+
+Client-side changes (/home/z/my-project/public/js/automation-manager.js):
+- Added `candleIndex: i` to both Long signal push (line 580) and Short signal push (line 604) in analyzeMarketData() loop
+- Inserted new control block AFTER step 8 (closeOppositePositions) and BEFORE step 9 (refresh history), at lines 1832-1937:
+  * Mirrors server-side logic exactly: reads `minSameDir = this.settings.minSameDirectionCandles || 0`
+  * Uses `this.currentSymbolData[i]` (client-side equivalent of server-side `data[i]`) to check close vs open
+  * Calls `this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, { controlName, math })` with 3-arg signature (existing client-side format)
+  * On reject: sets symbol.status='waiting', symbol.lastCycleTime=Date.now(), symbol.errorCount=0, saveSymbols(), renderSymbolsTable(), returns false (matches existing client-side risk-control pattern)
+  * Used different variable names in the two branches (`checkedIdxsNotEnough` vs `checkedIdxs`) to avoid any shadowing concerns within the same function scope
+
+=== Feature 2: Global Closed Positions History (مورد ۸) ===
+
+Created new file: /home/z/my-project/src/app/api/history-positions/route.ts (~75 lines)
+- `export const runtime = 'edge'`
+- GET handler that proxies Toobit's `/api/v1/futures/historyPositions` endpoint (NO symbol param → returns ALL symbols)
+- Uses `getSettingsFromRequest(null, request.headers)` to read X-API-Key, X-Secret-Key, X-Base-Url from headers
+- Returns 401 if API keys not configured (matches open-positions pattern)
+- Builds signed query: `timestamp + recvWindow=60000`, sorted via buildSortedQuery, signed via generateSignature (Web Crypto / Edge-compatible)
+- Calls `${baseUrl}/api/v1/futures/historyPositions?${queryString}&signature=${signature}` with `X-BB-APIKEY` header
+- Returns the raw JSON response from Toobit (caller sorts/parses)
+- Note: Initial implementation also tried KV fallback via AutomationState.get('marketSignalSettings') when headers missing — but this triggered noisy `fs` module errors in local dev Edge runtime (database.js's loadFileDatabase tries `import('fs')` which fails in Edge). Removed the KV fallback to match the open-positions pattern; the cycle engine always passes headers anyway (it reads marketSettings from KV itself).
+
+Modified /home/z/my-project/src/lib/tradebot/cycle-engine.ts — inserted new Step 0 at the very start of runCycle() (lines 471-591), AFTER settings are loaded (automationSettings + marketSettings + symbols) and BEFORE the `if (symbols.length === 0)` check:
+- Wrapped entirely in try-catch (non-blocking — logs warning on failure, continues cycle)
+- Reads `cpApiKey = marketSettings.apiKey`, `cpSecretKey = marketSettings.secretKey`, `cpBaseUrl = marketSettings.baseUrl || 'https://api.toobit.com'`
+- If both keys present:
+  * Fetches `${baseUrl}/api/history-positions` with X-API-Key/X-Secret-Key/X-Base-Url headers
+  * On HTTP OK: normalizes response (handles Array, { data: [...] }, { result: [...] }, or any object with an array value)
+  * If records exist: sorts by closeTime DESC (newest first)
+  * Gets `firstId = String(firstRecord.id)` and `lastIdStr = String(lastPosIdRaw)` from AutomationState.get('lastPositionId')
+  * If `firstId && firstId !== lastIdStr` (new positions detected):
+    - Takes `toNotify = cpRecords.slice(0, notifyCount)` where `notifyCount = automationSettings.closedPositionsNotifyCount || 10`
+    - Builds Persian Bale message: header '📋 تاریخچه پوزیشن‌های بسته‌شده', then per-record line `${persianNum(idx + 1)}. ⭐ نماد: ${sym} | ${sideIcon} جهت: ${sideText} | 💰 قیمت بسته: ${closePrice} | 🕐 زمان: ${timeStr}` (side rendered as 'Long'/'Short' with 🔵/🔴 icons, time via toJalali(closeTimeMs)), then footer with event time + '#تاریخچه_بسته' hashtag
+    - Persian numeral helper converts digits 0-9 to ۰-۹ for the index numbering
+    - Sends via `${baseUrl}/api/bale-send` POST (best-effort — wrapped in inner try-catch)
+    - Saves new firstId to KV via `AutomationState.set('lastPositionId', firstId)` (regardless of Bale success — prevents re-notifying on every cycle)
+  * On HTTP error: logs warning with status code
+- If API keys not configured: silently skips (no log) — matches pattern of other Toobit-dependent steps
+
+Verification:
+- `bun run lint` passes with 0 errors (only 2 pre-existing warnings in database.js unrelated to changes)
+- curl http://localhost:3000/api/history-positions → HTTP 401 (correct — no API keys configured in this dev env, matches open-positions behavior)
+- curl http://localhost:3000/ → HTTP 200 (page loads)
+- curl http://localhost:3000/automation.html → HTTP 200 (automation page loads)
+- POST http://localhost:3000/api/run-cycle → HTTP 200 with `{success: false, action: 'no_ready_symbol'}` (cycle runs end-to-end; step 0 silently skips because no API keys in local dev KV, then symbols check returns early — expected behavior)
+- grep confirms new step placement: Step 0 at line 472 (before symbols check at line 593, before Step 1 at line 607), Step 8 at line 977, مورد ۶ control at line 1057 (after Step 8, before Step 9 at line 1166)
+- grep confirms `candleIndex: i` added to both Long (line 674) and Short (line 698) signal pushes in cycle-engine.ts, and both Long (line 580) and Short (line 604) signal pushes in automation-manager.js
+- grep confirms `minSameDirectionCandles` and `closedPositionsNotifyCount` in getDefaultAutomationSettings() (lines 176-179) and AutomationSettings interface (lines 80-83) of cycle-engine.ts
+
+Stage Summary:
+- ✅ Feature 1 (مورد ۶ — Min Same-Direction Candles): New risk control added to BOTH server-side cycle-engine.ts AND client-side automation-manager.js, placed AFTER closeOppositePositions (step 8) and BEFORE refresh-history (step 9). Skipped when minSameDirectionCandles === 0. Sends Bale notification via existing notifyRiskControlBlocked helper (which auto-selects '#کندل_هم‌جهت' hashtag). Returns risk_blocked action when rejected.
+- ✅ Feature 2 (مورد ۸ — Global Closed Positions History): New /api/history-positions Edge route proxies Toobit's historyPositions endpoint (no symbol filter → all symbols). Step 0 added at very start of runCycle() (before symbols check, before step 1) — fetches closed positions, sorts by closeTime DESC, compares first id with lastPositionId in KV, sends Bale notification with last N records when new positions detected, saves new id to KV. Non-blocking (try-catch wrapped, logs warning on failure, continues cycle).
+- ✅ candleIndex added to Signal interface + both Long/Short signal push sites in BOTH server-side (cycle-engine.ts) and client-side (automation-manager.js)
+- ✅ minSameDirectionCandles + closedPositionsNotifyCount added to server-side AutomationSettings interface + getDefaultAutomationSettings() (client-side already had them from prior task)
+- ✅ Lint passes (0 errors)
+- ✅ No existing logic modified — only additions (new control block, new step 0, new fields, new route)
+
+---
+Task ID: 8-final
+Agent: Main Orchestrator
+Task: Implement all 8 requested improvements (items 1-8)
+
+Work Log:
+- [مورد ۱] Fixed cache key to symbol:direction — getLastEntryPrice now uses `${symbol}:${direction}` as cache key. Updated displayOpenPositions and Price Distance control to read from the new key format. Prevents long/short entries from overwriting each other.
+- [مورد ۲] Added hashtags to all Bale messages: #فاصله_قیمت, #دارایی_امن, #سقف_مارجین, #مارجین_مثبت, #کندل_هم‌جهت, #ورود_پوزیشن, #خطا, #عبور_نماد, #تاریخچه_بسته
+- [مورد ۳] Simplified Bale control messages: removed "جزئیات کنترل" (description) and "نتیجه" (result) sections. Changed emojis: 🛑→🚫, 📌→⭐, 📝→🚦. Applied to both client (automation-manager.js) and server (cycle-engine.ts).
+- [مورد ۴] Signal expiration: added isSignalExpired() method. calculateSignalStatus() now returns "منقضی شده" if signal is older than signalExpirationHours and no same-direction position was opened. updateSelectedSignal() skips expired signals. Applied to both client and server.
+- [مورد ۵] Login page + auth: Created login.html, /api/auth/login, /api/auth/logout, /api/auth/verify, /api/auth/update-credentials. Signed cookie with HMAC-SHA256. Credentials stored in KV (default: admin/admin, changeable from settings page). auth-check.js added to all HTML pages. AUTH_SECRET set as Cloudflare secret.
+- [مورد ۶] Min same-direction candles control: Added minSameDirectionCandles setting. Control runs after closeOppositePositions (step 8) and before openPosition. If not enough candles after signal → REJECT (wait). If any candle is opposite direction → REJECT. Added candleIndex to signal objects. Applied to both client and server.
+- [مورد ۷] Cycles per run: Added cyclesPerRun setting. /api/run-cycle now runs cyclesPerRun cycles sequentially (1s delay between). Client "یک چرخه" button also runs cyclesPerRun cycles. Cron Trigger uses same endpoint so also runs multiple cycles.
+- [مورد ۸] Global closed positions history: Created /api/history-positions route (proxies Toobit's /api/v1/futures/historyPositions). Step 0 added at start of cycle: fetch all closed positions, compare first record's id with lastPositionId in KV, if different → send Bale notification with last N records (N = closedPositionsNotifyCount). Uses side field directly (LONG/SHORT, no conversion).
+- Settings: Added 3 new fields to automation.html settings modal: min-same-direction-candles, cycles-per-run, closed-positions-notify-count
+- Build + deploy to Cloudflare Pages (successful)
+- AUTH_SECRET set as Cloudflare secret
+
+Testing (Agent Browser on https://tradebot-b9u.pages.dev):
+  - Main page redirects to login.html when not authenticated ✓
+  - Login with admin/admin succeeds → redirects to home.html ✓
+  - All HTML pages have auth-check.js (redirect to login if not authenticated) ✓
+  - Settings page has "تغییر نام کاربری و رمز عبور" section ✓
+  - Automation page settings modal has new fields (حداقل کندل هم‌جهت, تعداد چرخه, تعداد نوتیف تاریخچه) ✓
+  - "یک چرخه" button works — cycle ran with new steps:
+    * "جدول سوابق پوزیشن‌ها بروزرسانی شد (33 ردیف)" ✓
+    * "جدول پوزیشن‌های باز بروزرسانی شد (3 پوزیشن)" ✓
+    * "سیگنال آماده ورود - Long" ✓
+    * "38 سیگنال تولید شد" ✓
+  - No console errors ✓
+  - No build errors ✓
+
+Stage Summary:
+- ✅ All 8 items implemented in both client-side (automation-manager.js) and server-side (cycle-engine.ts)
+- ✅ Login system with signed cookies (AUTH_SECRET)
+- ✅ Default credentials: admin/admin (changeable from settings page)
+- ✅ New settings: minSameDirectionCandles, cyclesPerRun, closedPositionsNotifyCount
+- ✅ Deployed to Cloudflare: https://tradebot-b9u.pages.dev
+- ✅ No existing functionality broken

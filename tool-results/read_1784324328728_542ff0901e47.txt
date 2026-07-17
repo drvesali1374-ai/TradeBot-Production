@@ -1,0 +1,1486 @@
+     1→/**
+     2→ * Server-Side Cycle Engine
+     3→ * =========================
+     4→ *
+     5→ * A faithful TypeScript port of the client-side `AutomationManager.runCycle()`
+     6→ * logic (from public/js/automation-manager.js) so that a full automation cycle
+     7→ * can run on the server — triggered either manually via /api/run-cycle or
+     8→ * automatically via the Cloudflare Cron Worker (every 5 minutes).
+     9→ *
+    10→ * CRITICAL DESIGN RULES:
+    11→ *  - The logic MUST exactly mirror the client-side runCycle() so that
+    12→ *    behaviour is identical whether triggered from the browser button
+    13→ *    or from the cron worker. Do not "improve" or refactor the logic.
+    14→ *  - All settings are read from the permanent database (AutomationState),
+    15→ *    NOT from localStorage. This is the key Cloudflare migration requirement.
+    16→ *  - Indicator math (RSI/ATR/SMA, signal generation) is copied verbatim
+    17→ *    from public/js/shared/signal-utils.js and analyzeMarketData().
+    18→ *  - Risk controls (safe asset, price distance, max margin, positive margin)
+    19→ *    use the same formulas and produce the same Bale notifications.
+    20→ *
+    21→ * Flow (mirrors runCycle() 14 steps):
+    22→ *   1. selectNextSymbol()   — pick first ready symbol (respects tradeWaitTime)
+    23→ *   2. setupForCycle()      — clear per-cycle state
+    24→ *   3. fetchMarketData()    — GET /api/toobit-proxy (klines)
+    25→ *   4. analyzeMarketData()  — generate signals (RSI/ATR/SMA/daily levels)
+    26→ *   5. fetchPositionHistory — POST /api/history (mapped to consistent shape)
+    27→ *   6. updateSelectedSignal — only latest signal with status "در انتظار"
+    28→ *   7. fetchPrice()         — current price
+    29→ *   8. closeOppositePositions
+    30→ *   9. getSymbolMargin()    — existing same-direction margin
+    31→ *  10. fetchBalance()       — total / free / positionMargin
+    32→ *  11. calculateNewMargin()
+    33→ *  12. Risk controls (safe asset, price distance, max margin, positive margin)
+    34→ *  13. openPosition()       — POST /api/create-position
+    35→ *  14. notifyOpenPosition() — POST /api/bale-send
+    36→ *
+    37→ * After success or skip, the symbol's status/lastCycleTime/errorCount are
+    38→ * persisted back to the database.
+    39→ */
+    40→
+    41→import { AutomationState, AutomationLogs } from '@/lib/tradebot/database'
+    42→
+    43→// ---------------------------------------------------------------------------
+    44→// Types
+    45→// ---------------------------------------------------------------------------
+    46→
+    47→export interface MarketSignalSettings {
+    48→  symbolName?: string
+    49→  interval?: string
+    50→  limit?: number
+    51→  lookback?: number
+    52→  volMult?: number
+    53→  avgVolPeriod?: number
+    54→  rsiThreshold?: number
+    55→  rsiPeriod?: number
+    56→  atrPeriod?: number
+    57→  tpLongMult?: number
+    58→  slLongMult?: number
+    59→  tpShortMult?: number
+    60→  slShortMult?: number
+    61→  longFixedTp?: number | null
+    62→  longFixedSl?: number | null
+    63→  shortFixedTp?: number | null
+    64→  shortFixedSl?: number | null
+    65→  htfConfirmationSource?: string
+    66→  apiKey?: string
+    67→  secretKey?: string
+    68→  baseUrl?: string
+    69→}
+    70→
+    71→export interface AutomationSettings {
+    72→  safeAssetPercent: number
+    73→  entryMarginPercent: number
+    74→  maxMarginPerSymbolPercent: number
+    75→  minPriceDistancePercent: number
+    76→  tradeWaitTime: number
+    77→  allowedErrors: number
+    78→  leverage: number
+    79→  signalExpirationHours: number
+    80→  baleToken: string
+    81→  baleChatId: string
+    82→}
+    83→
+    84→export interface SymbolEntry {
+    85→  id: number
+    86→  name: string
+    87→  status: 'waiting' | 'running' | 'error'
+    88→  errorCount: number
+    89→  lastCycleTime: number | null
+    90→}
+    91→
+    92→export interface Candle {
+    93→  timestamp: Date
+    94→  open: number
+    95→  high: number
+    96→  low: number
+    97→  close: number
+    98→  amount: number
+    99→  rsi?: number | null
+   100→  atr?: number | null
+   101→  signal?: 'Long' | 'Short' | null
+   102→  tp?: number | null
+   103→  sl?: number | null
+   104→  clientOrderId?: string | null
+   105→}
+   106→
+   107→export interface Signal {
+   108→  type: 'Long' | 'Short'
+   109→  timestamp: Date
+   110→  price: number
+   111→  tp: number
+   112→  sl: number
+   113→  orderId: string
+   114→  symbol: string
+   115→}
+   116→
+   117→export interface HistoryEntry {
+   118→  time: Date
+   119→  symbol: string
+   120→  price: number
+   121→  qty: number
+   122→  commission: number
+   123→  side: string
+   124→  realizedPnl: number
+   125→}
+   126→
+   127→export interface BalanceInfo {
+   128→  asset: string
+   129→  total: string
+   130→  available: string
+   131→  free: string
+   132→  positionMargin: string
+   133→  orderMargin: string
+   134→  unrealizedPnL: string
+   135→  fetchedAt: string
+   136→}
+   137→
+   138→export interface CycleLogEntry {
+   139→  message: string
+   140→  type: 'info' | 'success' | 'warning' | 'error'
+   141→  symbol?: string
+   142→  timestamp: string
+   143→}
+   144→
+   145→export interface CycleResult {
+   146→  success: boolean
+   147→  symbol: string | null
+   148→  action: 'position_opened' | 'no_signal' | 'no_ready_symbol' | 'risk_blocked' | 'error' | 'skipped'
+   149→  logs: CycleLogEntry[]
+   150→  errorCount: number
+   151→  duration: number
+   152→}
+   153→
+   154→// ---------------------------------------------------------------------------
+   155→// Default settings (mirror getDefaultSettings() in automation-manager.js)
+   156→// ---------------------------------------------------------------------------
+   157→
+   158→function getDefaultAutomationSettings(): AutomationSettings {
+   159→  return {
+   160→    safeAssetPercent: 50,
+   161→    entryMarginPercent: 5,
+   162→    maxMarginPerSymbolPercent: 10,
+   163→    minPriceDistancePercent: 0.5,
+   164→    tradeWaitTime: 60,
+   165→    allowedErrors: 3,
+   166→    leverage: 4,
+   167→    signalExpirationHours: 6,
+   168→    baleToken: '',
+   169→    baleChatId: ''
+   170→  }
+   171→}
+   172→
+   173→// ---------------------------------------------------------------------------
+   174→// Indicator calculations — verbatim port of signal-utils.js
+   175→// ---------------------------------------------------------------------------
+   176→
+   177→function calculateRSI(data: Candle[], period = 14): (number | null)[] {
+   178→  let avgGain = 0
+   179→  let avgLoss = 0
+   180→  const rsiValues: (number | null)[] = []
+   181→
+   182→  if (data.length < period) {
+   183→    return new Array(data.length).fill(null)
+   184→  }
+   185→
+   186→  for (let i = 1; i < data.length; i++) {
+   187→    const change = data[i].close - data[i - 1].close
+   188→    const gain = Math.max(change, 0)
+   189→    const loss = Math.max(-change, 0)
+   190→
+   191→    if (i <= period) {
+   192→      avgGain += gain
+   193→      avgLoss += loss
+   194→      if (i === period) {
+   195→        avgGain /= period
+   196→        avgLoss /= period
+   197→      }
+   198→      rsiValues.push(null)
+   199→    } else {
+   200→      avgGain = (avgGain * (period - 1) + gain) / period
+   201→      avgLoss = (avgLoss * (period - 1) + loss) / period
+   202→      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss
+   203→      rsiValues.push(100 - 100 / (1 + rs))
+   204→    }
+   205→  }
+   206→
+   207→  return rsiValues
+   208→}
+   209→
+   210→function calculateATR(data: Candle[], period = 14): number[] {
+   211→  const atrValues: number[] = []
+   212→
+   213→  const trueRanges = data.map((candle, i) => {
+   214→    if (i === 0) return candle.high - candle.low
+   215→    const prevClose = data[i - 1].close
+   216→    return Math.max(
+   217→      candle.high - candle.low,
+   218→      Math.abs(candle.high - prevClose),
+   219→      Math.abs(candle.low - prevClose)
+   220→    )
+   221→  })
+   222→
+   223→  atrValues[0] = trueRanges[0]
+   224→  for (let i = 1; i < data.length; i++) {
+   225→    atrValues[i] = ((period - 1) * atrValues[i - 1] + trueRanges[i]) / period
+   226→  }
+   227→
+   228→  return atrValues
+   229→}
+   230→
+   231→function calculateSMA(data: number[], period: number): (number | null)[] {
+   232→  const smaValues: (number | null)[] = []
+   233→  for (let i = 0; i < data.length; i++) {
+   234→    if (i < period - 1) {
+   235→      smaValues.push(null)
+   236→    } else {
+   237→      let sum = 0
+   238→      for (let j = i - period + 1; j <= i; j++) {
+   239→        sum += data[j]
+   240→      }
+   241→      smaValues.push(sum / period)
+   242→    }
+   243→  }
+   244→  return smaValues
+   245→}
+   246→
+   247→function generateOrderId(timestamp: number | Date, symbol: string): string {
+   248→  const dt = new Date(timestamp)
+   249→  const year = dt.getFullYear().toString().padStart(4, '0')
+   250→  const month = (dt.getMonth() + 1).toString().padStart(2, '0')
+   251→  const day = dt.getDate().toString().padStart(2, '0')
+   252→  const hour = dt.getHours().toString().padStart(2, '0')
+   253→  const minute = dt.getMinutes().toString().padStart(2, '0')
+   254→  const second = dt.getSeconds().toString().padStart(2, '0')
+   255→  return `${symbol}_${year}${month}${day}_${hour}${minute}${second}`
+   256→}
+   257→
+   258→// ---------------------------------------------------------------------------
+   259→// Jalali date conversion — verbatim port of toJalali() in automation-manager.js
+   260→// ---------------------------------------------------------------------------
+   261→
+   262→function toJalali(date?: Date | number): string {
+   263→  if (!date) date = new Date()
+   264→  if (typeof date === 'number') date = new Date(date)
+   265→
+   266→  const tehranOffset = 3.5 * 60 // minutes
+   267→  const utcTime = date.getTime() + date.getTimezoneOffset() * 60000
+   268→  const tehranTime = new Date(utcTime + tehranOffset * 60000)
+   269→
+   270→  const gy = tehranTime.getFullYear()
+   271→  const gm = tehranTime.getMonth() + 1
+   272→  const gd = tehranTime.getDate()
+   273→
+   274→  const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+   275→  let jy: number, jm: number, jd: number, gy2: number, days: number
+   276→
+   277→  gy2 = gm > 2 ? gy + 1 : gy
+   278→  days =
+   279→    355666 +
+   280→    365 * gy +
+   281→    Math.floor((gy2 + 3) / 4) -
+   282→    Math.floor((gy2 + 99) / 100) +
+   283→    Math.floor((gy2 + 399) / 400) +
+   284→    gd +
+   285→    g_d_m[gm - 1]
+   286→  jy = -1595 + 33 * Math.floor(days / 12053)
+   287→  days %= 12053
+   288→  jy += 4 * Math.floor(days / 1461)
+   289→  days %= 1461
+   290→  if (days > 365) {
+   291→    jy += Math.floor((days - 1) / 365)
+   292→    days = (days - 1) % 365
+   293→  }
+   294→  if (days < 186) {
+   295→    jm = 1 + Math.floor(days / 31)
+   296→    jd = 1 + (days % 31)
+   297→  } else {
+   298→    jm = 7 + Math.floor((days - 186) / 30)
+   299→    jd = 1 + ((days - 186) % 30)
+   300→  }
+   301→
+   302→  const hours = String(tehranTime.getHours()).padStart(2, '0')
+   303→  const minutes = String(tehranTime.getMinutes()).padStart(2, '0')
+   304→  const seconds = String(tehranTime.getSeconds()).padStart(2, '0')
+   305→
+   306→  return `${jy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')} - ${hours}:${minutes}:${seconds}`
+   307→}
+   308→
+   309→// ---------------------------------------------------------------------------
+   310→// Core cycle engine
+   311→// ---------------------------------------------------------------------------
+   312→
+   313→/**
+   314→ * Execute one full automation cycle on the server.
+   315→ *
+   316→ * @param baseUrl - the base URL of the running app (for internal API calls).
+   317→ *                  In local dev this is http://localhost:3000.
+   318→ *                  In Cloudflare this is the deployed Pages URL.
+   319→ * @param options - optional overrides (used by tests / manual triggers)
+   320→ */
+   321→export async function runCycle(
+   322→  baseUrl: string,
+   323→  options: {
+   324→    symbolOverride?: string | null
+   325→    triggerSource?: 'manual' | 'cron'
+   326→  } = {}
+   327→): Promise<CycleResult> {
+   328→  const startTime = Date.now()
+   329→  const logs: CycleLogEntry[] = []
+   330→  // ✓ Batch logging: collect all logs in memory during the cycle, then flush
+   331→  //   them to KV in a SINGLE write at the end. This avoids the race condition
+   332→  //   where concurrent cron cycles overwrite each other's logs (each log was
+   333→  //   previously doing a full read-modify-write of the entire logs array).
+   334→  const pendingDbLogs: Array<{
+   335→    message: string
+   336→    type: string
+   337→    symbol: string
+   338→    source: string
+   339→    timestamp: string
+   340→  }> = []
+   341→
+   342→  const log = (message: string, type: CycleLogEntry['type'] = 'info', symbol?: string) => {
+   343→    const entry: CycleLogEntry = { message, type, symbol, timestamp: new Date().toISOString() }
+   344→    logs.push(entry)
+   345→    // Buffer for batch write — do NOT write to KV on each log call
+   346→    pendingDbLogs.push({
+   347→      message,
+   348→      type,
+   349→      symbol: symbol || '',
+   350→      source: options.triggerSource || 'server',
+   351→      timestamp: entry.timestamp
+   352→    })
+   353→    console.log(`[CycleEngine${options.triggerSource ? `:${options.triggerSource}` : ''}] ${type.toUpperCase()} ${symbol ? `[${symbol}] ` : ''}${message}`)
+   354→  }
+   355→
+   356→  // ✓ Flush all buffered logs to KV in a single batch operation.
+   357→  //   Uses TWO write strategies to avoid race conditions:
+   358→  //   1. `lastCycleLogs` — stores THIS cycle's complete logs (overwrite, no race)
+   359→  //   2. `logs` — appends to the shared historical log (best-effort, may lose some entries
+   360→  //      under concurrent cron fire, but `lastCycleLogs` always has the complete picture)
+   361→  const flushLogs = async () => {
+   362→    if (pendingDbLogs.length === 0) return
+   363→
+   364→    // Strategy 1: Write this cycle's complete logs to `lastCycleLogs` (no race condition)
+   365→    try {
+   366→      const cycleLogEntry = {
+   367→        timestamp: new Date().toISOString(),
+   368→        source: options.triggerSource || 'server',
+   369→        logCount: pendingDbLogs.length,
+   370→        logs: pendingDbLogs.map((l, i) => ({
+   371→          id: i + 1,
+   372→          symbol: l.symbol,
+   373→          action: 'automation_cycle',
+   374→          status: l.type === 'error' ? 'ERROR' : l.type === 'warning' ? 'WARNING' : 'SUCCESS',
+   375→          message: l.message,
+   376→          error_code: l.type === 'error' ? 'SIGNAL_ERROR' : null,
+   377→          details: JSON.stringify({ timestamp: l.timestamp, type: l.type, source: l.source }),
+   378→          created_at: l.timestamp
+   379→        }))
+   380→      }
+   381→      try {
+   382→        const { getRequestContext } = await import('@cloudflare/next-on-pages')
+   383→        const ctx = getRequestContext()
+   384→        if (ctx.env && ctx.env.TRADING_DATA) {
+   385→          await ctx.env.TRADING_DATA.put('lastCycleLogs', JSON.stringify(cycleLogEntry))
+   386→        }
+   387→      } catch {
+   388→        // Not on Cloudflare — skip (local dev doesn't need this)
+   389→      }
+   390→    } catch (e) {
+   391→      console.warn('[CycleEngine] Failed to write lastCycleLogs:', e)
+   392→    }
+   393→
+   394→    // Strategy 2: Append to shared `logs` array (best-effort, may lose some under concurrency)
+   395→    try {
+   396→      const existingLogs = (await AutomationLogs.getRecent(500)) || []
+   397→      const maxId = existingLogs.length > 0
+   398→        ? Math.max(...existingLogs.map((l: { id?: number }) => l.id || 0))
+   399→        : 0
+   400→      const newLogs = pendingDbLogs.map((l, i) => ({
+   401→        id: maxId + i + 1,
+   402→        symbol: l.symbol,
+   403→        action: 'automation_cycle',
+   404→        status: l.type === 'error' ? 'ERROR' : l.type === 'warning' ? 'WARNING' : 'SUCCESS',
+   405→        message: l.message,
+   406→        error_code: l.type === 'error' ? 'SIGNAL_ERROR' : null,
+   407→        details: JSON.stringify({ timestamp: l.timestamp, type: l.type, source: l.source }),
+   408→        created_at: l.timestamp
+   409→      }))
+   410→      const allLogs = [...existingLogs, ...newLogs].slice(-500)
+   411→      try {
+   412→        const { getRequestContext } = await import('@cloudflare/next-on-pages')
+   413→        const ctx = getRequestContext()
+   414→        if (ctx.env && ctx.env.TRADING_DATA) {
+   415→          await ctx.env.TRADING_DATA.put('logs', JSON.stringify(allLogs))
+   416→        }
+   417→      } catch {
+   418→        // Not on Cloudflare — use individual adds for local dev
+   419→        for (const l of pendingDbLogs) {
+   420→          await AutomationLogs.add({
+   421→            message: l.message,
+   422→            type: l.type as 'info' | 'success' | 'warning' | 'error',
+   423→            symbol: l.symbol,
+   424→            source: l.source,
+   425→            timestamp: l.timestamp
+   426→          }).catch(() => {})
+   427→        }
+   428→      }
+   429→    } catch (e) {
+   430→      console.warn('[CycleEngine] Failed to append to shared logs:', e)
+   431→    }
+   432→  }
+   433→
+   434→  try {
+   435→    // -------------------------------------------------------------------
+   436→    // Load settings + symbols from the permanent database (async — KV)
+   437→    // -------------------------------------------------------------------
+   438→    const dbAutomationSettings = await AutomationState.get('automation_settings')
+   439→    const automationSettings: AutomationSettings = {
+   440→      ...getDefaultAutomationSettings(),
+   441→      ...(typeof dbAutomationSettings === 'string'
+   442→        ? JSON.parse(dbAutomationSettings)
+   443→        : (dbAutomationSettings as Record<string, unknown>) || {})
+   444→    }
+   445→
+   446→    const dbMarketSettings = await AutomationState.get('marketSignalSettings')
+   447→    const marketSettings: MarketSignalSettings =
+   448→      typeof dbMarketSettings === 'string'
+   449→        ? JSON.parse(dbMarketSettings)
+   450→        : (dbMarketSettings as MarketSignalSettings) || {}
+   451→
+   452→    const dbSymbols = await AutomationState.get('automation_symbols')
+   453→    const symbols: SymbolEntry[] = (() => {
+   454→      const parsed =
+   455→        typeof dbSymbols === 'string' ? JSON.parse(dbSymbols) : (dbSymbols as SymbolEntry[]) || []
+   456→      return Array.isArray(parsed) ? parsed : []
+   457→    })()
+   458→
+   459→    if (symbols.length === 0) {
+   460→      log('هیچ نمادی در لیست اتوماسیون وجود ندارد', 'warning')
+   461→      return {
+   462→        success: false,
+   463→        symbol: null,
+   464→        action: 'no_ready_symbol',
+   465→        logs,
+   466→        errorCount: 0,
+   467→        duration: Date.now() - startTime
+   468→      }
+   469→    }
+   470→
+   471→    // -------------------------------------------------------------------
+   472→    // Step 1: selectNextSymbol()
+   473→    // -------------------------------------------------------------------
+   474→    const now = Date.now()
+   475→    const waitTimeMs = automationSettings.tradeWaitTime * 60 * 1000
+   476→    const readySymbols = symbols.filter((s) => {
+   477→      if (!s.lastCycleTime) return true
+   478→      return now - s.lastCycleTime >= waitTimeMs
+   479→    })
+   480→
+   481→    let symbol: SymbolEntry | null = null
+   482→    if (options.symbolOverride) {
+   483→      symbol = symbols.find((s) => s.name === options.symbolOverride) || null
+   484→    } else {
+   485→      symbol = readySymbols.length > 0 ? readySymbols[0] : null
+   486→    }
+   487→
+   488→    if (!symbol) {
+   489→      log('هیچ نمادی برای معامله آماده نیست', 'warning')
+   490→      return {
+   491→        success: false,
+   492→        symbol: null,
+   493→        action: 'no_ready_symbol',
+   494→        logs,
+   495→        errorCount: 0,
+   496→        duration: Date.now() - startTime
+   497→      }
+   498→    }
+   499→
+   500→    log(`شروع چرخه برای نماد ${symbol.name}`, 'info', symbol.name)
+   501→
+   502→    // -------------------------------------------------------------------
+   503→    // Helper to persist symbol state back to DB
+   504→    // -------------------------------------------------------------------
+   505→    const updateSymbolState = (
+   506→      updates: Partial<SymbolEntry>
+   507→    ) => {
+   508→      const idx = symbols.findIndex((s) => s.id === symbol!.id)
+   509→      if (idx >= 0) {
+   510→        symbols[idx] = { ...symbols[idx], ...updates }
+   511→        // ✓ async DB write (fire-and-forget for state updates)
+   512→        AutomationState.set('automation_symbols', symbols).catch(() => {})
+   513→      }
+   514→    }
+   515→
+   516→    // -------------------------------------------------------------------
+   517→    // Step 2-3: fetchMarketData()
+   518→    // -------------------------------------------------------------------
+   519→    const interval = marketSettings.interval || '1h'
+   520→    const limit = marketSettings.limit || 1000
+   521→    const fullSymbol = `${symbol.name}-SWAP-USDT`
+   522→    const proxyUrl = `${baseUrl}/api/toobit-proxy?symbol=${encodeURIComponent(fullSymbol)}&interval=${encodeURIComponent(interval)}&limit=${encodeURIComponent(limit)}`
+   523→
+   524→    log(`${symbol.name}: دریافت داده‌های بازار...`, 'info', symbol.name)
+   525→    const marketResponse = await fetch(proxyUrl)
+   526→    if (!marketResponse.ok) {
+   527→      throw new Error(`Failed to fetch market data: HTTP ${marketResponse.status}`)
+   528→    }
+   529→    const rawData = await marketResponse.json()
+   530→    if (!Array.isArray(rawData) || rawData.length === 0 || !Array.isArray(rawData[0])) {
+   531→      throw new Error('داده‌های بازار معتبر نیست')
+   532→    }
+   533→    log(`${symbol.name}: ${rawData.length} کندل دریافت شد`, 'success', symbol.name)
+   534→
+   535→    // -------------------------------------------------------------------
+   536→    // Step 4: analyzeMarketData() — signal generation (verbatim port)
+   537→    // -------------------------------------------------------------------
+   538→    const N = rawData.length
+   539→    const data: Candle[] = rawData.map((c: unknown[]) => ({
+   540→      timestamp: new Date(c[0] as number),
+   541→      open: parseFloat(c[1] as string),
+   542→      high: parseFloat(c[2] as string),
+   543→      low: parseFloat(c[3] as string),
+   544→      close: parseFloat(c[4] as string),
+   545→      amount: parseFloat(c[5] as string)
+   546→    }))
+   547→
+   548→    // Calculate daily data (Tehran offset +3:30)
+   549→    const offset = 3.5 * 3600 * 1000
+   550→    const dailyData: Record<number, { maxHigh: number; minLow: number; lastClose: number; lastTs: number }> = {}
+   551→    for (let i = 0; i < N; i++) {
+   552→      const localTs = data[i].timestamp.getTime() + offset
+   553→      const day = Math.floor(localTs / 86400000)
+   554→      if (!dailyData[day]) {
+   555→        dailyData[day] = { maxHigh: -Infinity, minLow: Infinity, lastClose: 0, lastTs: -Infinity }
+   556→      }
+   557→      dailyData[day].maxHigh = Math.max(dailyData[day].maxHigh, data[i].high)
+   558→      dailyData[day].minLow = Math.min(dailyData[day].minLow, data[i].low)
+   559→      if (localTs > dailyData[day].lastTs) {
+   560→        dailyData[day].lastTs = localTs
+   561→        dailyData[day].lastClose = data[i].close
+   562→      }
+   563→    }
+   564→
+   565→    const days = Object.keys(dailyData).sort((a, b) => Number(a) - Number(b)).map(Number)
+   566→
+   567→    const prevDailyHighs: (number | null)[] = []
+   568→    const prevDailyLows: (number | null)[] = []
+   569→    const prevDayCloses: (number | null)[] = []
+   570→    for (let i = 0; i < N; i++) {
+   571→      const localTs = data[i].timestamp.getTime() + offset
+   572→      const day = Math.floor(localTs / 86400000)
+   573→      const prevDayIndex = days.indexOf(day) - 1
+   574→      if (prevDayIndex >= 0) {
+   575→        const prevDay = days[prevDayIndex]
+   576→        prevDailyHighs.push(dailyData[prevDay].maxHigh)
+   577→        prevDailyLows.push(dailyData[prevDay].minLow)
+   578→        prevDayCloses.push(dailyData[prevDay].lastClose)
+   579→      } else {
+   580→        prevDailyHighs.push(null)
+   581→        prevDailyLows.push(null)
+   582→        prevDayCloses.push(null)
+   583→      }
+   584→    }
+   585→
+   586→    const atr = calculateATR(data, marketSettings.atrPeriod || 14)
+   587→    const avgVols = calculateSMA(data.map((d) => d.amount), marketSettings.avgVolPeriod || 50)
+   588→    const rsi = calculateRSI(data, marketSettings.rsiPeriod || 14)
+   589→
+   590→    // Track crossovers
+   591→    let lastUL: number | null = null
+   592→    let lastOH: number | null = null
+   593→    const lastCrossUnderPL = new Array(N).fill(Infinity)
+   594→    const lastCrossOverPH = new Array(N).fill(Infinity)
+   595→    for (let i = 1; i < N; i++) {
+   596→      if (data[i].close < (prevDailyLows[i] as number) && data[i - 1].close >= (prevDailyLows[i - 1] as number)) lastUL = i
+   597→      if (data[i].close > (prevDailyHighs[i] as number) && data[i - 1].close <= (prevDailyHighs[i - 1] as number)) lastOH = i
+   598→      lastCrossUnderPL[i] = lastUL === null ? Infinity : i - lastUL
+   599→      lastCrossOverPH[i] = lastOH === null ? Infinity : i - lastOH
+   600→    }
+   601→
+   602→    // Generate signals
+   603→    const signals: Signal[] = []
+   604→    const htfSource = marketSettings.htfConfirmationSource || 'signalCandleClose'
+   605→    for (let i = 1; i < N - 1; i++) {
+   606→      const isCrossOverPL = data[i].close > (prevDailyLows[i] as number) && data[i - 1].close <= (prevDailyLows[i - 1] as number)
+   607→      const isCrossUnderPH = data[i].close < (prevDailyHighs[i] as number) && data[i - 1].close >= (prevDailyHighs[i - 1] as number)
+   608→
+   609→      let htfConfirmLong: boolean
+   610→      let htfConfirmShort: boolean
+   611→      if (htfSource === 'previousDayClose') {
+   612→        htfConfirmLong = prevDayCloses[i] !== null && (prevDayCloses[i] as number) > (prevDailyLows[i] as number)
+   613→        htfConfirmShort = prevDayCloses[i] !== null && (prevDayCloses[i] as number) < (prevDailyHighs[i] as number)
+   614→      } else {
+   615→        htfConfirmLong = prevDailyLows[i] !== null && data[i].close > (prevDailyLows[i] as number)
+   616→        htfConfirmShort = prevDailyHighs[i] !== null && data[i].close < (prevDailyHighs[i] as number)
+   617→      }
+   618→
+   619→      const condLong =
+   620→        isCrossOverPL &&
+   621→        lastCrossUnderPL[i] <= (marketSettings.lookback || 50) &&
+   622→        avgVols[i] !== null &&
+   623→        data[i].amount > (avgVols[i] as number) * (marketSettings.volMult || 0.2) &&
+   624→        rsi[i] !== null &&
+   625→        (rsi[i] as number) < (marketSettings.rsiThreshold || 50) &&
+   626→        htfConfirmLong
+   627→
+   628→      const condShort =
+   629→        isCrossUnderPH &&
+   630→        lastCrossOverPH[i] <= (marketSettings.lookback || 50) &&
+   631→        avgVols[i] !== null &&
+   632→        data[i].amount > (avgVols[i] as number) * (marketSettings.volMult || 0.2) &&
+   633→        rsi[i] !== null &&
+   634→        (rsi[i] as number) > (marketSettings.rsiThreshold || 50) &&
+   635→        htfConfirmShort
+   636→
+   637→      data[i].rsi = rsi[i]
+   638→      data[i].atr = atr[i]
+   639→
+   640→      if (condLong) {
+   641→        data[i].signal = 'Long'
+   642→        if (marketSettings.longFixedTp !== null && !isNaN(marketSettings.longFixedTp as number)) {
+   643→          data[i].tp = data[i].close + data[i].close * (marketSettings.longFixedTp as number / 100)
+   644→        } else {
+   645→          data[i].tp = data[i].close + atr[i] * (marketSettings.tpLongMult || 20)
+   646→        }
+   647→        if (marketSettings.longFixedSl !== null && !isNaN(marketSettings.longFixedSl as number)) {
+   648→          data[i].sl = data[i].close - data[i].close * (marketSettings.longFixedSl as number / 100)
+   649→        } else {
+   650→          data[i].sl = data[i].close - atr[i] * (marketSettings.slLongMult || 6)
+   651→        }
+   652→        data[i].clientOrderId = generateOrderId(data[i].timestamp, symbol.name)
+   653→        signals.push({
+   654→          type: 'Long',
+   655→          timestamp: data[i].timestamp,
+   656→          price: data[i].close,
+   657→          tp: data[i].tp as number,
+   658→          sl: data[i].sl as number,
+   659→          orderId: data[i].clientOrderId as string,
+   660→          symbol: symbol.name
+   661→        })
+   662→      } else if (condShort) {
+   663→        data[i].signal = 'Short'
+   664→        if (marketSettings.shortFixedTp !== null && !isNaN(marketSettings.shortFixedTp as number)) {
+   665→          data[i].tp = data[i].close - data[i].close * (marketSettings.shortFixedTp as number / 100)
+   666→        } else {
+   667→          data[i].tp = data[i].close - atr[i] * (marketSettings.tpShortMult || 24)
+   668→        }
+   669→        if (marketSettings.shortFixedSl !== null && !isNaN(marketSettings.shortFixedSl as number)) {
+   670→          data[i].sl = data[i].close + data[i].close * (marketSettings.shortFixedSl as number / 100)
+   671→        } else {
+   672→          data[i].sl = data[i].close + atr[i] * (marketSettings.slShortMult || 4)
+   673→        }
+   674→        data[i].clientOrderId = generateOrderId(data[i].timestamp, symbol.name)
+   675→        signals.push({
+   676→          type: 'Short',
+   677→          timestamp: data[i].timestamp,
+   678→          price: data[i].close,
+   679→          tp: data[i].tp as number,
+   680→          sl: data[i].sl as number,
+   681→          orderId: data[i].clientOrderId as string,
+   682→          symbol: symbol.name
+   683→        })
+   684→      }
+   685→    }
+   686→
+   687→    log(`${symbol.name}: ${signals.length} سیگنال تولید شد`, 'info', symbol.name)
+   688→
+   689→    if (signals.length === 0) {
+   690→      log(`${symbol.name}: هیچ سیگنالی یافت نشد - شرایط بازار مناسب نیست`, 'warning', symbol.name)
+   691→      updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+   692→      return {
+   693→        success: false,
+   694→        symbol: symbol.name,
+   695→        action: 'no_signal',
+   696→        logs,
+   697→        errorCount: 0,
+   698→        duration: Date.now() - startTime
+   699→      }
+   700→    }
+   701→
+   702→    // -------------------------------------------------------------------
+   703→    // Step 5: fetchPositionHistory()
+   704→    // -------------------------------------------------------------------
+   705→    log(`${symbol.name}: دریافت تاریخچه معاملات...`, 'info', symbol.name)
+   706→    const apiKey = marketSettings.apiKey
+   707→    const secretKey = marketSettings.secretKey
+   708→    const toobitBaseUrl = marketSettings.baseUrl || 'https://api.toobit.com'
+   709→
+   710→    let currentSymbolHistory: HistoryEntry[] = []
+   711→    if (apiKey && secretKey) {
+   712→      try {
+   713→        const historyResponse = await fetch(`${baseUrl}/api/history`, {
+   714→          method: 'POST',
+   715→          headers: { 'Content-Type': 'application/json' },
+   716→          body: JSON.stringify({
+   717→            symbol: fullSymbol,
+   718→            apiKey,
+   719→            secretKey,
+   720→            baseUrl: toobitBaseUrl,
+   721→            limit: 100
+   722→          })
+   723→        })
+   724→        if (historyResponse.ok) {
+   725→          const historyData = await historyResponse.json()
+   726→          let histories: unknown[] = []
+   727→          if (Array.isArray(historyData)) {
+   728→            histories = historyData
+   729→          } else if (historyData.data && Array.isArray(historyData.data)) {
+   730→            histories = historyData.data
+   731→          } else if (historyData.result && Array.isArray(historyData.result)) {
+   732→            histories = historyData.result
+   733→          } else if (typeof historyData === 'object' && historyData !== null) {
+   734→            const values = Object.values(historyData).find((v) => Array.isArray(v))
+   735→            histories = values || []
+   736→          }
+   737→          currentSymbolHistory = (histories as Record<string, unknown>[]).map((item) => ({
+   738→            time: new Date(parseInt(String(item.time || 0))),
+   739→            symbol: String(item.symbol || '-'),
+   740→            price: parseFloat(String(item.price || 0)),
+   741→            qty: parseFloat(String(item.qty || 0)),
+   742→            commission: parseFloat(String(item.commission || 0)),
+   743→            side: String(item.side || '-'),
+   744→            realizedPnl: parseFloat(String(item.realizedPnl || 0))
+   745→          }))
+   746→        }
+   747→      } catch (e) {
+   748→        log(`${symbol.name}: خطا در دریافت تاریخچه - ${e instanceof Error ? e.message : 'unknown'}`, 'warning', symbol.name)
+   749→      }
+   750→    }
+   751→    log(`${symbol.name}: ${currentSymbolHistory.length} معامله یافت شد`, 'success', symbol.name)
+   752→
+   753→    // -------------------------------------------------------------------
+   754→    // Step 6: updateSelectedSignal() — only latest signal with "در انتظار" status
+   755→    // -------------------------------------------------------------------
+   756→    // calculateSignalStatus — ✓ includes signal expiration logic (مورد ۴)
+   757→    const isSignalExpired = (signal: Signal): boolean => {
+   758→      if (!signal || !signal.timestamp) return false
+   759→      const signalTime = signal.timestamp instanceof Date
+   760→        ? signal.timestamp.getTime()
+   761→        : new Date(signal.timestamp).getTime()
+   762→      const now = Date.now()
+   763→      const expirationMs = (automationSettings.signalExpirationHours || 6) * 60 * 60 * 1000
+   764→      return (now - signalTime) > expirationMs
+   765→    }
+   766→
+   767→    const calculateSignalStatus = (signal: Signal): { text: string } => {
+   768→      if (!currentSymbolHistory || !Array.isArray(currentSymbolHistory)) {
+   769→        const isLatest = signals.indexOf(signal) === signals.length - 1
+   770→        // ✓ Check expiration even without history
+   771→        if (isLatest && isSignalExpired(signal)) {
+   772→          return { text: 'منقضی شده' }
+   773→        }
+   774→        return { text: isLatest ? 'در انتظار' : 'باز نشده' }
+   775→      }
+   776→      const signalDirection = signal.type === 'Long' ? 'BUY' : 'SELL'
+   777→      const openPositions = currentSymbolHistory.filter(
+   778→        (pos) => pos.side && pos.side.includes('OPEN') && pos.side.includes(signalDirection)
+   779→      )
+   780→      const currentIndex = signals.indexOf(signal)
+   781→      const nextSignal = currentIndex < signals.length - 1 ? signals[currentIndex + 1] : null
+   782→      const currentTime = signal.timestamp.getTime()
+   783→      const nextTime = nextSignal ? nextSignal.timestamp.getTime() : Infinity
+   784→      const matchingPositions = openPositions.filter((pos) => {
+   785→        const posTime = pos.time.getTime()
+   786→        return posTime >= currentTime && posTime < nextTime
+   787→      })
+   788→      if (matchingPositions.length === 0) {
+   789→        const isLatest = currentIndex === signals.length - 1
+   790→        // ✓ Check if signal is expired (مورد ۴)
+   791→        if (isLatest && isSignalExpired(signal)) {
+   792→          return { text: 'منقضی شده' }
+   793→        }
+   794→        return { text: isLatest ? 'در انتظار' : 'باز نشده' }
+   795→      }
+   796→      return { text: 'باز شده' }
+   797→    }
+   798→
+   799→    const latestSignal = signals[signals.length - 1]
+   800→    const status = calculateSignalStatus(latestSignal)
+   801→    // ✓ Expired signals are NOT selected — they can't be traded
+   802→    const selectedSignal = status.text === 'در انتظار' ? latestSignal : null
+   803→
+   804→    if (!selectedSignal) {
+   805→      if (status.text === 'منقضی شده') {
+   806→        log(`${symbol.name}: سیگنال منقضی شده است (بیش از ${automationSettings.signalExpirationHours} ساعت از صدور گذشته) - از این نماد عبور میشود`, 'warning', symbol.name)
+   807→      } else {
+   808→        log(`${symbol.name}: هیچ سیگنالی برای ورود آماده نیست - از این نماد عبو میشود`, 'warning', symbol.name)
+   809→      }
+   810→      updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+   811→      return {
+   812→        success: false,
+   813→        symbol: symbol.name,
+   814→        action: 'no_signal',
+   815→        logs,
+   816→        errorCount: 0,
+   817→        duration: Date.now() - startTime
+   818→      }
+   819→    }
+   820→
+   821→    log(`${symbol.name}: سیگنال آماده ورود - ${selectedSignal.type}`, 'success', symbol.name)
+   822→
+   823→    // -------------------------------------------------------------------
+   824→    // Step 7: fetchPrice()
+   825→    // -------------------------------------------------------------------
+   826→    log(`${symbol.name}: دریافت قیمت...`, 'info', symbol.name)
+   827→    const priceResponse = await fetch(
+   828→      `${baseUrl}/api/toobit-proxy?symbol=${encodeURIComponent(fullSymbol)}&interval=1h&limit=1`
+   829→    )
+   830→    if (!priceResponse.ok) throw new Error('Failed to fetch price')
+   831→    const priceData = await priceResponse.json()
+   832→    const klines = Array.isArray(priceData) ? priceData : priceData.data || []
+   833→    if (klines.length === 0) throw new Error('No price data received')
+   834→    const price = parseFloat(klines[0][4])
+   835→    log(`${symbol.name}: قیمت فعلی = ${price}`, 'success', symbol.name)
+   836→
+   837→    // -------------------------------------------------------------------
+   838→    // Step 8: closeOppositePositions()
+   839→    // -------------------------------------------------------------------
+   840→    log(`${symbol.name}: بررسی پوزیشن‌های مخالف...`, 'info', symbol.name)
+   841→    let closedCount = 0
+   842→    let closedPositionInfo: {
+   843→      symbol: string
+   844→      side: string
+   845→      leverage: number
+   846→      margin: number
+   847→      unrealizedPnL: number
+   848→      profitRate: number
+   849→      avgPrice: number
+   850→      available: number
+   851→    } | null = null
+   852→
+   853→    if (apiKey && secretKey) {
+   854→      try {
+   855→        // First fetch open positions to find the opposite one's details
+   856→        const posResponse = await fetch(`${baseUrl}/api/open-positions`, {
+   857→          headers: {
+   858→            'X-API-Key': apiKey,
+   859→            'X-Secret-Key': secretKey,
+   860→            'X-Base-Url': toobitBaseUrl
+   861→          }
+   862→        })
+   863→        if (posResponse.ok) {
+   864→          const posResult = await posResponse.json()
+   865→          const allPositions = posResult.positions || posResult.data || []
+   866→          const oppositeDirection = selectedSignal.type === 'Long' ? 'short' : 'long'
+   867→          const targetSide = oppositeDirection.toUpperCase()
+   868→          const matchingPos = (allPositions as Record<string, unknown>[]).find((pos) => {
+   869→            const posSymbol = String(pos.symbol || '').toUpperCase()
+   870→            const side = String(pos.side || '').toUpperCase()
+   871→            const available = parseFloat(String(pos.available || pos.position || 0))
+   872→            return posSymbol === fullSymbol.toUpperCase() && side === targetSide && available > 0
+   873→          })
+   874→          if (matchingPos) {
+   875→            const margin = parseFloat(String(matchingPos.margin || 0))
+   876→            const unrealizedPnL = parseFloat(String(matchingPos.unrealizedPnL || 0))
+   877→            const profitRate = parseFloat(String(matchingPos.profitRate || 0)) * 100
+   878→            closedPositionInfo = {
+   879→              symbol: String(matchingPos.symbol || ''),
+   880→              side: String(matchingPos.side || ''),
+   881→              leverage: parseInt(String(matchingPos.leverage || 1)),
+   882→              margin,
+   883→              unrealizedPnL,
+   884→              profitRate,
+   885→              avgPrice: parseFloat(String(matchingPos.avgPrice || 0)),
+   886→              available: parseFloat(String(matchingPos.available || 0))
+   887→            }
+   888→          }
+   889→        }
+   890→
+   891→        // Close the opposite position
+   892→        const oppositeDir = selectedSignal.type === 'Long' ? 'short' : 'long'
+   893→        const closeResponse = await fetch(`${baseUrl}/api/close-position`, {
+   894→          method: 'POST',
+   895→          headers: { 'Content-Type': 'application/json' },
+   896→          body: JSON.stringify({
+   897→            symbol: symbol.name,
+   898→            direction: oppositeDir,
+   899→            clientOrderId: `${symbol.name}_close_${Date.now()}`,
+   900→            settings: { apiKey, secretKey, baseUrl: toobitBaseUrl }
+   901→          })
+   902→        })
+   903→        if (closeResponse.ok) {
+   904→          const closeData = await closeResponse.json()
+   905→          closedCount = closeData.closed || 0
+   906→        }
+   907→      } catch (e) {
+   908→        log(`${symbol.name}: خطا در بستن پوزیشن مخالف - ${e instanceof Error ? e.message : 'unknown'}`, 'warning', symbol.name)
+   909→      }
+   910→    }
+   911→    if (closedCount > 0) {
+   912→      log(`${symbol.name}: ${closedCount} پوزیشن مخالف بسته شد`, 'success', symbol.name)
+   913→    } else {
+   914→      log(`${symbol.name}: پوزیشن مخالفی یافت نشد`, 'info', symbol.name)
+   915→    }
+   916→
+   917→    // -------------------------------------------------------------------
+   918→    // ✓ Step 9 (NEW): Refresh "سوابق پوزیشن‌ها" (position history) table
+   919→    // Fetch fresh history AFTER closing opposite positions so the history
+   920→    // reflects the latest state (including any newly-closed positions).
+   921→    // This history is used to compute the "آخرین ورود" column in step 10.
+   922→    // -------------------------------------------------------------------
+   923→    log(`${symbol.name}: بروزرسانی جدول سوابق پوزیشن‌ها...`, 'info', symbol.name)
+   924→    // ✓ Re-fetch fresh history (currentSymbolHistory was already declared in step 5)
+   925→    currentSymbolHistory = []
+   926→    if (apiKey && secretKey) {
+   927→      try {
+   928→        const historyResponse = await fetch(`${baseUrl}/api/history`, {
+   929→          method: 'POST',
+   930→          headers: { 'Content-Type': 'application/json' },
+   931→          body: JSON.stringify({
+   932→            symbol: fullSymbol,
+   933→            apiKey,
+   934→            secretKey,
+   935→            baseUrl: toobitBaseUrl,
+   936→            limit: 100
+   937→          })
+   938→        })
+   939→        if (historyResponse.ok) {
+   940→          const historyData = await historyResponse.json()
+   941→          let histories: unknown[] = []
+   942→          if (Array.isArray(historyData)) {
+   943→            histories = historyData
+   944→          } else if (historyData.data && Array.isArray(historyData.data)) {
+   945→            histories = historyData.data
+   946→          } else if (historyData.result && Array.isArray(historyData.result)) {
+   947→            histories = historyData.result
+   948→          } else if (typeof historyData === 'object' && historyData !== null) {
+   949→            const values = Object.values(historyData).find((v) => Array.isArray(v))
+   950→            histories = values || []
+   951→          }
+   952→          currentSymbolHistory = (histories as Record<string, unknown>[]).map((item) => ({
+   953→            time: new Date(parseInt(String(item.time || 0))),
+   954→            symbol: String(item.symbol || '-'),
+   955→            price: parseFloat(String(item.price || 0)),
+   956→            qty: parseFloat(String(item.qty || 0)),
+   957→            commission: parseFloat(String(item.commission || 0)),
+   958→            side: String(item.side || '-'),
+   959→            realizedPnl: parseFloat(String(item.realizedPnl || 0))
+   960→          }))
+   961→          log(`${symbol.name}: جدول سوابق پوزیشن‌ها بروزرسانی شد (${currentSymbolHistory.length} ردیف)`, 'success', symbol.name)
+   962→        }
+   963→      } catch (e) {
+   964→        log(`${symbol.name}: خطا در بروزرسانی سوابق پوزیشن‌ها - ${e instanceof Error ? e.message : 'unknown'}`, 'warning', symbol.name)
+   965→      }
+   966→    }
+   967→
+   968→    // -------------------------------------------------------------------
+   969→    // ✓ Step 10 (NEW): Refresh "پوزیشن‌های باز" (open positions) table +
+   970→    //   compute "آخرین ورود" column from the fresh history (step 9).
+   971→    //   This replaces the old getSymbolMargin() call.
+   972→    //   The open positions data is stored in `freshOpenPositions` for
+   973→    //   use by the risk controls in step 12.
+   974→    // -------------------------------------------------------------------
+   975→    log(`${symbol.name}: بروزرسانی جدول پوزیشن‌های باز...`, 'info', symbol.name)
+   976→    let freshOpenPositions: Record<string, unknown>[] = []
+   977→    // ✓ lastEntryPriceCache for this symbol (computed from fresh history)
+   978→    let symbolLastEntryPrice: number | null = null
+   979→    if (apiKey && secretKey) {
+   980→      try {
+   981→        const opResponse = await fetch(`${baseUrl}/api/open-positions`, {
+   982→          headers: {
+   983→            'X-API-Key': apiKey,
+   984→            'X-Secret-Key': secretKey,
+   985→            'X-Base-Url': toobitBaseUrl
+   986→          }
+   987→        })
+   988→        if (opResponse.ok) {
+   989→          const opData = await opResponse.json()
+   990→          freshOpenPositions = (opData.positions || opData.data || []) as Record<string, unknown>[]
+   991→
+   992→          // ✓ Compute "آخرین ورود" for the current cycle symbol from the fresh history
+   993→          // Logic: find the latest row (newest time) in currentSymbolHistory.
+   994→          //   - If its side is OPEN (BUY_OPEN or SELL_OPEN) → use its price as "آخرین ورود"
+   995→          //   - If its side is CLOSE (BUY_CLOSE or SELL_CLOSE) → null (no open position)
+   996→          if (currentSymbolHistory.length > 0) {
+   997→            const signalDirection = selectedSignal.type === 'Long' ? 'long' : 'short'
+   998→            const sidePrefix = signalDirection === 'long' ? 'BUY' : 'SELL'
+   999→            // Sort chronologically (ascending by time)
+  1000→            const sortedHistory = [...currentSymbolHistory].sort((a, b) => a.time.getTime() - b.time.getTime())
+  1001→            // Find the LATEST OPEN trade matching direction
+  1002→            let latestOpen: HistoryEntry | null = null
+  1003→            for (let i = sortedHistory.length - 1; i >= 0; i--) {
+  1004→              const t = sortedHistory[i]
+  1005→              if (t.side && t.side.includes(sidePrefix) && t.side.includes('OPEN')) {
+  1006→                latestOpen = t
+  1007→                break
+  1008→              }
+  1009→            }
+  1010→            symbolLastEntryPrice = latestOpen ? latestOpen.price : null
+  1011→          }
+  1012→
+  1013→          // Persist open positions to DB (so the UI can display them)
+  1014→          AutomationState.set('openPositions', freshOpenPositions).catch(() => {})
+  1015→          log(`${symbol.name}: جدول پوزیشن‌های باز بروزرسانی شد (${freshOpenPositions.length} پوزیشن)`, 'success', symbol.name)
+  1016→        }
+  1017→      } catch (e) {
+  1018→        log(`${symbol.name}: خطا در بروزرسانی پوزیشن‌های باز - ${e instanceof Error ? e.message : 'unknown'}`, 'warning', symbol.name)
+  1019→      }
+  1020→    }
+  1021→
+  1022→    // -------------------------------------------------------------------
+  1023→    // ✓ Step 11: fetchBalance()
+  1024→    // -------------------------------------------------------------------
+  1025→    log(`${symbol.name}: دریافت موجودی حساب...`, 'info', symbol.name)
+  1026→    let balance: BalanceInfo
+  1027→    if (apiKey && secretKey) {
+  1028→      const balanceResponse = await fetch(`${baseUrl}/api/balance`, {
+  1029→        headers: {
+  1030→          'X-API-Key': apiKey,
+  1031→          'X-Secret-Key': secretKey,
+  1032→          'X-Base-Url': toobitBaseUrl
+  1033→        }
+  1034→      })
+  1035→      if (!balanceResponse.ok) throw new Error('Failed to fetch balance')
+  1036→      const balanceData = await balanceResponse.json()
+  1037→      balance = balanceData.balance || balanceData
+  1038→    } else {
+  1039→      throw new Error('API credentials not configured')
+  1040→    }
+  1041→
+  1042→    const totalAssets = parseFloat(balance.total)
+  1043→    const freeBalance = parseFloat(balance.free)
+  1044→    log(`${symbol.name}: کل دارایی = ${totalAssets} USDT, آزاد = ${freeBalance} USDT`, 'success', symbol.name)
+  1045→
+  1046→    // Persist balance to DB (so the UI can display it) — async, fire-and-forget
+  1047→    AutomationState.set('balance', balance).catch(() => {})
+  1048→
+  1049→    // -------------------------------------------------------------------
+  1050→    // ✓ Step 12: calculateNewMargin() + Risk Controls
+  1051→    // -------------------------------------------------------------------
+  1052→    log(`${symbol.name}: محاسبه مارجین (${automationSettings.entryMarginPercent}% از کل دارایی)...`, 'info', symbol.name)
+  1053→    const newMargin = parseFloat((totalAssets * (automationSettings.entryMarginPercent / 100)).toFixed(2))
+  1054→    log(`${symbol.name}: مارجین محاسبه شده = ${newMargin} USDT`, 'success', symbol.name)
+  1055→
+  1056→    // Helper to send Bale notification for risk-control blocks
+  1057→    const sendBaleNotification = async (text: string) => {
+  1058→      const token = automationSettings.baleToken
+  1059→      const chatId = automationSettings.baleChatId
+  1060→      if (!token || !chatId) return { ok: false, error: 'Not configured' }
+  1061→      try {
+  1062→        const res = await fetch(`${baseUrl}/api/bale-send`, {
+  1063→          method: 'POST',
+  1064→          headers: { 'Content-Type': 'application/json' },
+  1065→          body: JSON.stringify({ token, chatId, text })
+  1066→        })
+  1067→        return await res.json()
+  1068→      } catch {
+  1069→        return { ok: false, error: 'fetch failed' }
+  1070→      }
+  1071→    }
+  1072→
+  1073→    const notifyRiskControlBlocked = async (
+  1074→      controlName: string,
+  1075→      math: string
+  1076→    ) => {
+  1077→      const eventTime = toJalali(new Date())
+  1078→      const directionIcon = selectedSignal.type === 'Long' ? '🔵' : '🔴'
+  1079→      const directionText = selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'
+  1080→
+  1081→      // ✓ Determine hashtag based on control name
+  1082→      let hashtag = '#کنترل_ریسک'
+  1083→      if (controlName.includes('فاصله قیمت')) {
+  1084→        hashtag = '#فاصله_قیمت'
+  1085→      } else if (controlName.includes('دارایی امن')) {
+  1086→        hashtag = '#دارایی_امن'
+  1087→      } else if (controlName.includes('سقف مارجین')) {
+  1088→        hashtag = '#سقف_مارجین'
+  1089→      } else if (controlName.includes('مارجین مثبت')) {
+  1090→        hashtag = '#مارجین_مثبت'
+  1091→      } else if (controlName.includes('کندل هم‌جهت') || controlName.includes('کندل هم جهت')) {
+  1092→        hashtag = '#کندل_هم‌جهت'
+  1093→      }
+  1094→
+  1095→      const text =
+  1096→        `🚫 جلوگیری از باز شدن پوزیشن\n` +
+  1097→        `⭐ نماد: ${symbol!.name}\n` +
+  1098→        `${directionIcon} جهت سیگنال: ${directionText}\n` +
+  1099→        `🚦 کنترل فعال: ${controlName}\n\n` +
+  1100→        `📐 قیاس ریاضی:\n${math}\n\n` +
+  1101→        `🕐 زمان رویداد: ${eventTime}\n` +
+  1102→        `${hashtag}`
+  1103→      return sendBaleNotification(text)
+  1104→    }
+  1105→
+  1106→    // ===================================================================
+  1107→    // ✓ Control 2 (الف): Safe Asset Check — ALWAYS runs
+  1108→    // ===================================================================
+  1109→    const safeAmount = totalAssets * (automationSettings.safeAssetPercent / 100)
+  1110→    const projectedFree = freeBalance - newMargin
+  1111→    if (projectedFree < safeAmount) {
+  1112→      log(
+  1113→        `${symbol.name}: دارایی امن کافی نیست (آزاد ${freeBalance} - مارجین ${newMargin} = ${projectedFree.toFixed(2)} < دارایی امن ${safeAmount.toFixed(2)}) — رد شد`,
+  1114→        'warning',
+  1115→        symbol.name
+  1116→      )
+  1117→      await notifyRiskControlBlocked(
+  1118→        'دارایی امن (Safe Asset)',
+  1119→        `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
+  1120→          `موجودی آزاد = ${freeBalance.toFixed(4)} USDT\n` +
+  1121→          `مارجین ورودی جدید = ${newMargin.toFixed(4)} USDT\n` +
+  1122→          `درصد دارایی امن = ${automationSettings.safeAssetPercent}%\n` +
+  1123→          `دارایی امن = ${totalAssets.toFixed(4)} × ${automationSettings.safeAssetPercent}% = ${safeAmount.toFixed(4)} USDT\n` +
+  1124→          `موجودی آزاد پیش‌بینی‌شده = ${freeBalance.toFixed(4)} - ${newMargin.toFixed(4)} = ${projectedFree.toFixed(4)} USDT\n` +
+  1125→          `${projectedFree.toFixed(4)} < ${safeAmount.toFixed(4)} ✗`
+  1126→      )
+  1127→      updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+  1128→      return {
+  1129→        success: false,
+  1130→        symbol: symbol.name,
+  1131→        action: 'risk_blocked',
+  1132→        logs,
+  1133→        errorCount: 0,
+  1134→        duration: Date.now() - startTime
+  1135→      }
+  1136→    }
+  1137→
+  1138→    // ===================================================================
+  1139→    // ✓ Controls 3 & 4: Price Distance + Max Margin Per Symbol
+  1140→    //   NEW LOGIC: Only run if the current cycle symbol is in the open
+  1141→    //   positions table (freshOpenPositions from step 10).
+  1142→    //   If the symbol is NOT in open positions → skip both controls.
+  1143→    // ===================================================================
+  1144→    const symbolPosition = freshOpenPositions.find((pos) => {
+  1145→      const posSymbol = String(pos.symbol || '').toUpperCase()
+  1146→      return posSymbol === fullSymbol.toUpperCase()
+  1147→    })
+  1148→
+  1149→    if (symbolPosition) {
+  1150→      // Symbol IS in open positions table → run controls 3 & 4
+  1151→      log(`${symbol.name}: نماد در پوزیشن‌های باز یافت شد — اجرای کنترل‌های فاصله قیمت و سقف مارجین`, 'info', symbol.name)
+  1152→
+  1153→      // ── Control 3: Price Distance Check ──────────────────────────────
+  1154→      // ✓ Read "آخرین ورود" from symbolLastEntryPrice (computed in step 10)
+  1155→      if (symbolLastEntryPrice !== null && symbolLastEntryPrice !== undefined) {
+  1156→        let distancePercent: number
+  1157→        if (selectedSignal.type === 'Long') {
+  1158→          distancePercent = ((symbolLastEntryPrice - price) / symbolLastEntryPrice) * 100
+  1159→        } else {
+  1160→          distancePercent = ((price - symbolLastEntryPrice) / symbolLastEntryPrice) * 100
+  1161→        }
+  1162→        if (distancePercent < automationSettings.minPriceDistancePercent) {
+  1163→          log(
+  1164→            `${symbol.name}: فاصله قیمت کافی نیست (آخرین ورود: ${symbolLastEntryPrice}, فعلی: ${price}, فاصله: ${distancePercent.toFixed(2)}% < ${automationSettings.minPriceDistancePercent}%) — رد شد`,
+  1165→            'warning',
+  1166→            symbol.name
+  1167→          )
+  1168→          const distanceFormula =
+  1169→            selectedSignal.type === 'Long'
+  1170→              ? `فاصله = (آخرین ورود - فعلی) / آخرین ورود × 100\nفاصله = (${symbolLastEntryPrice} - ${price}) / ${symbolLastEntryPrice} × 100`
+  1171→              : `فاصله = (فعلی - آخرین ورود) / آخرین ورود × 100\nفاصله = (${price} - ${symbolLastEntryPrice}) / ${symbolLastEntryPrice} × 100`
+  1172→          await notifyRiskControlBlocked(
+  1173→            'فاصله قیمت (Price Distance)',
+  1174→            `آخرین قیمت ورود هم‌جهت = ${symbolLastEntryPrice} (از ستون «آخرین ورود» جدول پوزیشن‌های باز)\n` +
+  1175→              `قیمت فعلی = ${price}\n` +
+  1176→              `جهت سیگنال = ${selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'}\n` +
+  1177→              `${distanceFormula}\n` +
+  1178→              `فاصله = ${distancePercent.toFixed(4)}%\n` +
+  1179→              `حداقل فاصله قیمت = ${automationSettings.minPriceDistancePercent}%\n` +
+  1180→              `${distancePercent.toFixed(4)}% < ${automationSettings.minPriceDistancePercent}% ✗`
+  1181→          )
+  1182→          updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+  1183→          return {
+  1184→            success: false,
+  1185→            symbol: symbol.name,
+  1186→            action: 'risk_blocked',
+  1187→            logs,
+  1188→            errorCount: 0,
+  1189→            duration: Date.now() - startTime
+  1190→          }
+  1191→        }
+  1192→        log(`${symbol.name}: فاصله قیمت OK (${distancePercent.toFixed(2)}% ≥ ${automationSettings.minPriceDistancePercent}%)`, 'success', symbol.name)
+  1193→      } else {
+  1194→        log(`${symbol.name}: آخرین ورود هم‌جهت در تاریخچه یافت نشد — کنترل قیمت انجام نشد`, 'info', symbol.name)
+  1195→      }
+  1196→
+  1197→      // ── Control 4: Max Margin Per Symbol ────────────────────────────
+  1198→      // ✓ Read "مارجین موجود نماد" from the "مارجین" column of the open positions table
+  1199→      const existingSymbolMargin = parseFloat(String(symbolPosition.margin || 0))
+  1200→      const maxMarginPerSymbol = totalAssets * (automationSettings.maxMarginPerSymbolPercent / 100)
+  1201→      const totalSymbolMargin = existingSymbolMargin + newMargin
+  1202→      if (totalSymbolMargin > maxMarginPerSymbol) {
+  1203→        log(
+  1204→          `${symbol.name}: سقف مارجین نماد (${totalSymbolMargin.toFixed(2)} > ${maxMarginPerSymbol.toFixed(2)} USDT) — رد شد`,
+  1205→          'warning',
+  1206→          symbol.name
+  1207→        )
+  1208→        await notifyRiskControlBlocked(
+  1209→          'سقف مارجین نماد (Max Margin Per Symbol)',
+  1210→          `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
+  1211→            `درصد سقف مارجین نماد = ${automationSettings.maxMarginPerSymbolPercent}%\n` +
+  1212→            `سقف مارجین نماد = ${totalAssets.toFixed(4)} × ${automationSettings.maxMarginPerSymbolPercent}% = ${maxMarginPerSymbol.toFixed(4)} USDT\n` +
+  1213→            `مارجین موجود نماد = ${existingSymbolMargin.toFixed(4)} USDT (از ستون «مارجین» جدول پوزیشن‌های باز)\n` +
+  1214→            `مارجین ورودی جدید = ${newMargin.toFixed(4)} USDT\n` +
+  1215→            `مجموع مارجین نماد = ${existingSymbolMargin.toFixed(4)} + ${newMargin.toFixed(4)} = ${totalSymbolMargin.toFixed(4)} USDT\n` +
+  1216→            `${totalSymbolMargin.toFixed(4)} > ${maxMarginPerSymbol.toFixed(4)} ✗`
+  1217→        )
+  1218→        updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+  1219→        return {
+  1220→          success: false,
+  1221→          symbol: symbol.name,
+  1222→          action: 'risk_blocked',
+  1223→          logs,
+  1224→          errorCount: 0,
+  1225→          duration: Date.now() - startTime
+  1226→        }
+  1227→      }
+  1228→      log(`${symbol.name}: مارجین نماد OK (${totalSymbolMargin.toFixed(2)} ≤ ${maxMarginPerSymbol.toFixed(2)} USDT)`, 'success', symbol.name)
+  1229→    } else {
+  1230→      // Symbol NOT in open positions table → skip controls 3 & 4
+  1231→      log(`${symbol.name}: نماد در پوزیشن‌های باز یافت نشد — کنترل‌های فاصله قیمت و سقف مارجین skip شدند`, 'info', symbol.name)
+  1232→    }
+  1233→
+  1234→    // ===================================================================
+  1235→    // ✓ Control 5 (Fallback): Ensure margin is positive — ALWAYS runs
+  1236→    // ===================================================================
+  1237→    const finalMargin = Math.max(newMargin, 0)
+  1238→    if (finalMargin <= 0) {
+  1239→      log(`${symbol.name}: مارجین نهایی صفر یا منفی — رد شد`, 'warning', symbol.name)
+  1240→      await notifyRiskControlBlocked(
+  1241→        'مارجین مثبت (Positive Margin)',
+  1242→        `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
+  1243→          `درصد مارجین ورودی = ${automationSettings.entryMarginPercent}%\n` +
+  1244→          `مارجین محاسبه‌شده = ${totalAssets.toFixed(4)} × ${automationSettings.entryMarginPercent}% = ${newMargin.toFixed(4)} USDT\n` +
+  1245→          `مارجین نهایی = max(${newMargin.toFixed(4)}, 0) = ${finalMargin.toFixed(4)} USDT\n` +
+  1246→          `${finalMargin.toFixed(4)} ≤ 0 ✗`
+  1247→      )
+  1248→      updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+  1249→      return {
+  1250→        success: false,
+  1251→        symbol: symbol.name,
+  1252→        action: 'risk_blocked',
+  1253→        logs,
+  1254→        errorCount: 0,
+  1255→        duration: Date.now() - startTime
+  1256→      }
+  1257→    }
+  1258→
+  1259→    // -------------------------------------------------------------------
+  1260→    // Step 13: openPosition()
+  1261→    // -------------------------------------------------------------------
+  1262→    log(`${symbol.name}: باز کردن پوزیشن جدید...`, 'info', symbol.name)
+  1263→    const signalType = selectedSignal.type === 'Long' ? 'long' : 'short'
+  1264→    const createResponse = await fetch(`${baseUrl}/api/create-position`, {
+  1265→      method: 'POST',
+  1266→      headers: { 'Content-Type': 'application/json' },
+  1267→      body: JSON.stringify({
+  1268→        symbol: symbol.name,
+  1269→        direction: signalType,
+  1270→        usdtAmount: finalMargin,
+  1271→        leverage: automationSettings.leverage,
+  1272→        tpPrice: selectedSignal.tp,
+  1273→        slPrice: selectedSignal.sl,
+  1274→        clientOrderId: generateOrderId(Date.now(), symbol.name),
+  1275→        settings: { apiKey, secretKey, baseUrl: toobitBaseUrl }
+  1276→      })
+  1277→    })
+  1278→    if (!createResponse.ok) {
+  1279→      const errBody = await createResponse.json().catch(() => ({}))
+  1280→      throw new Error(errBody.error || `Failed to create position (HTTP ${createResponse.status})`)
+  1281→    }
+  1282→    const createData = await createResponse.json()
+  1283→    const order = createData.order || createData
+  1284→    log(`${symbol.name}: پوزیشن باز شد (سفارش: ${order.orderId}, مقدار: ${order.origQty})`, 'success', symbol.name)
+  1285→
+  1286→    // -------------------------------------------------------------------
+  1287→    // Fetch updated balance for notification
+  1288→    // -------------------------------------------------------------------
+  1289→    let updatedBalance = balance
+  1290→    try {
+  1291→      const updatedBalanceResponse = await fetch(`${baseUrl}/api/balance`, {
+  1292→        headers: {
+  1293→          'X-API-Key': apiKey,
+  1294→          'X-Secret-Key': secretKey,
+  1295→          'X-Base-Url': toobitBaseUrl
+  1296→        }
+  1297→      })
+  1298→      if (updatedBalanceResponse.ok) {
+  1299→        const updatedBalanceData = await updatedBalanceResponse.json()
+  1300→        updatedBalance = updatedBalanceData.balance || updatedBalanceData
+  1301→      }
+  1302→    } catch {
+  1303→      /* ignore */
+  1304→    }
+  1305→
+  1306→    // -------------------------------------------------------------------
+  1307→    // Step 14: notifyOpenPosition() — Bale notification
+  1308→    // -------------------------------------------------------------------
+  1309→    const directionIcon = selectedSignal.type === 'Long' ? '🔵' : '🔴'
+  1310→    const directionText = selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'
+  1311→    const eventTime = toJalali(new Date())
+  1312→    const signalTime = toJalali(selectedSignal.timestamp)
+  1313→    const closedDirectionText = selectedSignal.type === 'Long' ? 'شورت' : 'لانگ'
+  1314→    const closedDirectionIcon = selectedSignal.type === 'Long' ? '🔴' : '🔵'
+  1315→
+  1316→    let baleText = ''
+  1317→    if (closedCount > 0 && closedPositionInfo) {
+  1318→      const closedMargin = closedPositionInfo.margin ? closedPositionInfo.margin.toFixed(4) : '-'
+  1319→      const closedPnL = closedPositionInfo.unrealizedPnL !== undefined ? closedPositionInfo.unrealizedPnL.toFixed(4) : '-'
+  1320→      const closedPnLPercent = closedPositionInfo.profitRate !== undefined ? closedPositionInfo.profitRate.toFixed(2) : '-'
+  1321→      const closedPnLColor = closedPositionInfo.unrealizedPnL >= 0 ? '📈' : '📉'
+  1322→      baleText +=
+  1323→        `🔒 بسته شدن پوزیشن معکوس\n` +
+  1324→        `⭐ نماد: ${closedPositionInfo.symbol || symbol.name}\n` +
+  1325→        `${closedDirectionIcon} جهت: ${closedDirectionText}\n` +
+  1326→        `🔢 اهرم: ${closedPositionInfo.leverage || automationSettings.leverage}x\n` +
+  1327→        `💵 مارجین: ${closedMargin} USDT\n` +
+  1328→        `${closedPnLColor} سود/زیان: ${closedPnL} USDT (${closedPnLPercent}%)\n\n`
+  1329→    } else if (closedCount > 0) {
+  1330→      baleText +=
+  1331→        `🔒 بسته شدن پوزیشن معکوس\n` +
+  1332→        `⭐ نماد: ${symbol.name}\n` +
+  1333→        `${closedDirectionIcon} جهت: ${closedDirectionText}\n` +
+  1334→        `🔢 اهرم: ${automationSettings.leverage}x\n\n`
+  1335→    } else {
+  1336→      baleText += `⚠️ پوزیشن مخالف جهت بستن وجود نداشت\n\n`
+  1337→    }
+  1338→
+  1339→    baleText +=
+  1340→      `🚀 ورود به پوزیشن جدید\n` +
+  1341→      `⭐ نماد: ${symbol.name}\n` +
+  1342→      `${directionIcon} جهت: ${directionText}\n` +
+  1343→      `💰 قیمت ورود: ${price}\n` +
+  1344→      `🎯 حد سود: ${selectedSignal.tp.toFixed(4)}\n` +
+  1345→      `🛑 حد ضرر: ${selectedSignal.sl.toFixed(4)}\n` +
+  1346→      `💵 مارجین: ${finalMargin} USDT\n` +
+  1347→      `🔢 اهرم: ${automationSettings.leverage}x\n` +
+  1348→      `🏦 موجودی کل: ${updatedBalance.total || '-'} USDT\n` +
+  1349→      `🏦 موجودی آزاد: ${updatedBalance.free || '-'} USDT\n` +
+  1350→      `🕐 زمان صدور سیگنال: ${signalTime}\n` +
+  1351→      `🕐 زمان رویداد: ${eventTime}\n` +
+  1352→      `#ورود_پوزیشن`
+  1353→
+  1354→    await sendBaleNotification(baleText)
+  1355→
+  1356→    // -------------------------------------------------------------------
+  1357→    // Update symbol status
+  1358→    // -------------------------------------------------------------------
+  1359→    updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+  1360→    log(`چرخه ${symbol.name} با موفقیت انجام شد`, 'success', symbol.name)
+  1361→
+  1362→    return {
+  1363→      success: true,
+  1364→      symbol: symbol.name,
+  1365→      action: 'position_opened',
+  1366→      logs,
+  1367→      errorCount: 0,
+  1368→      duration: Date.now() - startTime
+  1369→    }
+  1370→  } catch (error) {
+  1371→    const message = error instanceof Error ? error.message : 'Unknown error'
+  1372→
+  1373→    // Handle the NO_SIGNAL_GENERATED case
+  1374→    if (message === 'NO_SIGNAL_GENERATED') {
+  1375→      return {
+  1376→        success: false,
+  1377→        symbol: null,
+  1378→        action: 'no_signal',
+  1379→        logs,
+  1380→        errorCount: 0,
+  1381→        duration: Date.now() - startTime
+  1382→      }
+  1383→    }
+  1384→
+  1385→    log(`خطای چرخه: ${message}`, 'error')
+  1386→    console.error('[CycleEngine] Error:', error)
+  1387→
+  1388→    // Try to update the symbol's error count if we have a symbol
+  1389→    try {
+  1390→      const dbSymbols = await AutomationState.get('automation_symbols')
+  1391→      const symbols: SymbolEntry[] =
+  1392→        typeof dbSymbols === 'string' ? JSON.parse(dbSymbols) : (dbSymbols as SymbolEntry[]) || []
+  1393→      // Find the symbol that was running (status === 'running')
+  1394→      const idx = symbols.findIndex((s) => s.status === 'running')
+  1395→      if (idx >= 0) {
+  1396→        symbols[idx].errorCount = (symbols[idx].errorCount || 0) + 1
+  1397→        const automationSettings = getDefaultAutomationSettings()
+  1398→        const dbAuto = await AutomationState.get('automation_settings')
+  1399→        const autoSettings = {
+  1400→          ...automationSettings,
+  1401→          ...(typeof dbAuto === 'string' ? JSON.parse(dbAuto) : (dbAuto as Record<string, unknown>) || {})
+  1402→        }
+  1403→
+  1404→        // ✓ Local Bale notification helper for catch block
+  1405→        //   (the try block's sendBaleNotification is out of scope here)
+  1406→        const sendBaleNotificationCatch = async (text: string) => {
+  1407→          const token = autoSettings.baleToken as string
+  1408→          const chatId = autoSettings.baleChatId as string
+  1409→          if (!token || !chatId) return { ok: false, error: 'Not configured' }
+  1410→          try {
+  1411→            const res = await fetch(`${baseUrl}/api/bale-send`, {
+  1412→              method: 'POST',
+  1413→              headers: { 'Content-Type': 'application/json' },
+  1414→              body: JSON.stringify({ token, chatId, text })
+  1415→            })
+  1416→            return await res.json()
+  1417→          } catch {
+  1418→            return { ok: false, error: 'fetch failed' }
+  1419→          }
+  1420→        }
+  1421→
+  1422→        // ✓ Bale notification for cycle errors (mirrors client-side notifyError)
+  1423→        const notifyError = async (symbolName: string, errorMessage: string) => {
+  1424→          const eventTime = toJalali(new Date())
+  1425→          const text =
+  1426→            `❌ خطای اتوماسیون\n` +
+  1427→            `⭐ نماد: ${symbolName}\n` +
+  1428→            `📝 پیام: ${errorMessage}\n` +
+  1429→            `🕐 زمان رویداد: ${eventTime}\n` +
+  1430→            `#خطا`
+  1431→          return sendBaleNotificationCatch(text)
+  1432→        }
+  1433→
+  1434→        // ✓ Bale notification for symbol skip (mirrors client-side notifySymbolSkipped)
+  1435→        const notifySymbolSkipped = async (symbolName: string) => {
+  1436→          const eventTime = toJalali(new Date())
+  1437→          const text =
+  1438→            `⏭️ عبور از نماد\n` +
+  1439→            `⭐ نماد: ${symbolName}\n` +
+  1440→            `📝 تعداد خطاها به حد مجاز رسید - خطاها ریست شد و به نماد بعدی پرش شد\n` +
+  1441→            `🕐 زمان رویداد: ${eventTime}\n` +
+  1442→            `#عبور_نماد`
+  1443→          return sendBaleNotificationCatch(text)
+  1444→        }
+  1445→
+  1446→        if (symbols[idx].errorCount >= autoSettings.allowedErrors) {
+  1447→          symbols[idx].errorCount = 0
+  1448→          symbols[idx].status = 'waiting'
+  1449→          symbols[idx].lastCycleTime = Date.now()
+  1450→          log(`${symbols[idx].name}: خطا به حد مجاز رسید - عبور از نماد`, 'error', symbols[idx].name)
+  1451→          await notifySymbolSkipped(symbols[idx].name)
+  1452→        } else {
+  1453→          symbols[idx].status = 'error'
+  1454→          log(`${symbols[idx].name}: خطا - ${message} (تلاش ${symbols[idx].errorCount}/${autoSettings.allowedErrors})`, 'error', symbols[idx].name)
+  1455→          await notifyError(symbols[idx].name, message)
+  1456→        }
+  1457→        await AutomationState.set('automation_symbols', symbols)
+  1458→        return {
+  1459→          success: false,
+  1460→          symbol: symbols[idx].name,
+  1461→          action: 'error',
+  1462→          logs,
+  1463→          errorCount: symbols[idx].errorCount,
+  1464→          duration: Date.now() - startTime
+  1465→        }
+  1466→      }
+  1467→    } catch {
+  1468→      /* ignore */
+  1469→    }
+  1470→
+  1471→    return {
+  1472→      success: false,
+  1473→      symbol: null,
+  1474→      action: 'error',
+  1475→      logs,
+  1476→      errorCount: 0,
+  1477→      duration: Date.now() - startTime
+  1478→    }
+  1479→  } finally {
+  1480→    // ✓ Flush all buffered logs to KV in a single batch write.
+  1481→    //   This runs before ANY return (success, no_signal, risk_blocked, error).
+  1482→    //   Using finally ensures logs are always persisted even if the cycle crashes.
+  1483→    await flushLogs()
+  1484→  }
+  1485→}
+  1486→

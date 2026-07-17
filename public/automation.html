@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
+    <script src="/auth-check.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>اتوماسیون معاملات - اتوماسیون هوشمند</title>
@@ -737,6 +738,21 @@
                                 <div>
                                     <label class="block text-xs text-gray-300 mb-1">انقضا سیگنال (ساعت)</label>
                                     <input type="number" id="signal-expiration" class="input-field text-sm" value="6" min="1" max="48" step="1">
+                                </div>
+                            </div>
+                            <!-- ✓ فیلدهای جدید (موردهای ۶، ۷، ۸) -->
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-300 mb-1">حداقل کندل هم‌جهت</label>
+                                    <input type="number" id="min-same-direction-candles" class="input-field text-sm" value="0" min="0" max="10" step="1" title="حداقل تعداد کندل هم‌جهت بعد از سیگنال (0 = غیرفعال)">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-300 mb-1">تعداد چرخه</label>
+                                    <input type="number" id="cycles-per-run" class="input-field text-sm" value="1" min="1" max="10" step="1" title="تعداد چرخه در هر بار زدن دکمه «یک چرخه»">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-300 mb-1">تعداد نوتیف تاریخچه</label>
+                                    <input type="number" id="closed-positions-notify-count" class="input-field text-sm" value="10" min="1" max="50" step="1" title="تعداد رکوردهای ارسالی در نوتیف تاریخچه پوزیشن‌های بسته">
                                 </div>
                             </div>
                         </div>

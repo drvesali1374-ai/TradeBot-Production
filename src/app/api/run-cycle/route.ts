@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { initializeDatabase } from '@/lib/tradebot/database'
+import { initializeDatabase, AutomationState } from '@/lib/tradebot/database'
 import { runCycle } from '@/lib/tradebot/cycle-engine'
 
 export const runtime = 'edge'
@@ -8,27 +8,22 @@ export const runtime = 'edge'
  * Server-Side Run Cycle API
  * ==========================
  *
- * Executes one full automation cycle on the server — identical to clicking the
- * "یک چرخه" (Run Once) button in the browser, but without requiring the
- * browser tab to stay open.
+ * Executes automation cycle(s) on the server.
  *
- * This endpoint is what the Cloudflare Cron Worker calls every 5 minutes to
- * keep automation running 24/7.
+ * ✓ مورد ۷: تعداد چرخه قابل تنظیم است (cyclesPerRun از دیتابیس خوانده می‌شود)
+ *   - هم دکمه دستی «یک چرخه» و هم Cron Trigger به تعداد cyclesPerRun چرخه اجرا می‌کنند
+ *   - بین هر چرخه ۱ ثانیه تاخیر برای جلوگیری از rate-limit صرافی
  *
  * Usage:
- *   GET  /api/run-cycle             — run one cycle (auto-selects next symbol)
+ *   GET  /api/run-cycle             — run cycle(s) (auto-selects next symbol)
  *   POST /api/run-cycle             — same, but supports { symbol } override
  *   POST /api/run-cycle?source=cron — called by the Cloudflare Cron Worker
  *
  * Security:
- *   - When called with ?source=cron, requires the RUN_CYCLE_SECRET header to
- *     match the RUN_CYCLE_SECRET env var (Cloudflare Secret). This prevents
- *     unauthorized users from triggering cycles.
- *   - When called manually (no source=cron), it runs without a secret so the
- *     browser "Run Once" button can call it directly.
+ *   - When called with ?source=cron, requires the RUN_CYCLE_SECRET header
  *
  * Response:
- *   { success: boolean, result: CycleResult }
+ *   { success: boolean, results: CycleResult[], duration: number }
  */
 
 export async function GET(request: NextRequest) {
@@ -60,9 +55,7 @@ async function handleRunCycle(request: NextRequest) {
   // ✓ Initialize database (async — KV or JSON file)
   await initializeDatabase()
 
-  // Determine the base URL for internal API calls.
-  // In local dev: http://localhost:3000
-  // In Cloudflare: the deployed Pages URL (from request)
+  // Determine the base URL for internal API calls
   const protocol = url.protocol
   const host = request.headers.get('host') || 'localhost:3000'
   const baseUrl = `${protocol}//${host}`
@@ -80,15 +73,49 @@ async function handleRunCycle(request: NextRequest) {
     }
   }
 
+  // ✓ مورد ۷: Read cyclesPerRun from database (default: 1)
+  let cyclesPerRun = 1
   try {
-    const result = await runCycle(baseUrl, {
-      symbolOverride,
-      triggerSource: isCron ? 'cron' : 'manual'
-    })
+    const dbSettings = await AutomationState.get('automation_settings')
+    if (dbSettings) {
+      const parsed = typeof dbSettings === 'string' ? JSON.parse(dbSettings) : dbSettings
+      if (parsed && typeof parsed.cyclesPerRun === 'number' && parsed.cyclesPerRun >= 1) {
+        cyclesPerRun = Math.min(parsed.cyclesPerRun, 10) // cap at 10
+      }
+    }
+  } catch {
+    // use default 1
+  }
+
+  try {
+    const results = []
+    let anySuccess = false
+
+    // ✓ Run cyclesPerRun cycles sequentially
+    for (let i = 0; i < cyclesPerRun; i++) {
+      console.log(`[/api/run-cycle] Running cycle ${i + 1} of ${cyclesPerRun}`)
+
+      const result = await runCycle(baseUrl, {
+        symbolOverride,
+        triggerSource: isCron ? 'cron' : 'manual'
+      })
+      results.push(result)
+
+      if (result.success) {
+        anySuccess = true
+      }
+
+      // ✓ Delay between cycles (1 second) to avoid exchange rate-limits
+      // (skip delay after the last cycle)
+      if (i < cyclesPerRun - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
 
     return NextResponse.json({
-      success: result.success,
-      result,
+      success: anySuccess,
+      results,
+      cyclesRun: results.length,
       duration: Date.now() - startTime
     })
   } catch (error: unknown) {
