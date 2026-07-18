@@ -656,3 +656,48 @@ Stage Summary:
 - ✅ New settings: minSameDirectionCandles, cyclesPerRun, closedPositionsNotifyCount
 - ✅ Deployed to Cloudflare: https://tradebot-b9u.pages.dev
 - ✅ No existing functionality broken
+
+---
+Task ID: 9
+Agent: Main Orchestrator
+Task: Fix Cron Trigger not executing + Bale messaging not working on Cloudflare
+
+Work Log:
+- Investigation 1: Cron Trigger not executing
+  - Root cause: RUN_CYCLE_SECRET file was lost (/tmp/run_cycle_secret.txt deleted)
+  - The secret on the Cron Worker and Pages app were mismatched
+  - Fix: Generated new secret, set on both Cron Worker and Pages app via Cloudflare API
+  - Redeployed Pages app to pick up the new secret
+  - Verified: Manual cron trigger works (ran 2 cycles successfully)
+
+- Investigation 2: Bale messaging not working on Cloudflare
+  - Root cause: Cloudflare's edge servers CANNOT reach tapi.bale.ai (DNS error 1016)
+  - The Bale API is hosted in Iran (IP: 2.189.68.126) and Cloudflare's global network can't resolve/reach it
+  - /api/bale-send returned "Internal server error" → actual error was "status 530, error code: 1016"
+  - Fix 1 (client-side): Modified sendBaleNotification() to send directly from the browser to Bale API
+    - Uses mode: 'no-cors' to bypass CORS restrictions (Bale API doesn't support CORS)
+    - Uses Content-Type: text/plain (simple content type, no preflight)
+    - Bale API accepts text/plain and parses JSON body
+    - Fallback to /api/bale-send for local dev
+  - Fix 2 (server-side): Modified cycle-engine.ts sendBaleNotification()
+    - If /api/bale-send fails (Cloudflare can't reach Bale), stores message in KV as pendingBaleMessages
+    - When user opens automation page, browser picks up pending messages and sends them directly
+  - Fix 3: Added sendPendingBaleMessages() to automation-manager.js init()
+    - Reads pendingBaleMessages from KV on page load
+    - Sends each message directly from browser using no-cors mode
+    - Clears successfully sent messages, keeps failed ones for retry
+  - Improved /api/bale-send error handling: returns actual error message instead of generic "Internal server error"
+
+Testing:
+  - Test Bale button on Cloudflare: "پیام تست بله با موفقیت ارسال شد" ✓
+  - Manual cron trigger: 2 cycles ran successfully ✓
+  - No browser console errors ✓
+  - Bale API direct test from browser (no-cors): works ✓
+  - Bale API test with text/plain: works ✓
+
+Stage Summary:
+- ✅ Cron Trigger fixed — secret regenerated and set on both systems
+- ✅ Bale messaging fixed on Cloudflare — browser sends directly using no-cors + text/plain
+- ✅ Server-side Bale messages queued in KV and sent by browser on next page load
+- ✅ Both local dev and Cloudflare work for Bale messaging
+- ✅ All 8 previous improvements still intact

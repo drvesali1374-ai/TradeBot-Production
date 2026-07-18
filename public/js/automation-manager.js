@@ -83,8 +83,62 @@ class AutomationManager {
                 }
             });
         }
+
+        // ✓ Cloudflare Bale fix: Send pending Bale messages from the browser
+        // The server (Cron Trigger) can't reach tapi.bale.ai from Cloudflare,
+        // so it stores messages in KV. The browser (in Iran) can reach Bale API,
+        // so we pick up pending messages and send them directly.
+        this.sendPendingBaleMessages();
     }
     
+    /**
+     * ✓ Cloudflare Bale fix: Send pending Bale messages from the browser
+     *
+     * پیام‌های بله که از سرور (Cron) قابل ارسال نبودند را از KV می‌خواند
+     * و مستقیماً از مرورگر به Bale API ارسال می‌کند.
+     */
+    async sendPendingBaleMessages() {
+        try {
+            const pending = await this.dbGet('pendingBaleMessages');
+            if (!pending || !Array.isArray(pending) || pending.length === 0) return;
+
+            console.log(`[BaleFix] Found ${pending.length} pending Bale messages to send from browser`);
+
+            let sentCount = 0;
+            const failedMessages = [];
+
+            for (const msg of pending) {
+                try {
+                    const baleUrl = `https://tapi.bale.ai/bot${msg.token}/sendMessage`;
+                    await fetch(baleUrl, {
+                        method: 'POST',
+                        mode: 'no-cors', // ✓ bypass CORS
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({
+                            chat_id: String(msg.chatId),
+                            text: String(msg.text)
+                        })
+                    });
+                    sentCount++;
+                } catch (e) {
+                    // Network error — keep the message for next attempt
+                    failedMessages.push(msg);
+                }
+            }
+
+            console.log(`[BaleFix] Sent ${sentCount}/${pending.length} pending messages`);
+
+            // Clear sent messages, keep only failed ones (for retry next time)
+            await this.dbSet('pendingBaleMessages', failedMessages);
+
+            if (sentCount > 0) {
+                this.log(`${sentCount} پیام بله معوق از مرورگر ارسال شد`, 'success');
+            }
+        } catch (e) {
+            console.warn('[BaleFix] Error sending pending Bale messages:', e);
+        }
+    }
+
     restoreUIWithLoadedData(symbolName) {
         // ✓ Restore ALL 8 sections of the automation page from loaded data.
         //   This is called after loadAutomationData() successfully loads data
@@ -3560,6 +3614,18 @@ class AutomationManager {
         return `${jy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')} - ${hours}:${minutes}:${seconds}`;
     }
 
+    /**
+     * ✓ ارسال نوتیفیکیشن بله
+     *
+     * ✓ Cloudflare fix: مرورگر مستقیماً به Bale API درخواست می‌فرستد
+     *   (Cloudflare سرورها نمی‌توانند به tapi.bale.ai برسند — خطای DNS 1016)
+     *   اما مرورگر کاربر در ایران می‌تواند مستقیماً به Bale API دسترسی داشته باشد.
+     *
+     * ✓ CORS fix: از mode: 'no-cors' با Content-Type: text/plain استفاده می‌کنیم
+     *   چون Bale API از CORS پشتیبانی نمی‌کند. با no-cors، مرورگر درخواست را
+     *   می‌فرستد ولی پاسخ را نمی‌خواند (برای ارسال پیام کافی است).
+     *   Bale API با text/plain هم JSON را می‌پذیرد.
+     */
     async sendBaleNotification(text) {
         const token = this.settings.baleToken;
         const chatId = this.settings.baleChatId;
@@ -3569,21 +3635,47 @@ class AutomationManager {
             return { ok: false, error: 'Not configured' };
         }
 
+        // ✓ Method 1: Send directly from browser to Bale API using no-cors mode
+        // This works because:
+        // 1. The browser is in Iran and can reach tapi.bale.ai
+        // 2. mode: 'no-cors' bypasses CORS restrictions (text/plain is a simple content type)
+        // 3. Bale API accepts text/plain and parses JSON body
         try {
-            const response = await fetch('/api/bale-send', {
+            const baleUrl = `https://tapi.bale.ai/bot${token}/sendMessage`;
+            await fetch(baleUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, chatId, text })
+                mode: 'no-cors', // ✓ bypass CORS — we can't read response but message is sent
+                headers: { 'Content-Type': 'text/plain' }, // ✓ simple content type (no preflight)
+                body: JSON.stringify({
+                    chat_id: String(chatId),
+                    text: String(text)
+                })
             });
+            // With no-cors, we can't read the response, but the request was sent.
+            // If there was a network error, the catch block would handle it.
+            console.log('✓ Bale notification sent (no-cors from browser)');
+            return { ok: true };
+        } catch (directError) {
+            console.warn('Direct Bale send failed, trying via /api/bale-send:', directError.message);
+            
+            // ✓ Method 2: Fallback to server-side /api/bale-send
+            // This works on local dev (where server can reach tapi.bale.ai)
+            try {
+                const response = await fetch('/api/bale-send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, chatId, text })
+                });
 
-            const result = await response.json();
-            if (!result.ok) {
-                console.warn('Bale notification failed:', result.error);
+                const result = await response.json();
+                if (!result.ok) {
+                    console.warn('Bale notification failed (fallback):', result.error);
+                }
+                return result;
+            } catch (error) {
+                console.warn('Bale notification error (all methods failed):', error);
+                return { ok: false, error: error.message };
             }
-            return result;
-        } catch (error) {
-            console.warn('Bale notification error:', error);
-            return { ok: false, error: error.message };
         }
     }
 

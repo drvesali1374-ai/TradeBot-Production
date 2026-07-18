@@ -1301,19 +1301,58 @@ export async function runCycle(
     log(`${symbol.name}: مارجین محاسبه شده = ${newMargin} USDT`, 'success', symbol.name)
 
     // Helper to send Bale notification for risk-control blocks
+    /**
+     * ✓ Send Bale notification
+     *
+     * ✓ Cloudflare issue: Cloudflare's edge servers can't reach tapi.bale.ai (DNS error 1016)
+     *   because the Bale API is hosted in Iran.
+     *
+     * ✓ Solution:
+     *   1. Try sending via /api/bale-send (might work if not on Cloudflare)
+     *   2. If that fails, store the message in KV as "pendingBaleMessages"
+     *   3. When the user opens the automation page in their browser, the browser
+     *      will pick up pending messages and send them directly to Bale API
+     *      (browser can reach tapi.bale.ai because it's in Iran)
+     */
     const sendBaleNotification = async (text: string) => {
       const token = automationSettings.baleToken
       const chatId = automationSettings.baleChatId
       if (!token || !chatId) return { ok: false, error: 'Not configured' }
+
+      // Method 1: Try via /api/bale-send
       try {
         const res = await fetch(`${baseUrl}/api/bale-send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, chatId, text })
         })
-        return await res.json()
+        const data = await res.json()
+        if (data.ok) {
+          return data
+        }
+        // If bale-send failed (e.g., Cloudflare can't reach tapi.bale.ai),
+        // fall through to Method 2
       } catch {
-        return { ok: false, error: 'fetch failed' }
+        // fall through to Method 2
+      }
+
+      // Method 2: Store in KV as pending message for the browser to send
+      try {
+        const existing = (await AutomationState.get('pendingBaleMessages')) || []
+        const messages = Array.isArray(existing) ? existing : []
+        messages.push({
+          text,
+          token,
+          chatId,
+          timestamp: new Date().toISOString()
+        })
+        // Keep only latest 50 pending messages
+        const trimmed = messages.slice(-50)
+        await AutomationState.set('pendingBaleMessages', trimmed)
+        log('پیام بله در صف ارسال مرورگر ذخیره شد (سرور نمی‌تواند به tapi.bale.ai برسد)', 'info')
+        return { ok: false, error: 'Queued for browser delivery', queued: true }
+      } catch {
+        return { ok: false, error: 'Failed to queue message' }
       }
     }
 

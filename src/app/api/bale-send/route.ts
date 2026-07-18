@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge'
 
+/**
+ * Bale Send API
+ * =============
+ *
+ * Sends a message to a Bale bot chat.
+ *
+ * ✓ Cloudflare-ready: works in Edge Runtime
+ * ✓ Better error handling: includes actual error message in response
+ */
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,21 +35,32 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
+    // ✓ Handle non-JSON responses gracefully
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      // Response is not JSON — return the raw text as error
+      return NextResponse.json(
+        { ok: false, error: `Bale API returned non-JSON response (status ${response.status}): ${responseText.substring(0, 200)}` },
+        { status: 502 }
+      );
+    }
 
     if (!response.ok) {
-      console.error('Bale API error:', data);
       return NextResponse.json(
-        { ok: false, error: data.description || 'Bale API error', details: data },
+        { ok: false, error: data.description || data.message || 'Bale API error', details: data },
         { status: response.status }
       );
     }
 
     return NextResponse.json({ ok: true, result: data });
   } catch (error) {
-    console.error('Bale send error:', error);
+    // ✓ Include the actual error message in the response
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { ok: false, error: 'Internal server error' },
+      { ok: false, error: `Internal server error: ${message}` },
       { status: 500 }
     );
   }
