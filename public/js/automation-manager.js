@@ -1792,6 +1792,11 @@ class AutomationManager {
 
         this.currentCycleSymbol = symbol;
         symbol.status = 'running';
+        // ✓ FIX (مشکل ۱): Set lastCycleTime IMMEDIATELY after symbol selection
+        //   This ensures that even if the next cycle starts in the same second,
+        //   this symbol won't be selected again (tradeWaitTime hasn't passed).
+        symbol.lastCycleTime = Date.now();
+        this.saveSymbols(); // Persist to localStorage + DB immediately
         this.renderSymbolsTable();
         this.log(`شروع چرخه برای نماد ${symbol.name}`, 'info', symbol.name);
 
@@ -2151,7 +2156,7 @@ class AutomationManager {
                         await this.notifyRiskControlBlocked(symbol.name, this.selectedSignal, {
                             controlName: 'فاصله قیمت (Price Distance)',
                                                         math:
-                                `آخرین قیمت ورود هم‌جهت = ${lastEntryPrice} (از ستون «آخرین ورود» جدول پوزیشن‌های باز)\n` +
+                                `آخرین قیمت ورود هم‌جهت = ${lastEntryPrice}\n` +
                                 `قیمت فعلی = ${currentPrice}\n` +
                                 `جهت سیگنال = ${this.selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'}\n` +
                                 `${distanceFormula}\n` +

@@ -468,128 +468,6 @@ export async function runCycle(
       return Array.isArray(parsed) ? parsed : []
     })()
 
-    // -------------------------------------------------------------------
-    // ✓ Step 0 (NEW, مورد ۸): Global Closed Positions History Check
-    //   At the very start of each cycle, fetch ALL closed positions from
-    //   Toobit (no symbol filter) and compare the latest id with the
-    //   lastPositionId stored in KV. If different → new positions detected
-    //   → send Bale notification with the last N records
-    //   (N = closedPositionsNotifyCount).
-    //   Non-blocking: wrapped in try-catch, logs warning on failure,
-    //   continues cycle regardless.
-    // -------------------------------------------------------------------
-    try {
-      const cpApiKey = marketSettings.apiKey || ''
-      const cpSecretKey = marketSettings.secretKey || ''
-      const cpBaseUrl = marketSettings.baseUrl || 'https://api.toobit.com'
-
-      if (cpApiKey && cpSecretKey) {
-        const cpResponse = await fetch(`${baseUrl}/api/history-positions`, {
-          headers: {
-            'X-API-Key': cpApiKey,
-            'X-Secret-Key': cpSecretKey,
-            'X-Base-Url': cpBaseUrl
-          }
-        })
-
-        if (cpResponse.ok) {
-          const cpData = await cpResponse.json()
-          // Normalize — Toobit returns either an array or { data: [...] } / { result: [...] }
-          let cpRecords: Record<string, unknown>[] = []
-          if (Array.isArray(cpData)) {
-            cpRecords = cpData
-          } else if (cpData && Array.isArray(cpData.data)) {
-            cpRecords = cpData.data
-          } else if (cpData && Array.isArray(cpData.result)) {
-            cpRecords = cpData.result
-          } else if (cpData && typeof cpData === 'object') {
-            const found = Object.values(cpData).find((v) => Array.isArray(v))
-            cpRecords = (found as Record<string, unknown>[]) || []
-          }
-
-          if (cpRecords.length > 0) {
-            // Sort by closeTime DESC (newest first)
-            cpRecords.sort((a, b) => {
-              const ta = parseInt(String(a.closeTime || 0))
-              const tb = parseInt(String(b.closeTime || 0))
-              return tb - ta
-            })
-
-            const firstRecord = cpRecords[0]
-            const firstId = String(firstRecord.id || '')
-
-            // Compare with lastPositionId from KV
-            const lastPosIdRaw = await AutomationState.get('lastPositionId')
-            const lastIdStr =
-              lastPosIdRaw === null || lastPosIdRaw === undefined ? '' : String(lastPosIdRaw)
-
-            if (firstId && firstId !== lastIdStr) {
-              // New positions detected — build Bale notification
-              const notifyCount = automationSettings.closedPositionsNotifyCount || 10
-              const toNotify = cpRecords.slice(0, notifyCount)
-
-              // Persian numeral helper (for index numbering)
-              const persianNum = (n: number | string): string => {
-                const map = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
-                return String(n).replace(/\d/g, (d) => map[parseInt(d)])
-              }
-
-              const lines: string[] = ['📋 تاریخچه پوزیشن‌های بسته‌شده', '']
-              toNotify.forEach((pos, idx) => {
-                const sym = String(pos.symbol || '-')
-                const sideRaw = String(pos.side || '').toUpperCase()
-                const sideText = sideRaw === 'SHORT' ? 'Short' : 'Long'
-                const sideIcon = sideRaw === 'SHORT' ? '🔴' : '🔵'
-                const closePrice = String(pos.closeAvgPrice || '-')
-                const closeTimeMs = parseInt(String(pos.closeTime || 0))
-                const timeStr = closeTimeMs > 0 ? toJalali(closeTimeMs) : '-'
-                lines.push(
-                  `${persianNum(idx + 1)}. ⭐ نماد: ${sym} | ${sideIcon} جهت: ${sideText} | 💰 قیمت بسته: ${closePrice} | 🕐 زمان: ${timeStr}`
-                )
-              })
-              lines.push('')
-              lines.push(`🕐 زمان رویداد: ${toJalali(new Date())}`)
-              lines.push(`#تاریخچه_بسته`)
-
-              const text = lines.join('\n')
-
-              // Send notification (best-effort)
-              const token = automationSettings.baleToken
-              const chatId = automationSettings.baleChatId
-              if (token && chatId) {
-                try {
-                  await fetch(`${baseUrl}/api/bale-send`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token, chatId, text })
-                  })
-                  log(`تاریخچه پوزیشن‌های بسته: ${toNotify.length} رکورد جدید به بله ارسال شد (firstId=${firstId})`, 'success')
-                } catch (e) {
-                  log(
-                    `تاریخچه پوزیشن‌های بسته: خطا در ارسال به بله - ${e instanceof Error ? e.message : 'unknown'}`,
-                    'warning'
-                  )
-                }
-              } else {
-                log('تاریخچه پوزیشن‌های بسته: توکن/چت‌آیدی بله پیکربندی نشده — نوتیف ارسال نشد', 'warning')
-              }
-
-              // ✓ Save the new firstId to KV (regardless of whether Bale succeeded)
-              //   so we don't keep re-notifying on every cycle.
-              await AutomationState.set('lastPositionId', firstId)
-            }
-          }
-        } else {
-          log(`تاریخچه پوزیشن‌های بسته: خطا در دریافت (HTTP ${cpResponse.status})`, 'warning')
-        }
-      }
-    } catch (e) {
-      log(
-        `تاریخچه پوزیشن‌های بسته: خطا - ${e instanceof Error ? e.message : 'unknown'}`,
-        'warning'
-      )
-    }
-
     if (symbols.length === 0) {
       log('هیچ نمادی در لیست اتوماسیون وجود ندارد', 'warning')
       return {
@@ -635,17 +513,24 @@ export async function runCycle(
 
     // -------------------------------------------------------------------
     // Helper to persist symbol state back to DB
+    // ✓ IMPORTANT: now async (await) — caller MUST await to ensure KV consistency
     // -------------------------------------------------------------------
-    const updateSymbolState = (
+    const updateSymbolState = async (
       updates: Partial<SymbolEntry>
     ) => {
       const idx = symbols.findIndex((s) => s.id === symbol!.id)
       if (idx >= 0) {
         symbols[idx] = { ...symbols[idx], ...updates }
-        // ✓ async DB write (fire-and-forget for state updates)
-        AutomationState.set('automation_symbols', symbols).catch(() => {})
+        // ✓ Await KV write to ensure consistency before next cycle starts
+        await AutomationState.set('automation_symbols', symbols)
       }
     }
+
+    // ✓ FIX (مشکل ۱): Set lastCycleTime IMMEDIATELY after symbol selection
+    //   This ensures that even if the next cycle starts in the same second,
+    //   this symbol won't be selected again (tradeWaitTime hasn't passed).
+    //   We await the KV write to guarantee it's persisted before continuing.
+    await updateSymbolState({ status: 'running', lastCycleTime: Date.now(), errorCount: 0 })
 
     // -------------------------------------------------------------------
     // Step 2-3: fetchMarketData()
@@ -826,7 +711,7 @@ export async function runCycle(
 
     if (signals.length === 0) {
       log(`${symbol.name}: هیچ سیگنالی یافت نشد - شرایط بازار مناسب نیست`, 'warning', symbol.name)
-      updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+      await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
       return {
         success: false,
         symbol: symbol.name,
@@ -945,7 +830,7 @@ export async function runCycle(
       } else {
         log(`${symbol.name}: هیچ سیگنالی برای ورود آماده نیست - از این نماد عبو میشود`, 'warning', symbol.name)
       }
-      updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+      await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
       return {
         success: false,
         symbol: symbol.name,
@@ -1089,7 +974,7 @@ export async function runCycle(
             'حداقل کندل هم‌جهت (Min Same-Direction Candles)',
             math
           )
-          updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+          await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
           return {
             success: false,
             symbol: symbol.name,
@@ -1146,7 +1031,7 @@ export async function runCycle(
             'حداقل کندل هم‌جهت (Min Same-Direction Candles)',
             math
           )
-          updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+          await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
           return {
             success: false,
             symbol: symbol.name,
@@ -1410,7 +1295,7 @@ export async function runCycle(
           `موجودی آزاد پیش‌بینی‌شده = ${freeBalance.toFixed(4)} - ${newMargin.toFixed(4)} = ${projectedFree.toFixed(4)} USDT\n` +
           `${projectedFree.toFixed(4)} < ${safeAmount.toFixed(4)} ✗`
       )
-      updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+      await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
       return {
         success: false,
         symbol: symbol.name,
@@ -1457,7 +1342,7 @@ export async function runCycle(
               : `فاصله = (فعلی - آخرین ورود) / آخرین ورود × 100\nفاصله = (${price} - ${symbolLastEntryPrice}) / ${symbolLastEntryPrice} × 100`
           await notifyRiskControlBlocked(
             'فاصله قیمت (Price Distance)',
-            `آخرین قیمت ورود هم‌جهت = ${symbolLastEntryPrice} (از ستون «آخرین ورود» جدول پوزیشن‌های باز)\n` +
+            `آخرین قیمت ورود هم‌جهت = ${symbolLastEntryPrice}\n` +
               `قیمت فعلی = ${price}\n` +
               `جهت سیگنال = ${selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'}\n` +
               `${distanceFormula}\n` +
@@ -1465,7 +1350,7 @@ export async function runCycle(
               `حداقل فاصله قیمت = ${automationSettings.minPriceDistancePercent}%\n` +
               `${distancePercent.toFixed(4)}% < ${automationSettings.minPriceDistancePercent}% ✗`
           )
-          updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+          await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
           return {
             success: false,
             symbol: symbol.name,
@@ -1501,7 +1386,7 @@ export async function runCycle(
             `مجموع مارجین نماد = ${existingSymbolMargin.toFixed(4)} + ${newMargin.toFixed(4)} = ${totalSymbolMargin.toFixed(4)} USDT\n` +
             `${totalSymbolMargin.toFixed(4)} > ${maxMarginPerSymbol.toFixed(4)} ✗`
         )
-        updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+        await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
         return {
           success: false,
           symbol: symbol.name,
@@ -1531,7 +1416,7 @@ export async function runCycle(
           `مارجین نهایی = max(${newMargin.toFixed(4)}, 0) = ${finalMargin.toFixed(4)} USDT\n` +
           `${finalMargin.toFixed(4)} ≤ 0 ✗`
       )
-      updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+      await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
       return {
         success: false,
         symbol: symbol.name,
@@ -1642,7 +1527,7 @@ export async function runCycle(
     // -------------------------------------------------------------------
     // Update symbol status
     // -------------------------------------------------------------------
-    updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+    await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
     log(`چرخه ${symbol.name} با موفقیت انجام شد`, 'success', symbol.name)
 
     return {
@@ -1767,5 +1652,196 @@ export async function runCycle(
     //   This runs before ANY return (success, no_signal, risk_blocked, error).
     //   Using finally ensures logs are always persisted even if the cycle crashes.
     await flushLogs()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ✓ مورد ۸: Check Closed Positions History
+//   This function is called AFTER the last cycle completes (not during each cycle).
+//   It fetches ALL closed positions from Toobit and compares with lastPositionId
+//   stored in KV. If different → new positions detected → send Bale notification.
+//
+//   ✓ Fix (مشکل ۲): Moved from beginning of each cycle to end of LAST cycle only.
+//   This prevents repeated notifications when cyclesPerRun > 1.
+// ---------------------------------------------------------------------------
+
+export async function checkClosedPositionsHistory(
+  baseUrl: string
+): Promise<void> {
+  const startTime = Date.now()
+  console.log('[ClosedPositionsHistory] Starting check...')
+
+  try {
+    // Load settings from KV
+    await initializeDatabase()
+
+    const dbAutomationSettings = await AutomationState.get('automation_settings')
+    const automationSettings: AutomationSettings = {
+      ...getDefaultAutomationSettings(),
+      ...(typeof dbAutomationSettings === 'string'
+        ? JSON.parse(dbAutomationSettings)
+        : (dbAutomationSettings as Record<string, unknown>) || {})
+    }
+
+    const dbMarketSettings = await AutomationState.get('marketSignalSettings')
+    const marketSettings: MarketSignalSettings =
+      typeof dbMarketSettings === 'string'
+        ? JSON.parse(dbMarketSettings)
+        : (dbMarketSettings as MarketSignalSettings) || {}
+
+    const cpApiKey = marketSettings.apiKey || ''
+    const cpSecretKey = marketSettings.secretKey || ''
+    const cpBaseUrl = marketSettings.baseUrl || 'https://api.toobit.com'
+
+    if (!cpApiKey || !cpSecretKey) {
+      console.log('[ClosedPositionsHistory] API keys not configured — skipping')
+      return
+    }
+
+    // Fetch all closed positions (no symbol filter → all symbols)
+    const cpResponse = await fetch(`${baseUrl}/api/history-positions`, {
+      headers: {
+        'X-API-Key': cpApiKey,
+        'X-Secret-Key': cpSecretKey,
+        'X-Base-Url': cpBaseUrl
+      }
+    })
+
+    if (!cpResponse.ok) {
+      console.warn(`[ClosedPositionsHistory] HTTP ${cpResponse.status} — skipping`)
+      return
+    }
+
+    const cpData = await cpResponse.json()
+
+    // Normalize response
+    let cpRecords: Record<string, unknown>[] = []
+    if (Array.isArray(cpData)) {
+      cpRecords = cpData
+    } else if (cpData && Array.isArray(cpData.data)) {
+      cpRecords = cpData.data
+    } else if (cpData && Array.isArray(cpData.result)) {
+      cpRecords = cpData.result
+    } else if (cpData && typeof cpData === 'object') {
+      const found = Object.values(cpData).find((v) => Array.isArray(v))
+      cpRecords = (found as Record<string, unknown>[]) || []
+    }
+
+    if (cpRecords.length === 0) {
+      console.log('[ClosedPositionsHistory] No closed positions found')
+      return
+    }
+
+    // Sort by closeTime DESC (newest first)
+    cpRecords.sort((a, b) => {
+      const ta = parseInt(String(a.closeTime || 0))
+      const tb = parseInt(String(b.closeTime || 0))
+      return tb - ta
+    })
+
+    const firstRecord = cpRecords[0]
+    const firstId = String(firstRecord.id || '')
+
+    // Compare with lastPositionId from KV
+    const lastPosIdRaw = await AutomationState.get('lastPositionId')
+    const lastIdStr =
+      lastPosIdRaw === null || lastPosIdRaw === undefined ? '' : String(lastPosIdRaw)
+
+    if (!firstId || firstId === lastIdStr) {
+      console.log('[ClosedPositionsHistory] No new positions (lastPositionId unchanged)')
+      return
+    }
+
+    // New positions detected — build Bale notification
+    const notifyCount = automationSettings.closedPositionsNotifyCount || 10
+    const toNotify = cpRecords.slice(0, notifyCount)
+
+    // Persian numeral helper
+    const persianNum = (n: number | string): string => {
+      const map = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
+      return String(n).replace(/\d/g, (d) => map[parseInt(d)])
+    }
+
+    // ✓ Fix (مشکل ۴): New 3-line format per position
+    //   Line 1: نماد (مختصر) + قیمت بسته
+    //   Line 2: جهت + سود/زیان (مقدار + درصد) + لوریج
+    //   Line 3: زمان
+    const lines: string[] = ['📋 تاریخچه پوزیشن‌های بسته‌شده', '']
+    toNotify.forEach((pos, idx) => {
+      // ✓ Convert full symbol to short name (XRP-SWAP-USDT → XRP)
+      const fullSym = String(pos.symbol || '-')
+      const shortSym = fullSym.replace('-SWAP-USDT', '').replace('USDT', '')
+
+      const sideRaw = String(pos.side || '').toUpperCase()
+      const sideText = sideRaw === 'SHORT' ? 'Short' : 'Long'
+      const sideIcon = sideRaw === 'SHORT' ? '🔴' : '🔵'
+
+      const closePrice = String(pos.closeAvgPrice || '-')
+
+      // ✓ PnL fields (from Toobit API)
+      const realizedPnL = parseFloat(String(pos.realizedPnL || 0))
+      const realizedPnlRate = parseFloat(String(pos.realizedPnlRate || 0))
+      const pnlIcon = realizedPnL >= 0 ? '📈' : '📉'
+      const pnlStr = `${realizedPnL.toFixed(4)} USDT`
+      const pnlPercentStr = `(${realizedPnlRate.toFixed(2)}%)`
+
+      // ✓ Leverage
+      const leverage = String(pos.leverage || '-')
+
+      const closeTimeMs = parseInt(String(pos.closeTime || 0))
+      const timeStr = closeTimeMs > 0 ? toJalali(closeTimeMs) : '-'
+
+      lines.push(
+        `${persianNum(idx + 1)}. ⭐ نماد: ${shortSym} | 💰 قیمت بسته: ${closePrice}`
+      )
+      lines.push(
+        `   ${sideIcon} جهت: ${sideText} | ${pnlIcon} سود/زیان: ${pnlStr} ${pnlPercentStr} | 🔢 لوریج: ${leverage}x`
+      )
+      lines.push(
+        `   🕐 زمان: ${timeStr}`
+      )
+    })
+    lines.push('')
+    lines.push(`🕐 زمان رویداد: ${toJalali(new Date())}`)
+    lines.push(`#تاریخچه_بسته`)
+
+    const text = lines.join('\n')
+    console.log(`[ClosedPositionsHistory] Built notification with ${toNotify.length} records`)
+    console.log(`[ClosedPositionsHistory] Message preview:\n${text.substring(0, 500)}...`)
+
+    // Send notification
+    const token = automationSettings.baleToken
+    const chatId = automationSettings.baleChatId
+    if (token && chatId) {
+      try {
+        const baleUrl = `https://tapi.bale.ai/bot${token}/sendMessage`
+        await fetch(baleUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ chat_id: String(chatId), text })
+        })
+        console.log(`[ClosedPositionsHistory] Notification sent to Bale`)
+      } catch (e) {
+        // Cloudflare can't reach tapi.bale.ai → store as pending for browser delivery
+        console.warn('[ClosedPositionsHistory] Direct Bale send failed, queuing for browser')
+        try {
+          const existing = (await AutomationState.get('pendingBaleMessages')) || []
+          const messages = Array.isArray(existing) ? existing : []
+          messages.push({ text, token, chatId, timestamp: new Date().toISOString() })
+          await AutomationState.set('pendingBaleMessages', messages.slice(-50))
+        } catch {
+          // give up silently
+        }
+      }
+    }
+
+    // ✓ Save the new firstId to KV (regardless of whether Bale succeeded)
+    //   so we don't keep re-notifying on every cycle.
+    await AutomationState.set('lastPositionId', firstId)
+    console.log(`[ClosedPositionsHistory] Done in ${Date.now() - startTime}ms (firstId=${firstId})`)
+  } catch (e) {
+    console.warn(
+      `[ClosedPositionsHistory] Error: ${e instanceof Error ? e.message : 'unknown'}`
+    )
   }
 }

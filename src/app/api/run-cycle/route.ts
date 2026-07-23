@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { initializeDatabase, AutomationState } from '@/lib/tradebot/database'
-import { runCycle } from '@/lib/tradebot/cycle-engine'
+import { runCycle, checkClosedPositionsHistory } from '@/lib/tradebot/cycle-engine'
 
 export const runtime = 'edge'
 
@@ -111,6 +111,13 @@ async function handleRunCycle(request: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 1000))
       }
     }
+
+    // ✓ Fix (مشکل ۲): Check closed positions history ONLY after the LAST cycle
+    //   This prevents repeated notifications when cyclesPerRun > 1.
+    //   Previously this was Step 0 at the beginning of each cycle, causing
+    //   duplicate Bale messages every 5 minutes for hours.
+    console.log('[/api/run-cycle] Checking closed positions history (post-cycle)...')
+    await checkClosedPositionsHistory(baseUrl)
 
     return NextResponse.json({
       success: anySuccess,

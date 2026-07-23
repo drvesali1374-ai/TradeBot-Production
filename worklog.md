@@ -701,3 +701,49 @@ Stage Summary:
 - ✅ Server-side Bale messages queued in KV and sent by browser on next page load
 - ✅ Both local dev and Cloudflare work for Bale messaging
 - ✅ All 8 previous improvements still intact
+
+---
+Task ID: 10
+Agent: Main Orchestrator
+Task: Fix 4 issues (duplicate cycles, repeated history notifications, message format)
+
+Work Log:
+- [مشکل ۱] Fix: One symbol selected in two consecutive cycles
+  - Root cause: lastCycleTime was set at the END of cycle (fire-and-forget KV write), so the next cycle in the same runCycle loop would select the same symbol again
+  - Fix (server-side cycle-engine.ts): Set lastCycleTime IMMEDIATELY after symbol selection (before any processing). Changed updateSymbolState to async-await (was fire-and-forget). All 10 updateSymbolState calls now use await.
+  - Fix (client-side automation-manager.js): Same — set symbol.lastCycleTime = Date.now() right after selectNextSymbol(), before any processing. Call saveSymbols() immediately.
+  - Verified: "یک چرخه" button test showed Cycle 1 selected XRP, Cycle 2 selected DYDX (different symbols) ✓
+
+- [مشکل ۲] Fix: Repeated "تاریخچه پوزیشن‌های بسته‌شده" messages every 5 minutes
+  - Root cause: Step 0 (historyPositions check) ran at the BEGINNING of EVERY cycle. When cyclesPerRun=2, it ran twice per /api/run-cycle call. Plus KV eventual consistency could cause lastPositionId to not be saved in time for the next check.
+  - Fix: Extracted Step 0 into a standalone function `checkClosedPositionsHistory(baseUrl)`. Removed from runCycle(). Now called from /api/run-cycle ONLY AFTER the last cycle completes.
+  - This means: if cyclesPerRun=2, historyPositions check runs exactly ONCE (after both cycles finish), not twice.
+
+- [مشکل ۳] Fix: Remove extra text from Price Distance Bale message
+  - Removed "(از ستون «آخرین ورود» جدول پوزیشن‌های باز)" from both cycle-engine.ts and automation-manager.js
+  - Message now just says: "آخرین قیمت ورود هم‌جهت = 1.1056"
+
+- [مشکل ۴] Fix: Update historyPositions message format (3 lines + PnL + leverage)
+  - Old format (1 line per position): "۱. ⭐ نماد: XRP-SWAP-USDT | 🔵 جهت: Long | 💰 قیمت بسته: 1.105 | 🕐 زمان: ..."
+  - New format (3 lines per position):
+    "۱. ⭐ نماد: XRP | 💰 قیمت بسته: 1.105"
+    "   🔵 جهت: Long | 📈 سود/زیان: 2.5 USDT (5.2%) | 🔢 لوریج: 4x"
+    "   🕐 زمان: 1405/04/26 - 14:30"
+  - Changes: short symbol name (XRP not XRP-SWAP-USDT), PnL value + percentage, leverage, 3-line layout
+  - Uses realizedPnL and realizedPnlRate from Toobit API response
+
+- Regenerated RUN_CYCLE_SECRET and set on both Cron Worker and Pages app
+- Build + deploy to Cloudflare Pages (successful)
+- Tested with Agent Browser:
+  - Login works ✓
+  - "یک چرخه" button: 2 cycles ran, each selected a DIFFERENT symbol (XRP then DYDX) ✓
+  - "2 چرخه تکمیل شد" ✓
+  - No console errors ✓
+- Tested manual cron trigger: 2 cycles ran successfully ✓
+
+Stage Summary:
+- ✅ مشکل ۱ solved: lastCycleTime set immediately + await KV write → different symbols per cycle
+- ✅ مشکل ۲ solved: historyPositions check moved to end of LAST cycle only
+- ✅ مشکل ۳ solved: extra text removed from Price Distance message
+- ✅ مشکل ۴ solved: 3-line format with PnL + leverage + short symbol name
+- ✅ Deployed to Cloudflare, tested, working
