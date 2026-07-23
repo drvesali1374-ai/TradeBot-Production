@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { initializeDatabase, AutomationState } from '@/lib/tradebot/database'
-import { runCycle, checkClosedPositionsHistory } from '@/lib/tradebot/cycle-engine'
+import { initializeDatabase, AutomationState, AutomationLogs } from '@/lib/tradebot/database'
+import { runCycle, checkClosedPositionsHistory, type CycleResult } from '@/lib/tradebot/cycle-engine'
 
 export const runtime = 'edge'
 
@@ -88,7 +88,7 @@ async function handleRunCycle(request: NextRequest) {
   }
 
   try {
-    const results = []
+    const results: CycleResult[] = []
     let anySuccess = false
 
     // ✓ Run cyclesPerRun cycles sequentially
@@ -118,6 +118,55 @@ async function handleRunCycle(request: NextRequest) {
     //   duplicate Bale messages every 5 minutes for hours.
     console.log('[/api/run-cycle] Checking closed positions history (post-cycle)...')
     await checkClosedPositionsHistory(baseUrl)
+
+    // ✓ Task 11 (KV write reduction): Batch-write ALL cycle logs to the shared
+    //   `logs` array in a SINGLE KV write. Previously each cycle's flushLogs()
+    //   did its own read-modify-write of the `logs` array (one write per cycle).
+    //   Now cycle-engine.ts only writes per-cycle logs to `lastCycleLogs`,
+    //   and we collect ALL cycle logs here and append them in one batch.
+    try {
+      const triggerSource = isCron ? 'cron' : 'manual'
+      const allNewLogs: Array<{
+        symbol: string
+        action: string
+        status: string
+        message: string
+        error_code: string | null
+        details: string
+        created_at: string
+      }> = []
+      for (const result of results) {
+        if (!result.logs || result.logs.length === 0) continue
+        for (const lg of result.logs) {
+          allNewLogs.push({
+            symbol: lg.symbol || '',
+            action: 'automation_cycle',
+            status:
+              lg.type === 'error'
+                ? 'ERROR'
+                : lg.type === 'warning'
+                  ? 'WARNING'
+                  : 'SUCCESS',
+            message: lg.message,
+            error_code: lg.type === 'error' ? 'SIGNAL_ERROR' : null,
+            details: JSON.stringify({
+              timestamp: lg.timestamp,
+              type: lg.type,
+              source: triggerSource
+            }),
+            created_at: lg.timestamp
+          })
+        }
+      }
+      if (allNewLogs.length > 0) {
+        console.log(
+          `[/api/run-cycle] Batch-writing ${allNewLogs.length} logs to shared logs array (single KV write)`
+        )
+        await AutomationLogs.appendBatch(allNewLogs)
+      }
+    } catch (e) {
+      console.warn('[/api/run-cycle] Failed to batch-write cycle logs:', e)
+    }
 
     return NextResponse.json({
       success: anySuccess,

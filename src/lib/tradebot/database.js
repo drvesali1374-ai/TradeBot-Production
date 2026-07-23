@@ -590,6 +590,48 @@ export const AutomationLogs = {
     }
     const db = await loadFileDatabase()
     return db.logs.filter(l => l.status === 'ERROR').slice(-limit)
+  },
+
+  // ✓ Batch append — used by /api/run-cycle to write ALL cycle logs in a
+  //   SINGLE KV write (read existing logs ONCE, append, write ONCE).
+  //   This replaces the previous per-cycle "Strategy 2" write which did a
+  //   full read-modify-write on every cycle (one write per cycle).
+  //   `newLogs` items should already have: symbol, action, status, message,
+  //   error_code, details, created_at. We auto-assign sequential ids.
+  async appendBatch(newLogs) {
+    if (!Array.isArray(newLogs) || newLogs.length === 0) {
+      return { added: 0 }
+    }
+    const kv = await getKV()
+    if (kv) {
+      const existing = (await kvGet('logs')) || []
+      const maxId = existing.length > 0
+        ? Math.max(...existing.map(l => l.id || 0))
+        : 0
+      const enriched = newLogs.map((l, i) => ({
+        id: maxId + i + 1,
+        symbol: l.symbol || '',
+        action: l.action || 'automation_cycle',
+        status: l.status || 'SUCCESS',
+        message: l.message || '',
+        error_code: l.error_code || null,
+        details: l.details || JSON.stringify({ timestamp: l.created_at || new Date().toISOString() }),
+        created_at: l.created_at || new Date().toISOString()
+      }))
+      // Keep only latest 500 logs to stay within KV size limits
+      const trimmed = [...existing, ...enriched].slice(-500)
+      await kvSet('logs', trimmed)
+      return { added: enriched.length }
+    }
+    // Local dev (JSON file) — fall back to individual pushes
+    const db = await loadFileDatabase()
+    for (const l of newLogs) {
+      l.id = db.logs.length > 0 ? Math.max(...db.logs.map(x => x.id || 0)) + 1 : 1
+      l.created_at = l.created_at || new Date().toISOString()
+      db.logs.push(l)
+    }
+    saveFileDatabase()
+    return { added: newLogs.length }
   }
 }
 

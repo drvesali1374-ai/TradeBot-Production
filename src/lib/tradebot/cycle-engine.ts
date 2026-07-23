@@ -38,7 +38,7 @@
  * persisted back to the database.
  */
 
-import { AutomationState, AutomationLogs } from '@/lib/tradebot/database'
+import { AutomationState } from '@/lib/tradebot/database'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -365,15 +365,16 @@ export async function runCycle(
     console.log(`[CycleEngine${options.triggerSource ? `:${options.triggerSource}` : ''}] ${type.toUpperCase()} ${symbol ? `[${symbol}] ` : ''}${message}`)
   }
 
-  // ✓ Flush all buffered logs to KV in a single batch operation.
-  //   Uses TWO write strategies to avoid race conditions:
-  //   1. `lastCycleLogs` — stores THIS cycle's complete logs (overwrite, no race)
-  //   2. `logs` — appends to the shared historical log (best-effort, may lose some entries
-  //      under concurrent cron fire, but `lastCycleLogs` always has the complete picture)
+  // ✓ Flush all buffered logs to KV.
+  //   Uses ONE write strategy (Task 11 — KV write reduction):
+  //     1. `lastCycleLogs` — stores THIS cycle's complete logs (single KV put).
+  //   The shared historical `logs` array is NO LONGER updated per-cycle.
+  //   Instead, /api/run-cycle does ONE batch append of all cycle logs after
+  //   all cycles in a single cron call complete (via AutomationLogs.appendBatch).
   const flushLogs = async () => {
     if (pendingDbLogs.length === 0) return
 
-    // Strategy 1: Write this cycle's complete logs to `lastCycleLogs` (no race condition)
+    // Strategy: Write this cycle's complete logs to `lastCycleLogs` (single KV put)
     try {
       const cycleLogEntry = {
         timestamp: new Date().toISOString(),
@@ -401,45 +402,6 @@ export async function runCycle(
       }
     } catch (e) {
       console.warn('[CycleEngine] Failed to write lastCycleLogs:', e)
-    }
-
-    // Strategy 2: Append to shared `logs` array (best-effort, may lose some under concurrency)
-    try {
-      const existingLogs = (await AutomationLogs.getRecent(500)) || []
-      const maxId = existingLogs.length > 0
-        ? Math.max(...existingLogs.map((l: { id?: number }) => l.id || 0))
-        : 0
-      const newLogs = pendingDbLogs.map((l, i) => ({
-        id: maxId + i + 1,
-        symbol: l.symbol,
-        action: 'automation_cycle',
-        status: l.type === 'error' ? 'ERROR' : l.type === 'warning' ? 'WARNING' : 'SUCCESS',
-        message: l.message,
-        error_code: l.type === 'error' ? 'SIGNAL_ERROR' : null,
-        details: JSON.stringify({ timestamp: l.timestamp, type: l.type, source: l.source }),
-        created_at: l.timestamp
-      }))
-      const allLogs = [...existingLogs, ...newLogs].slice(-500)
-      try {
-        const { getRequestContext } = await import('@cloudflare/next-on-pages')
-        const ctx = getRequestContext()
-        if (ctx.env && ctx.env.TRADING_DATA) {
-          await ctx.env.TRADING_DATA.put('logs', JSON.stringify(allLogs))
-        }
-      } catch {
-        // Not on Cloudflare — use individual adds for local dev
-        for (const l of pendingDbLogs) {
-          await AutomationLogs.add({
-            message: l.message,
-            type: l.type as 'info' | 'success' | 'warning' | 'error',
-            symbol: l.symbol,
-            source: l.source,
-            timestamp: l.timestamp
-          }).catch(() => {})
-        }
-      }
-    } catch (e) {
-      console.warn('[CycleEngine] Failed to append to shared logs:', e)
     }
   }
 
@@ -514,6 +476,23 @@ export async function runCycle(
     // -------------------------------------------------------------------
     // Helper to persist symbol state back to DB
     // ✓ IMPORTANT: now async (await) — caller MUST await to ensure KV consistency
+    //
+    // ✓ Task 11 (KV write reduction): We have TWO helpers now:
+    //   - `updateSymbolState` (async) — does the actual KV write. Used ONLY at
+    //     the START of a cycle to set `status: 'running'` + `lastCycleTime`
+    //     (one write per cycle, persisted immediately to prevent the same
+    //     symbol being picked again by the next cycle).
+    //   - `updateSymbolStateInMemory` (sync, no KV write) — used at the END of
+    //     every cycle (success / no_signal / risk_blocked) to flip `status`
+    //     back to 'waiting'. The `lastCycleTime` was already persisted at the
+    //     START, so the next cycle's selectNextSymbol will skip this symbol.
+    //     The status change is cosmetic (UI reads it) — not worth a KV write.
+    //
+    //     The ONE exception is the catch block (error path): it does its own
+    //     read-modify-write of `automation_symbols` to bump `errorCount`,
+    //     which MUST be persisted (allowedErrors tracking). That write is
+    //     kept as-is — only the redundant end-of-cycle 'waiting' writes are
+    //     removed.
     // -------------------------------------------------------------------
     const updateSymbolState = async (
       updates: Partial<SymbolEntry>
@@ -526,11 +505,29 @@ export async function runCycle(
       }
     }
 
+    // ✓ Lightweight in-memory-only update — does NOT write to KV.
+    //   Used at the END of every cycle path. The `lastCycleTime` was already
+    //   persisted at the START (line ~533), so we don't need to set it again.
+    const updateSymbolStateInMemory = (updates: Partial<SymbolEntry>) => {
+      const idx = symbols.findIndex((s) => s.id === symbol!.id)
+      if (idx >= 0) {
+        symbols[idx] = { ...symbols[idx], ...updates }
+      }
+    }
+
     // ✓ FIX (مشکل ۱): Set lastCycleTime IMMEDIATELY after symbol selection
     //   This ensures that even if the next cycle starts in the same second,
     //   this symbol won't be selected again (tradeWaitTime hasn't passed).
-    //   We await the KV write to guarantee it's persisted before continuing.
-    await updateSymbolState({ status: 'running', lastCycleTime: Date.now(), errorCount: 0 })
+    //   ✓ KV resilience: if KV write fails (e.g., daily limit exceeded),
+    //   continue anyway — the in-memory state is sufficient for the current
+    //   /api/run-cycle call to prevent duplicate symbol selection.
+    try {
+      await updateSymbolState({ status: 'running', lastCycleTime: Date.now(), errorCount: 0 })
+    } catch (kvError) {
+      // KV write failed (e.g., daily limit exceeded) — update in-memory only
+      updateSymbolStateInMemory({ status: 'running', lastCycleTime: Date.now(), errorCount: 0 })
+      log('هشدار: KV write ناموفق (احتمالاً محدودیت روزانه) — ادامه با حافظه محلی', 'warning')
+    }
 
     // -------------------------------------------------------------------
     // Step 2-3: fetchMarketData()
@@ -711,7 +708,7 @@ export async function runCycle(
 
     if (signals.length === 0) {
       log(`${symbol.name}: هیچ سیگنالی یافت نشد - شرایط بازار مناسب نیست`, 'warning', symbol.name)
-      await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+      updateSymbolStateInMemory({ status: 'waiting' })
       return {
         success: false,
         symbol: symbol.name,
@@ -830,7 +827,7 @@ export async function runCycle(
       } else {
         log(`${symbol.name}: هیچ سیگنالی برای ورود آماده نیست - از این نماد عبو میشود`, 'warning', symbol.name)
       }
-      await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+      updateSymbolStateInMemory({ status: 'waiting' })
       return {
         success: false,
         symbol: symbol.name,
@@ -974,7 +971,7 @@ export async function runCycle(
             'حداقل کندل هم‌جهت (Min Same-Direction Candles)',
             math
           )
-          await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+          updateSymbolStateInMemory({ status: 'waiting' })
           return {
             success: false,
             symbol: symbol.name,
@@ -1031,7 +1028,7 @@ export async function runCycle(
             'حداقل کندل هم‌جهت (Min Same-Direction Candles)',
             math
           )
-          await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+          updateSymbolStateInMemory({ status: 'waiting' })
           return {
             success: false,
             symbol: symbol.name,
@@ -1142,8 +1139,6 @@ export async function runCycle(
             symbolLastEntryPrice = latestOpen ? latestOpen.price : null
           }
 
-          // Persist open positions to DB (so the UI can display them)
-          AutomationState.set('openPositions', freshOpenPositions).catch(() => {})
           log(`${symbol.name}: جدول پوزیشن‌های باز بروزرسانی شد (${freshOpenPositions.length} پوزیشن)`, 'success', symbol.name)
         }
       } catch (e) {
@@ -1174,9 +1169,6 @@ export async function runCycle(
     const totalAssets = parseFloat(balance.total)
     const freeBalance = parseFloat(balance.free)
     log(`${symbol.name}: کل دارایی = ${totalAssets} USDT, آزاد = ${freeBalance} USDT`, 'success', symbol.name)
-
-    // Persist balance to DB (so the UI can display it) — async, fire-and-forget
-    AutomationState.set('balance', balance).catch(() => {})
 
     // -------------------------------------------------------------------
     // ✓ Step 12: calculateNewMargin() + Risk Controls
@@ -1295,7 +1287,7 @@ export async function runCycle(
           `موجودی آزاد پیش‌بینی‌شده = ${freeBalance.toFixed(4)} - ${newMargin.toFixed(4)} = ${projectedFree.toFixed(4)} USDT\n` +
           `${projectedFree.toFixed(4)} < ${safeAmount.toFixed(4)} ✗`
       )
-      await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+      updateSymbolStateInMemory({ status: 'waiting' })
       return {
         success: false,
         symbol: symbol.name,
@@ -1350,7 +1342,7 @@ export async function runCycle(
               `حداقل فاصله قیمت = ${automationSettings.minPriceDistancePercent}%\n` +
               `${distancePercent.toFixed(4)}% < ${automationSettings.minPriceDistancePercent}% ✗`
           )
-          await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+          updateSymbolStateInMemory({ status: 'waiting' })
           return {
             success: false,
             symbol: symbol.name,
@@ -1386,7 +1378,7 @@ export async function runCycle(
             `مجموع مارجین نماد = ${existingSymbolMargin.toFixed(4)} + ${newMargin.toFixed(4)} = ${totalSymbolMargin.toFixed(4)} USDT\n` +
             `${totalSymbolMargin.toFixed(4)} > ${maxMarginPerSymbol.toFixed(4)} ✗`
         )
-        await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+        updateSymbolStateInMemory({ status: 'waiting' })
         return {
           success: false,
           symbol: symbol.name,
@@ -1416,7 +1408,7 @@ export async function runCycle(
           `مارجین نهایی = max(${newMargin.toFixed(4)}, 0) = ${finalMargin.toFixed(4)} USDT\n` +
           `${finalMargin.toFixed(4)} ≤ 0 ✗`
       )
-      await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+      updateSymbolStateInMemory({ status: 'waiting' })
       return {
         success: false,
         symbol: symbol.name,
@@ -1527,7 +1519,7 @@ export async function runCycle(
     // -------------------------------------------------------------------
     // Update symbol status
     // -------------------------------------------------------------------
-    await updateSymbolState({ status: 'waiting', lastCycleTime: Date.now(), errorCount: 0 })
+    updateSymbolStateInMemory({ status: 'waiting' })
     log(`چرخه ${symbol.name} با موفقیت انجام شد`, 'success', symbol.name)
 
     return {
