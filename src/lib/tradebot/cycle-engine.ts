@@ -38,7 +38,7 @@
  * persisted back to the database.
  */
 
-import { AutomationState } from '@/lib/tradebot/database'
+import { AutomationState, initializeDatabase } from '@/lib/tradebot/database'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1664,7 +1664,7 @@ export async function runCycle(
 
 export async function checkClosedPositionsHistory(
   baseUrl: string
-): Promise<void> {
+): Promise<{ success: boolean; error?: string; newPositions?: number; closeTime?: number }> {
   const startTime = Date.now()
   console.log('[ClosedPositionsHistory] Starting check...')
 
@@ -1692,7 +1692,7 @@ export async function checkClosedPositionsHistory(
 
     if (!cpApiKey || !cpSecretKey) {
       console.log('[ClosedPositionsHistory] API keys not configured — skipping')
-      return
+      return { success: false, error: 'API keys not configured' }
     }
 
     // Fetch all closed positions (no symbol filter → all symbols)
@@ -1705,8 +1705,9 @@ export async function checkClosedPositionsHistory(
     })
 
     if (!cpResponse.ok) {
-      console.warn(`[ClosedPositionsHistory] HTTP ${cpResponse.status} — skipping`)
-      return
+      const errText = await cpResponse.text().catch(() => 'unknown')
+      console.warn(`[ClosedPositionsHistory] HTTP ${cpResponse.status}: ${errText.substring(0, 200)}`)
+      return { success: false, error: `HTTP ${cpResponse.status}: ${errText.substring(0, 200)}` }
     }
 
     const cpData = await cpResponse.json()
@@ -1726,7 +1727,7 @@ export async function checkClosedPositionsHistory(
 
     if (cpRecords.length === 0) {
       console.log('[ClosedPositionsHistory] No closed positions found')
-      return
+      return { success: true, newPositions: 0 }
     }
 
     // Sort by closeTime DESC (newest first)
@@ -1751,7 +1752,7 @@ export async function checkClosedPositionsHistory(
 
     if (firstCloseTime === 0 || firstCloseTime === lastCloseTime) {
       console.log(`[ClosedPositionsHistory] No new positions (closeTime=${firstCloseTime}, last=${lastCloseTime})`)
-      return
+      return { success: true, newPositions: 0, closeTime: firstCloseTime }
     }
 
     console.log(`[ClosedPositionsHistory] New positions detected! closeTime=${firstCloseTime} (was ${lastCloseTime})`)
@@ -1816,25 +1817,41 @@ export async function checkClosedPositionsHistory(
     // Send notification
     const token = automationSettings.baleToken
     const chatId = automationSettings.baleChatId
+    let baleSent = false
+    let baleQueued = false
     if (token && chatId) {
       try {
+        // ✓ Try direct fetch to Bale API
+        // Note: On Cloudflare, this will likely fail (can't reach tapi.bale.ai)
+        // but on local dev it works.
         const baleUrl = `https://tapi.bale.ai/bot${token}/sendMessage`
-        await fetch(baleUrl, {
+        const baleResponse = await fetch(baleUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({ chat_id: String(chatId), text })
         })
-        console.log(`[ClosedPositionsHistory] Notification sent to Bale`)
+        if (baleResponse.ok || baleResponse.status === 0) {
+          console.log(`[ClosedPositionsHistory] Notification sent to Bale directly`)
+          baleSent = true
+        } else {
+          console.warn(`[ClosedPositionsHistory] Bale API returned HTTP ${baleResponse.status}`)
+        }
       } catch (e) {
-        // Cloudflare can't reach tapi.bale.ai → store as pending for browser delivery
-        console.warn('[ClosedPositionsHistory] Direct Bale send failed, queuing for browser')
+        console.warn(`[ClosedPositionsHistory] Direct Bale send failed: ${e instanceof Error ? e.message : 'unknown'}`)
+      }
+
+      // ✓ If direct send failed, store as pending for browser delivery
+      if (!baleSent) {
+        console.log('[ClosedPositionsHistory] Queuing message for browser delivery')
         try {
           const existing = (await AutomationState.get('pendingBaleMessages')) || []
           const messages = Array.isArray(existing) ? existing : []
           messages.push({ text, token, chatId, timestamp: new Date().toISOString() })
           await AutomationState.set('pendingBaleMessages', messages.slice(-50))
-        } catch {
-          // give up silently
+          baleQueued = true
+          console.log(`[ClosedPositionsHistory] Message queued (${messages.length} pending)`)
+        } catch (queueErr) {
+          console.warn(`[ClosedPositionsHistory] Failed to queue message: ${queueErr instanceof Error ? queueErr.message : 'unknown'}`)
         }
       }
     }
@@ -1848,9 +1865,10 @@ export async function checkClosedPositionsHistory(
       // KV write failed — will retry next cycle
     }
     console.log(`[ClosedPositionsHistory] Done in ${Date.now() - startTime}ms (closeTime=${firstCloseTime})`)
+    return { success: true, newPositions: toNotify.length, closeTime: firstCloseTime, baleSent, baleQueued, baleToken: token ? 'configured' : 'missing', baleChatId: chatId ? 'configured' : 'missing' }
   } catch (e) {
-    console.warn(
-      `[ClosedPositionsHistory] Error: ${e instanceof Error ? e.message : 'unknown'}`
-    )
+    const msg = e instanceof Error ? e.message : 'unknown'
+    console.warn(`[ClosedPositionsHistory] Error: ${msg}`)
+    return { success: false, error: msg }
   }
 }

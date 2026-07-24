@@ -114,10 +114,9 @@ async function handleRunCycle(request: NextRequest) {
 
     // ✓ Fix (مشکل ۲): Check closed positions history ONLY after the LAST cycle
     //   This prevents repeated notifications when cyclesPerRun > 1.
-    //   Previously this was Step 0 at the beginning of each cycle, causing
-    //   duplicate Bale messages every 5 minutes for hours.
     console.log('[/api/run-cycle] Checking closed positions history (post-cycle)...')
-    await checkClosedPositionsHistory(baseUrl)
+    const historyResult = await checkClosedPositionsHistory(baseUrl)
+    console.log('[/api/run-cycle] History check result:', JSON.stringify(historyResult))
 
     // ✓ Task 11 (KV write reduction): Batch-write ALL cycle logs to the shared
     //   `logs` array in a SINGLE KV write. Previously each cycle's flushLogs()
@@ -172,6 +171,7 @@ async function handleRunCycle(request: NextRequest) {
       success: anySuccess,
       results,
       cyclesRun: results.length,
+      historyCheck: historyResult,
       duration: Date.now() - startTime
     })
   } catch (error: unknown) {

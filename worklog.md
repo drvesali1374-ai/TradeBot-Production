@@ -949,3 +949,35 @@ Stage Summary:
 - ⚠️ History positions not sending because API KEY EXPIRED — user needs to update keys
 - ✅ Improved history comparison to use closeTime (timestamp) instead of id
 - ✅ Deployed to Cloudflare
+
+---
+Task ID: 14
+Agent: Main Orchestrator
+Task: Fix checkClosedPositionsHistory not executing — missing import
+
+Work Log:
+- Issue: "تاریخچه پوزیشن‌های بسته‌شده" message not being sent after closing positions
+- Investigation: Tested /api/history-positions directly — API works, returns 20 records with all fields
+- Tested /api/run-cycle with debug output — historyCheck returned: "initializeDatabase is not defined"
+- ROOT CAUSE: `initializeDatabase` was NOT imported in cycle-engine.ts
+  - Only `AutomationState` was imported: `import { AutomationState } from '@/lib/tradebot/database'`
+  - The `checkClosedPositionsHistory` function calls `initializeDatabase()` but it was undefined
+  - The error was silently caught by the try-catch in the function
+- Fix: Changed import to: `import { AutomationState, initializeDatabase } from '@/lib/tradebot/database'`
+- Also improved checkClosedPositionsHistory:
+  - Changed return type from void to { success, error?, newPositions?, closeTime? }
+  - Added baleSent and baleQueued tracking
+  - Better error handling with detailed error messages
+  - /api/run-cycle now returns historyCheck result in response for debugging
+- Tested after fix:
+  - historyCheck: { success: true, newPositions: 10, closeTime: 1784904526659, baleSent: true }
+  - Bale message sent successfully directly from Cloudflare (baleSent: true)
+  - lastPositionCloseTime stored in KV: 1784904526659
+  - No pendingBaleMessages needed (direct send worked)
+
+Stage Summary:
+- ✅ Root cause: missing import of initializeDatabase
+- ✅ checkClosedPositionsHistory now works — detects new closed positions and sends Bale notification
+- ✅ Cloudflare CAN reach tapi.bale.ai (baleSent: true) — previous DNS issue may have been temporary
+- ✅ lastPositionCloseTime comparison working correctly (timestamp-based, not id-based)
+- ✅ Deployed to Cloudflare, tested, working
