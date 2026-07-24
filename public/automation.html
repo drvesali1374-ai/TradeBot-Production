@@ -755,6 +755,37 @@
                                     <input type="number" id="closed-positions-notify-count" class="input-field text-sm" value="10" min="1" max="50" step="1" title="تعداد رکوردهای ارسالی در نوتیف تاریخچه پوزیشن‌های بسته">
                                 </div>
                             </div>
+                            <!-- ✓ Fake Breakout Settings (اصلاحات پیشنهادی) -->
+                            <div class="border-t border-gray-700 pt-3 mt-3">
+                                <h4 class="text-sm font-semibold text-purple-400 mb-2">تنظیمات Fake Breakout</h4>
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-2">
+                                        <input type="checkbox" id="enable-meaningful-break-filter" class="rounded" checked>
+                                        <label for="enable-meaningful-break-filter" class="text-xs text-gray-300">فیلتر شکست معنادار (ATR)</label>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-xs text-gray-300 mb-1">ضریب ATR شکست</label>
+                                            <input type="number" id="break-atr-multiplier" class="input-field text-sm" value="0.20" min="0.05" max="1.00" step="0.05">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-300 mb-1">روش تشخیص شکست</label>
+                                            <select id="break-detection-method" class="input-field text-sm">
+                                                <option value="Wick">Wick (High/Low)</option>
+                                                <option value="Close">Close (قیمت بسته)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input type="checkbox" id="enable-break-lifecycle" class="rounded" checked>
+                                        <label for="enable-break-lifecycle" class="text-xs text-gray-300">مدیریت چرخه شکست</label>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-300 mb-1">عمر چرخه شکست (0 = LookBack)</label>
+                                        <input type="number" id="break-sequence-lifetime" class="input-field text-sm" value="0" min="0" max="100" step="1">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

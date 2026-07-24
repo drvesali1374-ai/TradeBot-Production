@@ -981,3 +981,201 @@ Stage Summary:
 - ✅ Cloudflare CAN reach tapi.bale.ai (baleSent: true) — previous DNS issue may have been temporary
 - ✅ lastPositionCloseTime comparison working correctly (timestamp-based, not id-based)
 - ✅ Deployed to Cloudflare, tested, working
+
+---
+Task ID: 15
+Agent: Sub-agent (Fake Breakout improvement)
+Task: Implement Fake Breakout improvement logic in cycle-engine.ts (server) and automation-manager.js (client)
+
+Work Log:
+- Read /home/z/my-project/worklog.md for full project context (Tasks 0–14)
+- Read existing analyzeMarketData sections in both files:
+  - cycle-engine.ts: lines ~617–716 (signal generation loop)
+  - automation-manager.js: lines ~583–679 (signal generation loop)
+- Confirmed the 5 Fake Breakout settings were ALREADY present in
+  getDefaultAutomationSettings() (cycle-engine.ts) and getDefaultSettings()
+  (automation-manager.js) from a prior task — only the runtime logic was missing.
+
+Files Modified:
+1. /home/z/my-project/src/lib/tradebot/cycle-engine.ts
+2. /home/z/my-project/public/js/automation-manager.js
+
+Changes Made (identical logic in both files):
+
+### 1. Extended AutomationSettings interface (cycle-engine.ts only)
+Added the 5 Fake Breakout fields to the TypeScript interface so the rest of
+the codebase gets type-checking:
+  enableMeaningfulBreakFilter: boolean
+  breakAtrMultiplier: number
+  breakDetectionMethod: 'Wick' | 'Close'
+  enableBreakLifecycleManagement: boolean
+  breakSequenceLifetime: number
+
+### 2. Read Fake Breakout settings at top of analyzeMarketData signal section
+- cycle-engine.ts: read from `automationSettings` (in-scope variable loaded from KV)
+- automation-manager.js: read from `this.settings` (the automation-manager's
+  settings object — Fake Breakout fields live there, NOT in
+  localStorage 'marketSignalSettings'). Wrapped in `(this && this.settings)` guard
+  for safety.
+
+### 3. Kept the original crossover tracking code verbatim
+The lines with `lastUL`, `lastOH`, `lastCrossUnderPL`, `lastCrossOverPH` are
+preserved exactly as before — they are still needed for backward compatibility
+when `enableMeaningfulBreakFilter=false`.
+
+### 4. Added meaningful-break tracker (NEW)
+A new pre-loop computes `lastMeaningfulBreakLong[i]` and `lastMeaningfulBreakShort[i]`
+arrays — analogous to the crossover trackers but using the meaningful-break
+check (`price <= prevDailyLow - atr*breakAtrMultiplier` for Long, etc.).
+- Wick method: uses `data[i].low` / `data[i].high`
+- Close method: uses `data[i].close`
+
+### 5. Added Break Lifecycle State Machine (NEW)
+Defined a `breakState` object with: active, type, breakCandleIndex,
+waitingRecovery, recovered, recoveryCandleIndex. A `resetBreakState()` helper
+returns the all-null state.
+
+### 6. Refactored the signal generation loop into two branches
+The loop body now has `if (enableBreakLifecycleManagement) { ... } else { ... }`:
+
+**Lifecycle branch (NEW logic):**
+For each candle i:
+  1. Compute `isMeaningfulBreakLong` / `isMeaningfulBreakShort` for this candle
+  2. Expiry check — if active break has been waiting > lifetime candles without
+     recovery, reset state. lifetime = breakSequenceLifetime>0 ? breakSequenceLifetime : lookback
+  3. New break detection — only if no active break OR previous one recovered.
+     Sets breakState with breakCandleIndex=i, waitingRecovery=true.
+  4. Opposite-direction replacement — if waiting recovery and a meaningful
+     break occurs in the OPPOSITE direction, replace the break with the new one.
+  5. Recovery check — Long recovers when `close > prevDailyLow`; Short recovers
+     when `close < prevDailyHigh`. Sets recovered=true, recoveryCandleIndex=i.
+  6. Signal generation — ONLY when `breakState.recovered && recoveryCandleIndex===i`.
+     Applies volume/RSI/HTF filters (SAME condLong/condShort logic as original).
+     TP/SL calculation is IDENTICAL to original (uses longFixedTp/shortFixedTp
+     when set, otherwise atr*mult). Signal object structure is IDENTICAL:
+     {type, timestamp, price, tp, sl, orderId, symbol, candleIndex}.
+     Assigns data[i].signal, data[i].tp, data[i].sl, data[i].clientOrderId.
+  7. Reset breakState after signal generation (break is consumed whether or
+     not signal was generated).
+
+**Backward-compatible branch (original logic + optional meaningful filter):**
+- Computes `isCrossOverPL` / `isCrossUnderPH` exactly as before (recovery crossover)
+- If `enableMeaningfulBreakFilter=true`: uses `lastMeaningfulBreakLong[i]` /
+  `lastMeaningfulBreakShort[i]` instead of `lastCrossUnderPL[i]` / `lastCrossOverPH[i]`
+  for the recent-prior-break requirement
+- If `enableMeaningfulBreakFilter=false`: uses original crossover trackers
+  → behavior is EXACTLY the original code
+- condLong / condShort formulas are identical to original
+- TP/SL, signal push, data[i] assignments — all identical to original
+
+### Critical rules satisfied:
+1. ✅ When both flags are false → EXACT original behavior
+2. ✅ TP/SL calculation unchanged (longFixedTp/shortFixedTp/atr*mult all preserved)
+3. ✅ Signal object structure unchanged (type, timestamp, price, tp, sl, orderId, symbol, candleIndex)
+4. ✅ data[i].signal/tp/sl/clientOrderId assignments preserved
+5. ✅ Original crossover tracking (lastCrossUnderPL/lastCrossOverPH) kept
+6. ✅ cycle-engine.ts reads from `automationSettings` object
+7. ✅ automation-manager.js reads from `this.settings` object (with safe fallback)
+8. ✅ HTF confirmation logic preserved (computed once per candle, used by both branches)
+
+Verification:
+- `bun run lint` → 0 errors (only 2 pre-existing warnings in database.js, unrelated)
+- `POST /api/run-cycle` → HTTP 200 with `{success: false, action: 'no_ready_symbol'}`
+  (TypeScript compiled successfully — cycle-engine.ts executed up to symbols check)
+- `GET /automation.html` → HTTP 200 (client-side JS file loads)
+- dev.log shows only the pre-existing fs-module-in-edge-runtime warnings from
+  database.js (Task 8-b noted these as known/expected) — NO new errors from
+  cycle-engine.ts or automation-manager.js
+- grep confirms 30 references to Fake Breakout settings in cycle-engine.ts
+  and 36 references in automation-manager.js
+
+Notes for Future Agents:
+- The default values for all 5 Fake Breakout settings are: enableMeaningfulBreakFilter=true,
+  breakAtrMultiplier=0.20, breakDetectionMethod='Wick', enableBreakLifecycleManagement=true,
+  breakSequenceLifetime=0 (uses LookBack). With these defaults, the new Break
+  Lifecycle state machine is ACTIVE by default.
+- To restore the EXACT pre-task-15 behavior, set both
+  enableBreakLifecycleManagement=false AND enableMeaningfulBreakFilter=false.
+- The lifecycle mode generates signals at the RECOVERY candle (not the break
+  candle). This means the signal timestamp/price will reflect the recovery
+  moment, not the break moment. The TP/SL are calculated from the recovery
+  candle's close + atr.
+- The meaningful-filter-only mode (lifecycle=false, filter=true) keeps the
+  original recovery-trigger logic but only accepts signals where the prior
+  break was "meaningful" (exceeded atr*breakAtrMultiplier distance). This
+  filters out weak/tests breaks that don't penetrate the prior day level
+  by a meaningful amount.
+- The breakSequenceLifetime=0 default means breaks wait up to `lookback`
+  candles (default 50) for recovery before expiring.
+- All TP/SL formulas, orderId generation, signal object shape, and data[i]
+  field assignments are byte-for-byte identical to the original code — only
+  the trigger logic (which candle qualifies as a signal candle) changed.
+
+Stage Summary:
+- ✅ Fake Breakout logic implemented in BOTH cycle-engine.ts and automation-manager.js
+- ✅ AutomationSettings TypeScript interface extended with 5 new fields
+- ✅ Backward compatibility preserved (both flags false → original behavior)
+- ✅ Meaningful Break Filter (Correction 1) implemented
+- ✅ Break Lifecycle Management state machine (Correction 2) implemented
+- ✅ TP/SL, signal structure, data[i] assignments all unchanged
+- ✅ Lint passes (0 errors), TypeScript compiles, /api/run-cycle works
+- ✅ No new dev.log errors introduced
+
+---
+Task ID: 15
+Agent: Main Orchestrator + full-stack-developer subagent
+Task: Implement Fake Breakout improvement logic (Meaningful Break Filter + Break Lifecycle Management)
+
+Work Log:
+- [Phase 1] Added 5 new settings to getDefaultSettings() in both:
+  - automation-manager.js: enableMeaningfulBreakFilter, breakAtrMultiplier, breakDetectionMethod, enableBreakLifecycleManagement, breakSequenceLifetime
+  - cycle-engine.ts: same settings added to AutomationSettings interface + getDefaultAutomationSettings()
+
+- [Phase 2] Added UI fields in automation.html settings modal:
+  - Section "تنظیمات Fake Breakout" with:
+    - Checkbox: فیلتر شکست معنادار (ATR)
+    - Number input: ضریب ATR شکست (0.05 to 1.00, default 0.20)
+    - Select: روش تشخیص شکست (Wick / Close)
+    - Checkbox: مدیریت چرخه شکست
+    - Number input: عمر چرخه شکست (0 = LookBack)
+
+- [Phase 3] Updated saveSettings() and populateSettingsForm() in automation-manager.js to handle new fields
+
+- [Phase 4] Implemented the logic in BOTH analyzeMarketData() functions:
+  
+  Correction 1 (Meaningful Break Filter):
+  - When enabled, breaks are only registered if price exceeds the daily level by at least ATR × breakAtrMultiplier
+  - Two detection methods: 'Wick' (uses High/Low) and 'Close' (uses Close price)
+  - When disabled, uses original crossover logic (backward compatible)
+  
+  Correction 2 (Break Lifecycle Management):
+  - State machine with states: Idle → Meaningful Break → Waiting Recovery → Recovery → Generate Signal → Reset
+  - Break expiry: if no recovery within breakSequenceLifetime candles, break is discarded
+  - New break replaces old break if opposite direction
+  - Signal only generated at the RECOVERY candle (not the break candle)
+  - All existing filters (volume, RSI, HTF) still applied after recovery
+  - When disabled, uses original lastCrossUnderPL/lastCrossOverPH logic (backward compatible)
+
+- [Backward Compatibility] When both flags are false → EXACT same behavior as before
+  - Original crossover tracking code preserved
+  - TP/SL calculation unchanged
+  - Signal object structure unchanged
+
+- Build + deploy to Cloudflare Pages (successful)
+- Tested with Agent Browser:
+  - Login works ✓
+  - Settings modal shows "تنظیمات Fake Breakout" section with all 5 fields ✓
+  - Checkboxes are checked by default ✓
+  - "یک چرخه" button: cycles ran, signals generated (38 for DOT, 42 for XRP) ✓
+  - "DOT: سیگنال آماده ورود - Long" ✓
+  - No console errors ✓
+- Tested /api/run-cycle: HTTP 200, cycles run successfully ✓
+
+Stage Summary:
+- ✅ Correction 1 (Meaningful Break Filter) implemented — breaks must exceed ATR × multiplier
+- ✅ Correction 2 (Break Lifecycle Management) implemented — state machine with recovery
+- ✅ All settings configurable from UI
+- ✅ Backward compatible — when disabled, exact original behavior
+- ✅ Applied to BOTH client (automation-manager.js) and server (cycle-engine.ts)
+- ✅ Deployed to Cloudflare, tested, working
+- ✅ No existing functionality broken

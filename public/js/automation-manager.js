@@ -215,6 +215,12 @@ class AutomationManager {
             cyclesPerRun: 1,
             // ✓ مورد ۸: تعداد رکوردهای ارسالی در نوتیف تاریخچه پوزیشن‌های بسته
             closedPositionsNotifyCount: 10,
+            // ✓ Fake Breakout Settings (اصلاحات پیشنهادی)
+            enableMeaningfulBreakFilter: true,      // فیلتر شکست معنادار
+            breakAtrMultiplier: 0.20,               // ضریب ATR برای حداقل قدرت شکست
+            breakDetectionMethod: 'Wick',           // روش تشخیص: 'Wick' یا 'Close'
+            enableBreakLifecycleManagement: true,   // مدیریت چرخه شکست
+            breakSequenceLifetime: 0,               // 0 = استفاده از LookBack
             baleToken: '',
             baleChatId: ''
         };
@@ -276,6 +282,12 @@ class AutomationManager {
             cyclesPerRun: parseInt(document.getElementById('cycles-per-run').value) || 1,
             // ✓ مورد ۸: تعداد رکوردهای نوتیف تاریخچه
             closedPositionsNotifyCount: parseInt(document.getElementById('closed-positions-notify-count').value) || 10,
+            // ✓ Fake Breakout Settings
+            enableMeaningfulBreakFilter: document.getElementById('enable-meaningful-break-filter').checked,
+            breakAtrMultiplier: parseFloat(document.getElementById('break-atr-multiplier').value) || 0.20,
+            breakDetectionMethod: document.getElementById('break-detection-method').value,
+            enableBreakLifecycleManagement: document.getElementById('enable-break-lifecycle').checked,
+            breakSequenceLifetime: parseInt(document.getElementById('break-sequence-lifetime').value) || 0,
             baleToken: document.getElementById('bale-token').value.trim(),
             baleChatId: document.getElementById('bale-chat-id').value.trim()
         };
@@ -312,6 +324,12 @@ class AutomationManager {
         document.getElementById('min-same-direction-candles').value = this.settings.minSameDirectionCandles || 0;
         document.getElementById('cycles-per-run').value = this.settings.cyclesPerRun || 1;
         document.getElementById('closed-positions-notify-count').value = this.settings.closedPositionsNotifyCount || 10;
+        // ✓ Fake Breakout Settings
+        document.getElementById('enable-meaningful-break-filter').checked = this.settings.enableMeaningfulBreakFilter !== false;
+        document.getElementById('break-atr-multiplier').value = this.settings.breakAtrMultiplier || 0.20;
+        document.getElementById('break-detection-method').value = this.settings.breakDetectionMethod || 'Wick';
+        document.getElementById('enable-break-lifecycle').checked = this.settings.enableBreakLifecycleManagement !== false;
+        document.getElementById('break-sequence-lifetime').value = this.settings.breakSequenceLifetime || 0;
         document.getElementById('bale-token').value = this.settings.baleToken || '';
         document.getElementById('bale-chat-id').value = this.settings.baleChatId || '';
 
@@ -562,7 +580,7 @@ class AutomationManager {
         const avgVols = SignalUtils.calculateSMA(data.map(d => d.amount), settings.avgVolPeriod || 50);
         const rsi = SignalUtils.calculateRSI(data, settings.rsiPeriod || 14);
 
-        // Track crossovers
+        // Track crossovers (kept for backward compatibility — used when filters are disabled)
         let lastUL = null, lastOH = null;
         const lastCrossUnderPL = new Array(N).fill(Infinity);
         const lastCrossOverPH = new Array(N).fill(Infinity);
@@ -573,13 +591,57 @@ class AutomationManager {
             lastCrossOverPH[i] = lastOH === null ? Infinity : i - lastOH;
         }
 
+        // ✓ Fake Breakout settings (read from this.settings — Fake Breakout fields live there)
+        const fbSettings = (this && this.settings) ? this.settings : {};
+        const enableMeaningfulBreakFilter = fbSettings.enableMeaningfulBreakFilter !== false;
+        const breakAtrMultiplier = (fbSettings.breakAtrMultiplier !== undefined && fbSettings.breakAtrMultiplier !== null)
+            ? fbSettings.breakAtrMultiplier : 0.20;
+        const breakDetectionMethod = fbSettings.breakDetectionMethod === 'Close' ? 'Close' : 'Wick';
+        const enableBreakLifecycleManagement = fbSettings.enableBreakLifecycleManagement !== false;
+        const breakSequenceLifetime = (fbSettings.breakSequenceLifetime !== undefined && fbSettings.breakSequenceLifetime !== null)
+            ? fbSettings.breakSequenceLifetime : 0;
+
+        // ✓ Track meaningful breaks (used when enableMeaningfulBreakFilter is true)
+        //   A meaningful break for Long = price goes BELOW prevDailyLow by (atr * breakAtrMultiplier)
+        //   A meaningful break for Short = price goes ABOVE prevDailyHigh by (atr * breakAtrMultiplier)
+        const lastMeaningfulBreakLong = new Array(N).fill(Infinity);
+        const lastMeaningfulBreakShort = new Array(N).fill(Infinity);
+        {
+            let lastMBL = null, lastMBS = null;
+            for (let i = 1; i < N; i++) {
+                const bd = (atr[i] || 0) * breakAtrMultiplier;
+                let mbl = false, mbs = false;
+                if (breakDetectionMethod === 'Wick') {
+                    mbl = prevDailyLows[i] !== null && data[i].low <= (prevDailyLows[i] - bd);
+                    mbs = prevDailyHighs[i] !== null && data[i].high >= (prevDailyHighs[i] + bd);
+                } else {
+                    mbl = prevDailyLows[i] !== null && data[i].close <= (prevDailyLows[i] - bd);
+                    mbs = prevDailyHighs[i] !== null && data[i].close >= (prevDailyHighs[i] + bd);
+                }
+                if (mbl) lastMBL = i;
+                if (mbs) lastMBS = i;
+                lastMeaningfulBreakLong[i] = lastMBL === null ? Infinity : i - lastMBL;
+                lastMeaningfulBreakShort[i] = lastMBS === null ? Infinity : i - lastMBS;
+            }
+        }
+
         // Generate signals
         this.signals = [];
         const htfSource = settings.htfConfirmationSource || 'signalCandleClose';
+
+        // ✓ Break Lifecycle State Machine (used when enableBreakLifecycleManagement is true)
+        const resetBreakState = () => ({
+            active: false,
+            type: null,           // 'Long' | 'Short' | null
+            breakCandleIndex: null,
+            waitingRecovery: false,
+            recovered: false,
+            recoveryCandleIndex: null
+        });
+        let breakState = resetBreakState();
+
         for (let i = 1; i < N - 1; i++) {
-            const isCrossOverPL = data[i].close > prevDailyLows[i] && data[i - 1].close <= prevDailyLows[i - 1];
-            const isCrossUnderPH = data[i].close < prevDailyHighs[i] && data[i - 1].close >= prevDailyHighs[i - 1];
-            
+            // HTF confirmation (always computed — used by both branches)
             let htfConfirmLong, htfConfirmShort;
             if (htfSource === 'previousDayClose') {
                 htfConfirmLong = prevDayCloses[i] !== null && prevDayCloses[i] > prevDailyLows[i];
@@ -589,74 +651,241 @@ class AutomationManager {
                 htfConfirmLong = prevDailyLows[i] !== null && data[i].close > prevDailyLows[i];
                 htfConfirmShort = prevDailyHighs[i] !== null && data[i].close < prevDailyHighs[i];
             }
-            
-            const condLong = isCrossOverPL
-                && lastCrossUnderPL[i] <= (settings.lookback || 50)
-                && avgVols[i] !== null
-                && data[i].amount > avgVols[i] * (settings.volMult || 0.2)
-                && rsi[i] !== null
-                && rsi[i] < (settings.rsiThreshold || 50)
-                && htfConfirmLong;
-            
-            const condShort = isCrossUnderPH
-                && lastCrossOverPH[i] <= (settings.lookback || 50)
-                && avgVols[i] !== null
-                && data[i].amount > avgVols[i] * (settings.volMult || 0.2)
-                && rsi[i] !== null
-                && rsi[i] > (settings.rsiThreshold || 50)
-                && htfConfirmShort;
 
             data[i].rsi = rsi[i];
             data[i].atr = atr[i];
 
-            if (condLong) {
-                data[i].signal = 'Long';
-                if (settings.longFixedTp !== null && !isNaN(settings.longFixedTp)) {
-                    data[i].tp = data[i].close + (data[i].close * (settings.longFixedTp / 100));
+            if (enableBreakLifecycleManagement) {
+                // ===========================================================
+                // ✓ Fake Breakout: Break Lifecycle Management state machine
+                //   Signal is generated at the RECOVERY candle (price closing
+                //   back inside the prior day range), not at the break candle.
+                // ===========================================================
+
+                // Compute meaningful break conditions for this candle
+                const breakDistance = (atr[i] || 0) * breakAtrMultiplier;
+                let isMeaningfulBreakLong = false;
+                let isMeaningfulBreakShort = false;
+                if (breakDetectionMethod === 'Wick') {
+                    isMeaningfulBreakLong = prevDailyLows[i] !== null && data[i].low <= (prevDailyLows[i] - breakDistance);
+                    isMeaningfulBreakShort = prevDailyHighs[i] !== null && data[i].high >= (prevDailyHighs[i] + breakDistance);
                 } else {
-                    data[i].tp = data[i].close + (atr[i] * (settings.tpLongMult || 20));
+                    isMeaningfulBreakLong = prevDailyLows[i] !== null && data[i].close <= (prevDailyLows[i] - breakDistance);
+                    isMeaningfulBreakShort = prevDailyHighs[i] !== null && data[i].close >= (prevDailyHighs[i] + breakDistance);
                 }
-                if (settings.longFixedSl !== null && !isNaN(settings.longFixedSl)) {
-                    data[i].sl = data[i].close - (data[i].close * (settings.longFixedSl / 100));
-                } else {
-                    data[i].sl = data[i].close - (atr[i] * (settings.slLongMult || 6));
+
+                // 1. Check expiry — if a break has been waiting too long without recovery, discard it
+                if (breakState.active && !breakState.recovered && breakState.breakCandleIndex !== null) {
+                    const lifetime = breakSequenceLifetime > 0 ? breakSequenceLifetime : (settings.lookback || 50);
+                    if (i - breakState.breakCandleIndex > lifetime) {
+                        breakState = resetBreakState();
+                    }
                 }
-                data[i].clientOrderId = SignalUtils.generateOrderId(data[i].timestamp, symbol);
-                this.signals.push({
-                    type: 'Long',
-                    timestamp: data[i].timestamp,
-                    price: data[i].close,
-                    tp: data[i].tp,
-                    sl: data[i].sl,
-                    orderId: data[i].clientOrderId,
-                    symbol: symbol,
-                    // ✓ مورد ۶: candle index — used by min-same-direction-candles risk control
-                    candleIndex: i
-                });
-            } else if (condShort) {
-                data[i].signal = 'Short';
-                if (settings.shortFixedTp !== null && !isNaN(settings.shortFixedTp)) {
-                    data[i].tp = data[i].close - (data[i].close * (settings.shortFixedTp / 100));
-                } else {
-                    data[i].tp = data[i].close - (atr[i] * (settings.tpShortMult || 24));
+
+                // 2. Check for new meaningful break (only if no active break, or previous one recovered/consumed)
+                if (!breakState.active || breakState.recovered) {
+                    if (isMeaningfulBreakLong) {
+                        breakState = {
+                            active: true, type: 'Long', breakCandleIndex: i,
+                            waitingRecovery: true, recovered: false, recoveryCandleIndex: null
+                        };
+                    } else if (isMeaningfulBreakShort) {
+                        breakState = {
+                            active: true, type: 'Short', breakCandleIndex: i,
+                            waitingRecovery: true, recovered: false, recoveryCandleIndex: null
+                        };
+                    }
                 }
-                if (settings.shortFixedSl !== null && !isNaN(settings.shortFixedSl)) {
-                    data[i].sl = data[i].close + (data[i].close * (settings.shortFixedSl / 100));
-                } else {
-                    data[i].sl = data[i].close + (atr[i] * (settings.slShortMult || 4));
+
+                // 3. Check for new break while waiting recovery (replace old break if OPPOSITE direction)
+                if (breakState.active && !breakState.recovered) {
+                    if (breakState.type === 'Long' && isMeaningfulBreakShort) {
+                        breakState = {
+                            active: true, type: 'Short', breakCandleIndex: i,
+                            waitingRecovery: true, recovered: false, recoveryCandleIndex: null
+                        };
+                    } else if (breakState.type === 'Short' && isMeaningfulBreakLong) {
+                        breakState = {
+                            active: true, type: 'Long', breakCandleIndex: i,
+                            waitingRecovery: true, recovered: false, recoveryCandleIndex: null
+                        };
+                    }
                 }
-                data[i].clientOrderId = SignalUtils.generateOrderId(data[i].timestamp, symbol);
-                this.signals.push({
-                    type: 'Short',
-                    timestamp: data[i].timestamp,
-                    price: data[i].close,
-                    tp: data[i].tp,
-                    sl: data[i].sl,
-                    orderId: data[i].clientOrderId,
-                    symbol: symbol,
-                    // ✓ مورد ۶: candle index — used by min-same-direction-candles risk control
-                    candleIndex: i
-                });
+
+                // 4. Check recovery — price closes back inside the prior day range
+                if (breakState.active && breakState.waitingRecovery) {
+                    if (breakState.type === 'Long') {
+                        // Recovery: price closes back above Previous Daily Low
+                        if (data[i].close > prevDailyLows[i]) {
+                            breakState.recovered = true;
+                            breakState.recoveryCandleIndex = i;
+                            breakState.waitingRecovery = false;
+                        }
+                    } else if (breakState.type === 'Short') {
+                        // Recovery: price closes back below Previous Daily High
+                        if (data[i].close < prevDailyHighs[i]) {
+                            breakState.recovered = true;
+                            breakState.recoveryCandleIndex = i;
+                            breakState.waitingRecovery = false;
+                        }
+                    }
+                }
+
+                // 5. Generate signal ONLY if recovered, on the recovery candle
+                if (breakState.recovered && breakState.recoveryCandleIndex === i) {
+                    if (breakState.type === 'Long') {
+                        const condLong = avgVols[i] !== null
+                            && data[i].amount > avgVols[i] * (settings.volMult || 0.2)
+                            && rsi[i] !== null
+                            && rsi[i] < (settings.rsiThreshold || 50)
+                            && htfConfirmLong;
+
+                        if (condLong) {
+                            data[i].signal = 'Long';
+                            if (settings.longFixedTp !== null && !isNaN(settings.longFixedTp)) {
+                                data[i].tp = data[i].close + (data[i].close * (settings.longFixedTp / 100));
+                            } else {
+                                data[i].tp = data[i].close + (atr[i] * (settings.tpLongMult || 20));
+                            }
+                            if (settings.longFixedSl !== null && !isNaN(settings.longFixedSl)) {
+                                data[i].sl = data[i].close - (data[i].close * (settings.longFixedSl / 100));
+                            } else {
+                                data[i].sl = data[i].close - (atr[i] * (settings.slLongMult || 6));
+                            }
+                            data[i].clientOrderId = SignalUtils.generateOrderId(data[i].timestamp, symbol);
+                            this.signals.push({
+                                type: 'Long',
+                                timestamp: data[i].timestamp,
+                                price: data[i].close,
+                                tp: data[i].tp,
+                                sl: data[i].sl,
+                                orderId: data[i].clientOrderId,
+                                symbol: symbol,
+                                // ✓ مورد ۶: candle index — used by min-same-direction-candles risk control
+                                candleIndex: i
+                            });
+                        }
+                    } else if (breakState.type === 'Short') {
+                        const condShort = avgVols[i] !== null
+                            && data[i].amount > avgVols[i] * (settings.volMult || 0.2)
+                            && rsi[i] !== null
+                            && rsi[i] > (settings.rsiThreshold || 50)
+                            && htfConfirmShort;
+
+                        if (condShort) {
+                            data[i].signal = 'Short';
+                            if (settings.shortFixedTp !== null && !isNaN(settings.shortFixedTp)) {
+                                data[i].tp = data[i].close - (data[i].close * (settings.shortFixedTp / 100));
+                            } else {
+                                data[i].tp = data[i].close - (atr[i] * (settings.tpShortMult || 24));
+                            }
+                            if (settings.shortFixedSl !== null && !isNaN(settings.shortFixedSl)) {
+                                data[i].sl = data[i].close + (data[i].close * (settings.shortFixedSl / 100));
+                            } else {
+                                data[i].sl = data[i].close + (atr[i] * (settings.slShortMult || 4));
+                            }
+                            data[i].clientOrderId = SignalUtils.generateOrderId(data[i].timestamp, symbol);
+                            this.signals.push({
+                                type: 'Short',
+                                timestamp: data[i].timestamp,
+                                price: data[i].close,
+                                tp: data[i].tp,
+                                sl: data[i].sl,
+                                orderId: data[i].clientOrderId,
+                                symbol: symbol,
+                                // ✓ مورد ۶: candle index — used by min-same-direction-candles risk control
+                                candleIndex: i
+                            });
+                        }
+                    }
+
+                    // Reset after signal generation (break is consumed whether or not signal was generated)
+                    breakState = resetBreakState();
+                }
+            } else {
+                // ===========================================================
+                // ✓ Backward compatible: original logic (with optional meaningful break filter)
+                //   When enableMeaningfulBreakFilter is false → EXACT original behavior
+                //   When enableMeaningfulBreakFilter is true  → prior-break crossover check
+                //     is replaced with the meaningful break check (filter out weak breaks)
+                // ===========================================================
+                const isCrossOverPL = data[i].close > prevDailyLows[i] && data[i - 1].close <= prevDailyLows[i - 1];
+                const isCrossUnderPH = data[i].close < prevDailyHighs[i] && data[i - 1].close >= prevDailyHighs[i - 1];
+
+                // Recent prior break — use meaningful break tracker when filter is enabled,
+                // otherwise use plain crossover tracker (original behavior)
+                const recentBreakLong = enableMeaningfulBreakFilter
+                    ? lastMeaningfulBreakLong[i]
+                    : lastCrossUnderPL[i];
+                const recentBreakShort = enableMeaningfulBreakFilter
+                    ? lastMeaningfulBreakShort[i]
+                    : lastCrossOverPH[i];
+
+                const condLong = isCrossOverPL
+                    && recentBreakLong <= (settings.lookback || 50)
+                    && avgVols[i] !== null
+                    && data[i].amount > avgVols[i] * (settings.volMult || 0.2)
+                    && rsi[i] !== null
+                    && rsi[i] < (settings.rsiThreshold || 50)
+                    && htfConfirmLong;
+
+                const condShort = isCrossUnderPH
+                    && recentBreakShort <= (settings.lookback || 50)
+                    && avgVols[i] !== null
+                    && data[i].amount > avgVols[i] * (settings.volMult || 0.2)
+                    && rsi[i] !== null
+                    && rsi[i] > (settings.rsiThreshold || 50)
+                    && htfConfirmShort;
+
+                if (condLong) {
+                    data[i].signal = 'Long';
+                    if (settings.longFixedTp !== null && !isNaN(settings.longFixedTp)) {
+                        data[i].tp = data[i].close + (data[i].close * (settings.longFixedTp / 100));
+                    } else {
+                        data[i].tp = data[i].close + (atr[i] * (settings.tpLongMult || 20));
+                    }
+                    if (settings.longFixedSl !== null && !isNaN(settings.longFixedSl)) {
+                        data[i].sl = data[i].close - (data[i].close * (settings.longFixedSl / 100));
+                    } else {
+                        data[i].sl = data[i].close - (atr[i] * (settings.slLongMult || 6));
+                    }
+                    data[i].clientOrderId = SignalUtils.generateOrderId(data[i].timestamp, symbol);
+                    this.signals.push({
+                        type: 'Long',
+                        timestamp: data[i].timestamp,
+                        price: data[i].close,
+                        tp: data[i].tp,
+                        sl: data[i].sl,
+                        orderId: data[i].clientOrderId,
+                        symbol: symbol,
+                        // ✓ مورد ۶: candle index — used by min-same-direction-candles risk control
+                        candleIndex: i
+                    });
+                } else if (condShort) {
+                    data[i].signal = 'Short';
+                    if (settings.shortFixedTp !== null && !isNaN(settings.shortFixedTp)) {
+                        data[i].tp = data[i].close - (data[i].close * (settings.shortFixedTp / 100));
+                    } else {
+                        data[i].tp = data[i].close - (atr[i] * (settings.tpShortMult || 24));
+                    }
+                    if (settings.shortFixedSl !== null && !isNaN(settings.shortFixedSl)) {
+                        data[i].sl = data[i].close + (data[i].close * (settings.shortFixedSl / 100));
+                    } else {
+                        data[i].sl = data[i].close + (atr[i] * (settings.slShortMult || 4));
+                    }
+                    data[i].clientOrderId = SignalUtils.generateOrderId(data[i].timestamp, symbol);
+                    this.signals.push({
+                        type: 'Short',
+                        timestamp: data[i].timestamp,
+                        price: data[i].close,
+                        tp: data[i].tp,
+                        sl: data[i].sl,
+                        orderId: data[i].clientOrderId,
+                        symbol: symbol,
+                        // ✓ مورد ۶: candle index — used by min-same-direction-candles risk control
+                        candleIndex: i
+                    });
+                }
             }
         }
 
