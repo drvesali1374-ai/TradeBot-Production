@@ -521,11 +521,16 @@ export async function runCycle(
     //   ✓ KV resilience: if KV write fails (e.g., daily limit exceeded),
     //   continue anyway — the in-memory state is sufficient for the current
     //   /api/run-cycle call to prevent duplicate symbol selection.
+    //   ✓ FIX (status issue): Don't set status to 'running' in KV — keep it
+    //   as 'waiting'. The 'running' status was never being reset back to
+    //   'waiting' in KV (end-of-cycle writes were removed for KV optimization),
+    //   causing all symbols to show "در حال اجرا" permanently. Instead, just
+    //   update lastCycleTime (which is the only field that matters for cycle logic).
     try {
-      await updateSymbolState({ status: 'running', lastCycleTime: Date.now(), errorCount: 0 })
+      await updateSymbolState({ lastCycleTime: Date.now() })
     } catch (kvError) {
       // KV write failed (e.g., daily limit exceeded) — update in-memory only
-      updateSymbolStateInMemory({ status: 'running', lastCycleTime: Date.now(), errorCount: 0 })
+      updateSymbolStateInMemory({ lastCycleTime: Date.now() })
       log('هشدار: KV write ناموفق (احتمالاً محدودیت روزانه) — ادامه با حافظه محلی', 'warning')
     }
 
@@ -1733,16 +1738,23 @@ export async function checkClosedPositionsHistory(
 
     const firstRecord = cpRecords[0]
     const firstId = String(firstRecord.id || '')
+    const firstCloseTime = parseInt(String(firstRecord.closeTime || 0))
 
-    // Compare with lastPositionId from KV
-    const lastPosIdRaw = await AutomationState.get('lastPositionId')
-    const lastIdStr =
-      lastPosIdRaw === null || lastPosIdRaw === undefined ? '' : String(lastPosIdRaw)
+    // ✓ بهبود KV: فقط timestamp جدیدترین رکورد را با KV مقایسه می‌کنیم
+    //   این روش بهینه‌تر از مقایسه id است چون timestamp همیشه تغییر می‌کند
+    //   وقتی پوزیشن جدیدی بسته می‌شود
+    const lastCloseTimeRaw = await AutomationState.get('lastPositionCloseTime')
+    const lastCloseTime =
+      lastCloseTimeRaw === null || lastCloseTimeRaw === undefined
+        ? 0
+        : parseInt(String(lastCloseTimeRaw))
 
-    if (!firstId || firstId === lastIdStr) {
-      console.log('[ClosedPositionsHistory] No new positions (lastPositionId unchanged)')
+    if (firstCloseTime === 0 || firstCloseTime === lastCloseTime) {
+      console.log(`[ClosedPositionsHistory] No new positions (closeTime=${firstCloseTime}, last=${lastCloseTime})`)
       return
     }
+
+    console.log(`[ClosedPositionsHistory] New positions detected! closeTime=${firstCloseTime} (was ${lastCloseTime})`)
 
     // New positions detected — build Bale notification
     const notifyCount = automationSettings.closedPositionsNotifyCount || 10
@@ -1827,10 +1839,15 @@ export async function checkClosedPositionsHistory(
       }
     }
 
-    // ✓ Save the new firstId to KV (regardless of whether Bale succeeded)
+    // ✓ Save the new closeTime to KV (regardless of whether Bale succeeded)
     //   so we don't keep re-notifying on every cycle.
-    await AutomationState.set('lastPositionId', firstId)
-    console.log(`[ClosedPositionsHistory] Done in ${Date.now() - startTime}ms (firstId=${firstId})`)
+    //   ✓ بهبود KV: فقط timestamp را ذخیره می‌کنیم (نه کل لیست)
+    try {
+      await AutomationState.set('lastPositionCloseTime', firstCloseTime)
+    } catch {
+      // KV write failed — will retry next cycle
+    }
+    console.log(`[ClosedPositionsHistory] Done in ${Date.now() - startTime}ms (closeTime=${firstCloseTime})`)
   } catch (e) {
     console.warn(
       `[ClosedPositionsHistory] Error: ${e instanceof Error ? e.message : 'unknown'}`

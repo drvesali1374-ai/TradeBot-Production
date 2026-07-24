@@ -1791,10 +1791,10 @@ class AutomationManager {
         }
 
         this.currentCycleSymbol = symbol;
-        symbol.status = 'running';
-        // ✓ FIX (مشکل ۱): Set lastCycleTime IMMEDIATELY after symbol selection
-        //   This ensures that even if the next cycle starts in the same second,
-        //   this symbol won't be selected again (tradeWaitTime hasn't passed).
+        // ✓ FIX: Don't set status to 'running' in KV — keep as 'waiting'.
+        //   Only set lastCycleTime (prevents duplicate symbol selection).
+        //   Status 'running' was never being reset back to 'waiting' in KV,
+        //   causing all symbols to show "در حال اجرا" permanently.
         symbol.lastCycleTime = Date.now();
         this.saveSymbols(); // Persist to localStorage + DB immediately
         this.renderSymbolsTable();

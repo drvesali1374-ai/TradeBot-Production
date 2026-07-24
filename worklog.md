@@ -915,3 +915,37 @@ Stage Summary:
 - ⚠️ Logs won't show in UI until KV limit resets (UTC midnight)
 - 📊 Daily write estimate: ~1,440/day (was ~10,368/day) — still slightly over 1,000 free limit
 - 💡 Recommendation: Consider upgrading to Workers Paid plan ($5/month, 100K writes/day) or reducing cyclesPerRun to 1
+
+---
+Task ID: 13
+Agent: Main Orchestrator
+Task: Fix symbol status stuck at "running" + fix history positions not sending
+
+Work Log:
+- Issue 1: All symbols show "در حال اجرا" (running) instead of "در انتظار" (waiting)
+  - Root cause: At START of cycle, we set `status: 'running'` and wrote to KV. At END of cycle,
+    we only updated in-memory (no KV write — removed for KV optimization). So KV permanently
+    had `status: 'running'` for all symbols.
+  - Fix: Don't set `status: 'running'` in KV at all. Only set `lastCycleTime` (which is the
+    only field that matters for cycle logic). Status stays as 'waiting' in KV.
+  - Applied to both cycle-engine.ts and automation-manager.js
+  - Also fixed existing KV data: set all symbols back to status='waiting' via Cloudflare API
+  - Verified: Agent Browser shows all symbols as "در انتظار" ✓
+
+- Issue 2: "تاریخچه پوزیشن‌های بسته‌شده" message not being sent
+  - Root cause: API key has EXPIRED! Toobit returns: "The API key has expired. Please update
+    your API key immediately." (error code -2017)
+  - This means ALL exchange API calls are failing (balance, positions, history, etc.)
+  - The user needs to update their Toobit API keys in the settings page
+  - Also improved the comparison logic per user request:
+    - Old: compared firstRecord.id with lastPositionId
+    - New: compared firstRecord.closeTime with lastPositionCloseTime (timestamp comparison)
+    - This is more efficient and uses fewer KV writes
+
+- Build + deploy to Cloudflare Pages (successful)
+
+Stage Summary:
+- ✅ Symbol status fixed — all show "در انتظار" now
+- ⚠️ History positions not sending because API KEY EXPIRED — user needs to update keys
+- ✅ Improved history comparison to use closeTime (timestamp) instead of id
+- ✅ Deployed to Cloudflare
