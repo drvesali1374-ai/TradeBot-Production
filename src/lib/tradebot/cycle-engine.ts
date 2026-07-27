@@ -163,6 +163,8 @@ export interface CycleResult {
   logs: CycleLogEntry[]
   errorCount: number
   duration: number
+  // ✓ Transaction Buffer: symbols array returned so /api/run-cycle can persist to KV
+  symbols?: SymbolEntry[]
 }
 
 // ---------------------------------------------------------------------------
@@ -383,38 +385,12 @@ export async function runCycle(
   //   The shared historical `logs` array is NO LONGER updated per-cycle.
   //   Instead, /api/run-cycle does ONE batch append of all cycle logs after
   //   all cycles in a single cron call complete (via AutomationLogs.appendBatch).
+  // ✓ Transaction Buffer (پیشنهاد ۱): flushLogs دیگر به KV نمی‌نویسد
+  //   logs در CycleResult.logs برگردانده می‌شوند و /api/run-cycle در پایان
+  //   یک‌بار آنها را به lastCycleLogs و shared logs می‌نویسد
   const flushLogs = async () => {
-    if (pendingDbLogs.length === 0) return
-
-    // Strategy: Write this cycle's complete logs to `lastCycleLogs` (single KV put)
-    try {
-      const cycleLogEntry = {
-        timestamp: new Date().toISOString(),
-        source: options.triggerSource || 'server',
-        logCount: pendingDbLogs.length,
-        logs: pendingDbLogs.map((l, i) => ({
-          id: i + 1,
-          symbol: l.symbol,
-          action: 'automation_cycle',
-          status: l.type === 'error' ? 'ERROR' : l.type === 'warning' ? 'WARNING' : 'SUCCESS',
-          message: l.message,
-          error_code: l.type === 'error' ? 'SIGNAL_ERROR' : null,
-          details: JSON.stringify({ timestamp: l.timestamp, type: l.type, source: l.source }),
-          created_at: l.timestamp
-        }))
-      }
-      try {
-        const { getRequestContext } = await import('@cloudflare/next-on-pages')
-        const ctx = getRequestContext()
-        if (ctx.env && ctx.env.TRADING_DATA) {
-          await ctx.env.TRADING_DATA.put('lastCycleLogs', JSON.stringify(cycleLogEntry))
-        }
-      } catch {
-        // Not on Cloudflare — skip (local dev doesn't need this)
-      }
-    } catch (e) {
-      console.warn('[CycleEngine] Failed to write lastCycleLogs:', e)
-    }
+    // No-op: logs are already in the `logs` array and will be returned in CycleResult
+    // The caller (/api/run-cycle) is responsible for writing them to KV
   }
 
   try {
@@ -450,7 +426,8 @@ export async function runCycle(
         action: 'no_ready_symbol',
         logs,
         errorCount: 0,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
+        symbols
       }
     }
 
@@ -479,7 +456,8 @@ export async function runCycle(
         action: 'no_ready_symbol',
         logs,
         errorCount: 0,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
+        symbols
       }
     }
 
@@ -506,20 +484,17 @@ export async function runCycle(
     //     kept as-is — only the redundant end-of-cycle 'waiting' writes are
     //     removed.
     // -------------------------------------------------------------------
-    const updateSymbolState = async (
-      updates: Partial<SymbolEntry>
-    ) => {
+    // ✓ Transaction Buffer (پیشنهاد ۱+۶): تمام state updates در حافظه انجام می‌شود
+    //   KV write فقط در پایان /api/run-cycle انجام می‌شود (نه در هر چرخه)
+    //   این KV writes را از ~۵ به ~۱-۲ در هر چرخه کاهش می‌دهد
+    const updateSymbolState = async (updates: Partial<SymbolEntry>) => {
+      // ✓ In-memory only — NO KV write during cycle
       const idx = symbols.findIndex((s) => s.id === symbol!.id)
       if (idx >= 0) {
         symbols[idx] = { ...symbols[idx], ...updates }
-        // ✓ Await KV write to ensure consistency before next cycle starts
-        await AutomationState.set('automation_symbols', symbols)
       }
     }
 
-    // ✓ Lightweight in-memory-only update — does NOT write to KV.
-    //   Used at the END of every cycle path. The `lastCycleTime` was already
-    //   persisted at the START (line ~533), so we don't need to set it again.
     const updateSymbolStateInMemory = (updates: Partial<SymbolEntry>) => {
       const idx = symbols.findIndex((s) => s.id === symbol!.id)
       if (idx >= 0) {
@@ -527,24 +502,9 @@ export async function runCycle(
       }
     }
 
-    // ✓ FIX (مشکل ۱): Set lastCycleTime IMMEDIATELY after symbol selection
-    //   This ensures that even if the next cycle starts in the same second,
-    //   this symbol won't be selected again (tradeWaitTime hasn't passed).
-    //   ✓ KV resilience: if KV write fails (e.g., daily limit exceeded),
-    //   continue anyway — the in-memory state is sufficient for the current
-    //   /api/run-cycle call to prevent duplicate symbol selection.
-    //   ✓ FIX (status issue): Don't set status to 'running' in KV — keep it
-    //   as 'waiting'. The 'running' status was never being reset back to
-    //   'waiting' in KV (end-of-cycle writes were removed for KV optimization),
-    //   causing all symbols to show "در حال اجرا" permanently. Instead, just
-    //   update lastCycleTime (which is the only field that matters for cycle logic).
-    try {
-      await updateSymbolState({ lastCycleTime: Date.now() })
-    } catch (kvError) {
-      // KV write failed (e.g., daily limit exceeded) — update in-memory only
-      updateSymbolStateInMemory({ lastCycleTime: Date.now() })
-      log('هشدار: KV write ناموفق (احتمالاً محدودیت روزانه) — ادامه با حافظه محلی', 'warning')
-    }
+    // ✓ FIX (مشکل ۱): Set lastCycleTime IMMEDIATELY in-memory after symbol selection
+    //   KV write deferred to end of /api/run-cycle (Transaction Buffer)
+    updateSymbolStateInMemory({ lastCycleTime: Date.now() })
 
     // -------------------------------------------------------------------
     // Step 2-3: fetchMarketData()
@@ -985,7 +945,8 @@ export async function runCycle(
         action: 'no_signal',
         logs,
         errorCount: 0,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
+        symbols
       }
     }
 
@@ -1104,7 +1065,8 @@ export async function runCycle(
         action: 'no_signal',
         logs,
         errorCount: 0,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
+        symbols
       }
     }
 
@@ -1248,7 +1210,8 @@ export async function runCycle(
             action: 'risk_blocked',
             logs,
             errorCount: 0,
-            duration: Date.now() - startTime
+            duration: Date.now() - startTime,
+            symbols
           }
         }
 
@@ -1305,7 +1268,8 @@ export async function runCycle(
             action: 'risk_blocked',
             logs,
             errorCount: 0,
-            duration: Date.now() - startTime
+            duration: Date.now() - startTime,
+            symbols
           }
         }
 
@@ -1564,7 +1528,8 @@ export async function runCycle(
         action: 'risk_blocked',
         logs,
         errorCount: 0,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
+        symbols
       }
     }
 
@@ -1619,7 +1584,8 @@ export async function runCycle(
             action: 'risk_blocked',
             logs,
             errorCount: 0,
-            duration: Date.now() - startTime
+            duration: Date.now() - startTime,
+            symbols
           }
         }
         log(`${symbol.name}: فاصله قیمت OK (${distancePercent.toFixed(2)}% ≥ ${automationSettings.minPriceDistancePercent}%)`, 'success', symbol.name)
@@ -1655,7 +1621,8 @@ export async function runCycle(
           action: 'risk_blocked',
           logs,
           errorCount: 0,
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
+          symbols
         }
       }
       log(`${symbol.name}: مارجین نماد OK (${totalSymbolMargin.toFixed(2)} ≤ ${maxMarginPerSymbol.toFixed(2)} USDT)`, 'success', symbol.name)
@@ -1685,7 +1652,8 @@ export async function runCycle(
         action: 'risk_blocked',
         logs,
         errorCount: 0,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
+        symbols
       }
     }
 
@@ -1798,7 +1766,8 @@ export async function runCycle(
       action: 'position_opened',
       logs,
       errorCount: 0,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
+      symbols
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
@@ -1811,7 +1780,8 @@ export async function runCycle(
         action: 'no_signal',
         logs,
         errorCount: 0,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
+        symbols
       }
     }
 
@@ -1894,7 +1864,8 @@ export async function runCycle(
           action: 'error',
           logs,
           errorCount: symbols[idx].errorCount,
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
+          symbols
         }
       }
     } catch {
@@ -1907,7 +1878,8 @@ export async function runCycle(
       action: 'error',
       logs,
       errorCount: 0,
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
+      symbols
     }
   } finally {
     // ✓ Flush all buffered logs to KV in a single batch write.

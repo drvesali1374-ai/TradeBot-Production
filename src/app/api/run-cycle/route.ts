@@ -113,58 +113,99 @@ async function handleRunCycle(request: NextRequest) {
     }
 
     // ✓ Fix (مشکل ۲): Check closed positions history ONLY after the LAST cycle
-    //   This prevents repeated notifications when cyclesPerRun > 1.
     console.log('[/api/run-cycle] Checking closed positions history (post-cycle)...')
     const historyResult = await checkClosedPositionsHistory(baseUrl)
     console.log('[/api/run-cycle] History check result:', JSON.stringify(historyResult))
 
-    // ✓ Task 11 (KV write reduction): Batch-write ALL cycle logs to the shared
-    //   `logs` array in a SINGLE KV write. Previously each cycle's flushLogs()
-    //   did its own read-modify-write of the `logs` array (one write per cycle).
-    //   Now cycle-engine.ts only writes per-cycle logs to `lastCycleLogs`,
-    //   and we collect ALL cycle logs here and append them in one batch.
-    try {
-      const triggerSource = isCron ? 'cron' : 'manual'
-      const allNewLogs: Array<{
-        symbol: string
-        action: string
-        status: string
-        message: string
-        error_code: string | null
-        details: string
-        created_at: string
-      }> = []
-      for (const result of results) {
-        if (!result.logs || result.logs.length === 0) continue
-        for (const lg of result.logs) {
-          allNewLogs.push({
-            symbol: lg.symbol || '',
-            action: 'automation_cycle',
-            status:
-              lg.type === 'error'
-                ? 'ERROR'
-                : lg.type === 'warning'
-                  ? 'WARNING'
-                  : 'SUCCESS',
-            message: lg.message,
-            error_code: lg.type === 'error' ? 'SIGNAL_ERROR' : null,
-            details: JSON.stringify({
-              timestamp: lg.timestamp,
-              type: lg.type,
-              source: triggerSource
-            }),
-            created_at: lg.timestamp
-          })
-        }
+    // ✓ Transaction Buffer (پیشنهاد ۱+۶): Persist symbols to KV ONCE
+    //   During the cycle, symbols were only updated in-memory.
+    //   Now we do a single KV write for the final symbols state.
+    const lastResultWithSymbols = [...results].reverse().find(r => r.symbols)
+    if (lastResultWithSymbols && lastResultWithSymbols.symbols) {
+      try {
+        await AutomationState.set('automation_symbols', lastResultWithSymbols.symbols)
+        console.log('[/api/run-cycle] Persisted symbols to KV (single write)')
+      } catch (e) {
+        console.warn('[/api/run-cycle] Failed to persist symbols:', e)
       }
-      if (allNewLogs.length > 0) {
-        console.log(
-          `[/api/run-cycle] Batch-writing ${allNewLogs.length} logs to shared logs array (single KV write)`
-        )
-        await AutomationLogs.appendBatch(allNewLogs)
+    }
+
+    // ✓ Write Debounce (پیشنهاد ۳): Write lastCycleLogs only if enough time has passed
+    //   If tradeWaitTime is 30 minutes and cron runs every 5 minutes,
+    //   we only write logs every 30 minutes (6x reduction in writes)
+    let logsWritten = false
+    try {
+      const dbSettings = await AutomationState.get('automation_settings')
+      const settings = typeof dbSettings === 'string' ? JSON.parse(dbSettings) : dbSettings || {}
+      const tradeWaitTime = settings.tradeWaitTime || 30
+      const debounceMs = tradeWaitTime * 60 * 1000
+
+      const lastWriteRaw = await AutomationState.get('lastCycleLogsWriteTime')
+      const lastWriteTime = lastWriteRaw ? parseInt(String(lastWriteRaw)) : 0
+      const now = Date.now()
+
+      if (now - lastWriteTime >= debounceMs) {
+        const lastCycleResult = results[results.length - 1]
+        if (lastCycleResult && lastCycleResult.logs && lastCycleResult.logs.length > 0) {
+          const cycleLogEntry = {
+            timestamp: new Date().toISOString(),
+            source: isCron ? 'cron' : 'manual',
+            logCount: lastCycleResult.logs.length,
+            logs: lastCycleResult.logs.map((l, i) => ({
+              id: i + 1,
+              symbol: l.symbol || '',
+              action: 'automation_cycle',
+              status: l.type === 'error' ? 'ERROR' : l.type === 'warning' ? 'WARNING' : 'SUCCESS',
+              message: l.message,
+              error_code: l.type === 'error' ? 'SIGNAL_ERROR' : null,
+              details: JSON.stringify({ timestamp: l.timestamp, type: l.type, source: isCron ? 'cron' : 'manual' }),
+              created_at: l.timestamp
+            }))
+          }
+          try {
+            const { getRequestContext } = await import('@cloudflare/next-on-pages')
+            const ctx = getRequestContext()
+            if (ctx.env && ctx.env.TRADING_DATA) {
+              await ctx.env.TRADING_DATA.put('lastCycleLogs', JSON.stringify(cycleLogEntry))
+              await AutomationState.set('lastCycleLogsWriteTime', now)
+              logsWritten = true
+              console.log(`[/api/run-cycle] Wrote lastCycleLogs (debounced: ${Math.round((now - lastWriteTime) / 60000)}min since last)`)
+            }
+          } catch { /* Not on Cloudflare */ }
+        }
+      } else {
+        console.log(`[/api/run-cycle] Skipping lastCycleLogs (debounced: ${Math.round((now - lastWriteTime) / 60000)}min < ${tradeWaitTime}min)`)
       }
     } catch (e) {
-      console.warn('[/api/run-cycle] Failed to batch-write cycle logs:', e)
+      console.warn('[/api/run-cycle] lastCycleLogs write error:', e)
+    }
+
+    // ✓ Batch-write ALL cycle logs to shared `logs` array (only if lastCycleLogs was written)
+    if (logsWritten) {
+      try {
+        const triggerSource = isCron ? 'cron' : 'manual'
+        const allNewLogs = []
+        for (const result of results) {
+          if (!result.logs || result.logs.length === 0) continue
+          for (const lg of result.logs) {
+            allNewLogs.push({
+              symbol: lg.symbol || '',
+              action: 'automation_cycle',
+              status: lg.type === 'error' ? 'ERROR' : lg.type === 'warning' ? 'WARNING' : 'SUCCESS',
+              message: lg.message,
+              error_code: lg.type === 'error' ? 'SIGNAL_ERROR' : null,
+              details: JSON.stringify({ timestamp: lg.timestamp, type: lg.type, source: triggerSource }),
+              created_at: lg.timestamp
+            })
+          }
+        }
+        if (allNewLogs.length > 0) {
+          console.log(`[/api/run-cycle] Batch-writing ${allNewLogs.length} logs (single KV write)`)
+          await AutomationLogs.appendBatch(allNewLogs)
+        }
+      } catch (e) {
+        console.warn('[/api/run-cycle] Failed to batch-write logs:', e)
+      }
     }
 
     return NextResponse.json({
