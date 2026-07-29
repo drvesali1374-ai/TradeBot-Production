@@ -1,0 +1,1003 @@
+     1→<!DOCTYPE html>
+     2→<html lang="fa" dir="rtl">
+     3→<head>
+     4→    <script src="/auth-check.js"></script>
+     5→    <meta charset="UTF-8">
+     6→    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     7→    <title>اتوماسیون معاملات - اتوماسیون هوشمند</title>
+     8→    <script src="https://cdn.tailwindcss.com"></script>
+     9→    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    10→    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    11→    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    12→    <style>
+    13→        body {
+    14→            font-family: 'Vazirmatn', sans-serif;
+    15→            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    16→            min-height: 100vh;
+    17→        }
+    18→        
+    19→        .glass-effect {
+    20→            background: rgba(255, 255, 255, 0.05);
+    21→            backdrop-filter: blur(10px);
+    22→            border: 1px solid rgba(255, 255, 255, 0.1);
+    23→        }
+    24→        
+    25→        .text-gradient {
+    26→            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    27→            -webkit-background-clip: text;
+    28→            -webkit-text-fill-color: transparent;
+    29→            background-clip: text;
+    30→        }
+    31→        
+    32→        .loading-spinner {
+    33→            border: 3px solid rgba(255, 255, 255, 0.3);
+    34→            border-top: 3px solid #667eea;
+    35→            border-radius: 50%;
+    36→            width: 24px;
+    37→            height: 24px;
+    38→            animation: spin 1s linear infinite;
+    39→        }
+    40→        
+    41→        @keyframes spin {
+    42→            0% { transform: rotate(0deg); }
+    43→            100% { transform: rotate(360deg); }
+    44→        }
+    45→        
+    46→        .input-field {
+    47→            background: rgba(255, 255, 255, 0.05);
+    48→            border: 1px solid rgba(255, 255, 255, 0.1);
+    49→            color: white;
+    50→            padding: 0.5rem;
+    51→            border-radius: 0.5rem;
+    52→            width: 100%;
+    53→            transition: all 0.3s ease;
+    54→        }
+    55→        
+    56→        .input-field:focus {
+    57→            outline: none;
+    58→            border-color: #667eea;
+    59→            background: rgba(255, 255, 255, 0.08);
+    60→        }
+    61→        
+    62→        .status-waiting {
+    63→            color: #fbbf24;
+    64→        }
+    65→        
+    66→        .status-running {
+    67→            color: #10b981;
+    68→            animation: pulse 2s infinite;
+    69→        }
+    70→        
+    71→        .status-error {
+    72→            color: #ef4444;
+    73→        }
+    74→        
+    75→        @keyframes pulse {
+    76→            0%, 100% { opacity: 1; }
+    77→            50% { opacity: 0.5; }
+    78→        }
+    79→
+    80→        .data-table {
+    81→            max-height: 500px;
+    82→            overflow-y: auto;
+    83→        }
+    84→        
+    85→        .data-table::-webkit-scrollbar {
+    86→            width: 6px;
+    87→        }
+    88→        
+    89→        .data-table::-webkit-scrollbar-track {
+    90→            background: rgba(255, 255, 255, 0.1);
+    91→            border-radius: 3px;
+    92→        }
+    93→        
+    94→        .data-table::-webkit-scrollbar-thumb {
+    95→            background: #667eea;
+    96→            border-radius: 3px;
+    97→        }
+    98→
+    99→        #signal-list::-webkit-scrollbar {
+   100→            width: 6px;
+   101→        }
+   102→        
+   103→        #signal-list::-webkit-scrollbar-track {
+   104→            background: rgba(255, 255, 255, 0.1);
+   105→            border-radius: 3px;
+   106→        }
+   107→        
+   108→        #signal-list::-webkit-scrollbar-thumb {
+   109→            background: #764ba2;
+   110→            border-radius: 3px;
+   111→        }
+   112→
+   113→        .sticky-control-bar {
+   114→            position: sticky;
+   115→            top: 64px;
+   116→            z-index: 40;
+   117→            background: rgba(26, 26, 46, 0.95);
+   118→            backdrop-filter: blur(10px);
+   119→            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+   120→        }
+   121→
+   122→        .collapsible-section {
+   123→            max-height: 1000px;
+   124→            transition: max-height 0.3s ease-out;
+   125→            overflow: hidden;
+   126→        }
+   127→
+   128→        .collapsible-section.collapsed {
+   129→            max-height: 50px;
+   130→        }
+   131→
+   132→        .section-header {
+   133→            cursor: pointer;
+   134→            user-select: none;
+   135→            display: flex;
+   136→            align-items: center;
+   137→            justify-content: space-between;
+   138→            padding: 1rem;
+   139→            background: rgba(255, 255, 255, 0.05);
+   140→            border: 1px solid rgba(255, 255, 255, 0.1);
+   141→            border-radius: 0.5rem;
+   142→            margin-bottom: 1.5rem;
+   143→        }
+   144→
+   145→        .section-header:hover {
+   146→            background: rgba(255, 255, 255, 0.08);
+   147→        }
+   148→
+   149→        .section-header .toggle-icon {
+   150→            transition: transform 0.3s ease;
+   151→        }
+   152→
+   153→        .collapsible-section.collapsed .toggle-icon {
+   154→            transform: rotate(-90deg);
+   155→        }
+   156→
+   157→        .chart-container {
+   158→            width: 100%;
+   159→            height: 400px;
+   160→        }
+   161→
+   162→        .data-table {
+   163→            max-height: 500px;
+   164→            overflow-y: auto;
+   165→        }
+   166→
+   167→        /* Modal Styles for Settings Panel */
+   168→        .settings-modal {
+   169→            display: none;
+   170→            position: fixed;
+   171→            top: 0;
+   172→            left: 0;
+   173→            right: 0;
+   174→            bottom: 0;
+   175→            background: rgba(0, 0, 0, 0.7);
+   176→            z-index: 100;
+   177→            align-items: center;
+   178→            justify-content: center;
+   179→            padding: 20px;
+   180→        }
+   181→
+   182→        .settings-modal.active {
+   183→            display: flex;
+   184→        }
+   185→
+   186→        .settings-modal-content {
+   187→            background: rgba(26, 26, 46, 0.98);
+   188→            backdrop-filter: blur(10px);
+   189→            border: 1px solid rgba(255, 255, 255, 0.1);
+   190→            border-radius: 1rem;
+   191→            max-width: 90%;
+   192→            width: 100%;
+   193→            max-height: 90vh;
+   194→            overflow-y: auto;
+   195→            padding: 0;
+   196→            display: flex;
+   197→            flex-direction: column;
+   198→        }
+   199→
+   200→        .settings-modal-header {
+   201→            display: flex;
+   202→            justify-content: space-between;
+   203→            align-items: center;
+   204→            padding: 2rem 2rem 1rem 2rem;
+   205→            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+   206→            position: sticky;
+   207→            top: 0;
+   208→            background: rgba(26, 26, 46, 0.98);
+   209→            z-index: 10;
+   210→            flex-wrap: wrap;
+   211→            gap: 1rem;
+   212→        }
+   213→
+   214→        .settings-modal-header-title {
+   215→            display: flex;
+   216→            align-items: center;
+   217→            gap: 1rem;
+   218→            flex: 1;
+   219→        }
+   220→
+   221→        .settings-modal-header-buttons {
+   222→            display: flex;
+   223→            gap: 0.5rem;
+   224→            align-items: center;
+   225→        }
+   226→
+   227→        .settings-modal-content > div:not(.settings-modal-header) {
+   228→            padding: 2rem;
+   229→            overflow-y: auto;
+   230→        }
+   231→
+   232→        .settings-modal-header h1 {
+   233→            font-size: 1.875rem;
+   234→            font-weight: 600;
+   235→            margin: 0;
+   236→        }
+   237→
+   238→        .settings-modal-close {
+   239→            background: none;
+   240→            border: none;
+   241→            color: #9ca3af;
+   242→            font-size: 1.875rem;
+   243→            cursor: pointer;
+   244→            padding: 0;
+   245→            width: 2.5rem;
+   246→            height: 2.5rem;
+   247→            display: flex;
+   248→            align-items: center;
+   249→            justify-content: center;
+   250→            border-radius: 0.5rem;
+   251→            transition: all 0.3s ease;
+   252→        }
+   253→
+   254→        .settings-modal-close:hover {
+   255→            background: rgba(255, 255, 255, 0.1);
+   256→            color: white;
+   257→        }
+   258→
+   259→        @media (max-width: 768px) {
+   260→            .settings-modal-content {
+   261→                max-width: 95%;
+   262→                padding: 1rem;
+   263→            }
+   264→        }
+   265→
+   266→        .drag-over {
+   267→            border-top: 3px solid #667eea !important;
+   268→        }
+   269→        
+   270→        .dragging {
+   271→            opacity: 0.5;
+   272→            background: rgba(102, 126, 234, 0.1);
+   273→        }
+   274→
+   275→        .drag-handle {
+   276→            cursor: grab;
+   277→            color: #6b7280;
+   278→            transition: color 0.2s;
+   279→        }
+   280→
+   281→        .drag-handle:hover {
+   282→            color: #667eea;
+   283→        }
+   284→
+   285→        .drag-handle:active {
+   286→            cursor: grabbing;
+   287→        }
+   288→    </style>
+   289→    <!-- Scripts loaded in HEAD so initialization happens before DOM -->
+   290→    <script src="init-settings.js"></script>
+   291→    <script src="main.js"></script>
+   292→    <!-- Shared utilities -->
+   293→    <script src="js/shared/signal-utils.js"></script>
+   294→    <script src="js/shared/visualization.js"></script>
+   295→    <script src="js/shared/ui-utils.js"></script>
+   296→    <!-- Automation Manager -->
+   297→    <script src="js/automation-manager.js"></script>
+   298→</head>
+   299→<body class="text-white">
+   300→    <!-- Navigation -->
+   301→    <nav class="fixed top-0 w-full z-50 glass-effect">
+   302→        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   303→            <div class="flex justify-between items-center h-16">
+   304→                <div class="flex items-center space-x-reverse space-x-6">
+   305→                    <a href="home.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+   306→                        <i class="fas fa-home ml-1"></i>
+   307→                        خانه
+   308→                    </a>
+   309→                    <a href="settings.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+   310→                        <i class="fas fa-cog ml-1"></i>
+   311→                        تنظیمات
+   312→                    </a>
+   313→                    <a href="market_signal.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+   314→                        <i class="fas fa-chart-line ml-1"></i>
+   315→                        داشبورد
+   316→                    </a>
+   317→                    <a href="trading.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+   318→                        <i class="fas fa-exchange-alt ml-1"></i>
+   319→                        خرید و فروش
+   320→                    </a>
+   321→                    <a href="automation.html" class="text-purple-400">
+   322→                        <i class="fas fa-robot ml-1"></i>
+   323→                        اتوماسیون
+   324→                    </a>
+   325→                </div>
+   326→                <div class="flex items-center">
+   327→                    <div class="text-2xl font-bold text-gradient">
+   328→                        اتوماسیون معاملات
+   329→                        <i class="fas fa-robot mr-2"></i>
+   330→                    </div>
+   331→                </div>
+   332→            </div>
+   333→        </div>
+   334→    </nav>
+   335→
+   336→    <!-- Sticky Control Bar -->
+   337→    <div class="sticky-control-bar">
+   338→        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+   339→            <!-- Row 1: Control Buttons + Balance Info -->
+   340→            <div class="flex flex-wrap justify-between items-center gap-2">
+   341→                <div class="flex items-center space-x-reverse space-x-3">
+   342→                    <button id="start-automation-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-green-600 transition-all duration-300 text-sm">
+   343→                        <i class="fas fa-play ml-1"></i>
+   344→                        شروع
+   345→                    </button>
+   346→                    <button id="stop-automation-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-300 text-sm" disabled>
+   347→                        <i class="fas fa-stop ml-1"></i>
+   348→                        توقف
+   349→                    </button>
+   350→                    <button id="run-once-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-blue-600 transition-all duration-300 text-sm">
+   351→                        <i class="fas fa-step-forward ml-1"></i>
+   352→                        یک چرخه
+   353→                    </button>
+   354→                    <div class="border-r border-gray-600 mx-2"></div>
+   355→                    <div id="automation-status" class="text-sm">
+   356→                        <i class="fas fa-circle text-gray-500 ml-1"></i>
+   357→                        <span>غیرفعال</span>
+   358→                    </div>
+   359→                </div>
+   360→
+   361→                <!-- Balance Info + Refresh -->
+   362→                <div class="flex items-center space-x-reverse space-x-6 text-sm">
+   363→                    <div class="flex items-center">
+   364→                        <i class="fas fa-wallet ml-2 text-purple-400"></i>
+   365→                        <span class="text-gray-400 ml-1">موجودی کل:</span>
+   366→                        <span id="balance-total" class="font-bold" style="color: #a78bfa; font-weight: 700;">-</span>
+   367→                        <span class="mr-1 text-gray-500">USDT</span>
+   368→                    </div>
+   369→                    <div class="flex items-center">
+   370→                        <i class="fas fa-lock ml-2 text-orange-400"></i>
+   371→                        <span class="text-gray-400 ml-1">در معامله:</span>
+   372→                        <span id="balance-position-margin" class="font-bold text-orange-400">-</span>
+   373→                        <span class="mr-1 text-gray-500">USDT</span>
+   374→                    </div>
+   375→                    <div class="flex items-center">
+   376→                        <i class="fas fa-unlock ml-2 text-blue-400"></i>
+   377→                        <span class="text-gray-400 ml-1">آزاد:</span>
+   378→                        <span id="balance-free" class="font-bold text-blue-400">-</span>
+   379→                        <span class="mr-1 text-gray-500">USDT</span>
+   380→                    </div>
+   381→                    <button id="refresh-balance-btn" class="glass-effect px-3 py-1.5 text-xs rounded-lg hover:bg-purple-600 transition-all duration-300">
+   382→                        <i class="fas fa-sync-alt ml-1"></i>
+   383→                        بروزرسانی
+   384→                    </button>
+   385→                </div>
+   386→
+   387→                <button id="toggle-settings-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-purple-600 transition-all duration-300 text-sm">
+   388→                    <i class="fas fa-sliders-h ml-1"></i>
+   389→                    تنظیمات
+   390→                </button>
+   391→            </div>
+   392→        </div>
+   393→    </div>
+   394→
+   395→    <!-- Main Content -->
+   396→    <main class="pt-32 pb-12">
+   397→        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   398→            <!-- Open Positions (Compact) -->
+   399→            <div class="glass-effect rounded-2xl p-3 mb-4">
+   400→                <div class="flex justify-between items-center mb-2 px-1">
+   401→                    <h3 class="text-base font-semibold text-gradient flex items-center">
+   402→                        <i class="fas fa-chart-bar ml-2 text-sm"></i>
+   403→                        پوزیشن‌های باز
+   404→                        <span id="positions-count-badge" class="mr-2 text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full">۰</span>
+   405→                    </h3>
+   406→                    <div class="flex items-center gap-2">
+   407→                        <span id="positions-meta" class="text-xs text-gray-400"></span>
+   408→                        <button id="refresh-positions-btn" class="glass-effect px-2 py-1 text-xs rounded-md hover:bg-purple-600 transition-all duration-300" title="بروزرسانی پوزیشن‌ها">
+   409→                            <i class="fas fa-sync-alt ml-1"></i>
+   410→                            بروزرسانی
+   411→                        </button>
+   412→                    </div>
+   413→                </div>
+   414→                <div class="overflow-x-auto" style="max-height: 220px; overflow-y: auto;">
+   415→                    <table class="w-full text-xs">
+   416→                        <thead class="sticky top-0 bg-gray-800 z-10">
+   417→                            <tr class="border-b border-gray-700">
+   418→                                <th class="px-2 py-2 text-right">نماد</th>
+   419→                                <th class="px-2 py-2 text-right">جهت</th>
+   420→                                <th class="px-2 py-2 text-right">قیمت ورود</th>
+   421→                                <th class="px-2 py-2 text-right">موجودی</th>
+   422→                                <th class="px-2 py-2 text-right">اهرم</th>
+   423→                                <th class="px-2 py-2 text-right">مارجین</th>
+   424→                                <th class="px-2 py-2 text-right">سود/زیان</th>
+   425→                                <th class="px-2 py-2 text-right">درصد</th>
+   426→                                <th class="px-2 py-2 text-right">آخرین ورود</th>
+   427→                            </tr>
+   428→                        </thead>
+   429→                        <tbody id="positions-table-body">
+   430→                            <tr>
+   431→                                <td colspan="9" class="px-4 py-4 text-center text-gray-400">
+   432→                                    <i class="fas fa-download text-2xl mb-1 block"></i>
+   433→                                    <div>پوزیشنی باز نیست یا بروزرسانی نشده</div>
+   434→                                </td>
+   435→                            </tr>
+   436→                        </tbody>
+   437→                    </table>
+   438→                </div>
+   439→            </div>
+   440→
+   441→            <!-- Symbol Table -->
+   442→            <div class="glass-effect rounded-2xl p-6 mb-6">
+   443→                <div class="flex justify-between items-center mb-6">
+   444→                    <h2 class="text-2xl font-semibold text-gradient">
+   445→                        <i class="fas fa-list ml-2"></i>
+   446→                        لیست نمادها
+   447→                    </h2>
+   448→                    <button id="clear-errors-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-blue-600 transition-all duration-300">
+   449→                        <i class="fas fa-broom ml-2"></i>
+   450→                        پاکسازی خطاها
+   451→                    </button>
+   452→                </div>
+   453→
+   454→                <div class="data-table">
+   455→                    <table class="w-full text-sm">
+   456→                        <thead class="sticky top-0 bg-gray-800">
+   457→                            <tr class="border-b border-gray-700">
+   458→                                <th class="px-4 py-3 text-right">ردیف</th>
+   459→                                <th class="px-4 py-3 text-right">نماد</th>
+   460→                                <th class="px-4 py-3 text-right">وضعیت</th>
+   461→                                <th class="px-4 py-3 text-right">تعداد خطا</th>
+   462→                                <th class="px-4 py-3 text-right">آخرین چرخه</th>
+   463→                                <th class="px-4 py-3 text-right">زمان انتظار</th>
+   464→                                <th class="px-4 py-3 text-right">عملیات</th>
+   465→                            </tr>
+   466→                        </thead>
+   467→                        <tbody id="symbols-table-body">
+   468→                        </tbody>
+   469→                    </table>
+   470→                </div>
+   471→            </div>
+   472→
+   473→            <!-- Cycle Log Table -->
+   474→            <div class="glass-effect rounded-2xl p-6 mb-6">
+   475→                <div class="flex justify-between items-center mb-6">
+   476→                    <h2 class="text-2xl font-semibold text-gradient">
+   477→                        <i class="fas fa-history ml-2"></i>
+   478→                        گزارش چرخه‌ها
+   479→                    </h2>
+   480→                    <button id="clear-log-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-300">
+   481→                        <i class="fas fa-trash ml-2"></i>
+   482→                        پاکسازی
+   483→                    </button>
+   484→                </div>
+   485→                <div class="data-table">
+   486→                    <table class="w-full text-sm">
+   487→                        <thead class="sticky top-0 bg-gray-800">
+   488→                            <tr class="border-b border-gray-700">
+   489→                                <th class="px-3 py-3 text-right">زمان</th>
+   490→                                <th class="px-3 py-3 text-right">نماد</th>
+   491→                                <th class="px-3 py-3 text-right">فرایند</th>
+   492→                                <th class="px-3 py-3 text-right">وضعیت</th>
+   493→                                <th class="px-3 py-3 text-right">جزئیات</th>
+   494→                            </tr>
+   495→                        </thead>
+   496→                        <tbody id="cycle-log-body">
+   497→                            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">گزارشی موجود نیست</td></tr>
+   498→                        </tbody>
+   499→                    </table>
+   500→                </div>
+   501→            </div>
+   502→
+   503→            <!-- Chart Section -->
+   504→            <div class="glass-effect rounded-2xl p-6 mb-6">
+   505→                <div class="flex justify-between items-center mb-6">
+   506→                    <h2 class="text-2xl font-semibold text-gradient">
+   507→                        <i class="fas fa-chart-area ml-2"></i>
+   508→                        نمودار قیمت و سیگنال‌ها
+   509→                    </h2>
+   510→                    <span id="chart-symbol-name" class="text-sm text-gray-400 bg-gray-700/50 px-3 py-1 rounded-lg" style="display: none;"></span>
+   511→                </div>
+   512→                <div id="price-chart" class="chart-container" dir="ltr"></div>
+   513→            </div>
+   514→            <!-- Ready Signal -->
+   515→            <div class="glass-effect rounded-2xl p-6 mb-6 border-l-4 border-purple-500">
+   516→                <h2 class="text-2xl font-semibold text-gradient mb-6">
+   517→                    <i class="fas fa-check-circle ml-2"></i>
+   518→                    سیگنال آماده برای ورود
+   519→                </h2>
+   520→                <div id="ready-signal-container" class="text-center text-gray-400 py-8">
+   521→                    <i class="fas fa-ban text-4xl mb-4"></i>
+   522→                    <div>بدون سیگنال</div>
+   523→                </div>
+   524→            </div>
+   525→            <!-- Signal Details -->
+   526→            <div class="glass-effect rounded-2xl p-6 mb-6">
+   527→                <div class="flex justify-between items-center mb-6">
+   528→                    <h2 class="text-2xl font-semibold text-gradient">
+   529→                        <i class="fas fa-bullseye ml-2"></i>
+   530→                        جزئیات سیگنال‌ها
+   531→                    </h2>
+   532→                    <button id="refresh-signals-btn" class="glass-effect px-3 py-1.5 text-xs rounded-lg hover:bg-amber-600 transition-all duration-300" title="تولید سیگنال بر اساس داده‌های بازار و تاریخچه فعلی">
+   533→                        <i class="fas fa-bolt ml-1"></i>
+   534→                        تولید سیگنال
+   535→                    </button>
+   536→                </div>
+   537→                <div id="signal-list" class="space-y-4" style="max-height: 400px; overflow-y: auto;">
+   538→                    <div class="text-center text-gray-400 py-8">
+   539→                        <i class="fas fa-chart-line text-4xl mb-4"></i>
+   540→                        <div>سیگنالی برای نمایش وجود ندارد</div>
+   541→                    </div>
+   542→                </div>
+   543→            </div>
+   544→
+   545→            <!-- Market Data Table -->
+   546→            <div class="glass-effect rounded-2xl p-6 mb-6">
+   547→                <div class="flex justify-between items-center mb-6">
+   548→                    <h2 class="text-2xl font-semibold text-gradient">
+   549→                        <i class="fas fa-table ml-2"></i>
+   550→                        داده‌های بازار
+   551→                    </h2>
+   552→                    <div class="flex items-center space-x-reverse space-x-4">
+   553→                        <button id="refresh-market-data-btn" class="glass-effect px-3 py-1.5 text-xs rounded-lg hover:bg-cyan-600 transition-all duration-300" title="بروزرسانی داده‌های بازار برای اولین نماد">
+   554→                            <i class="fas fa-sync-alt ml-1"></i>
+   555→                            بروزرسانی
+   556→                        </button>
+   557→                        <button id="export-market-btn" class="glass-effect px-4 py-2 text-sm rounded-lg hover:bg-purple-600 transition-all duration-300" disabled>
+   558→                            <i class="fas fa-file-export ml-1"></i>
+   559→                            CSV
+   560→                        </button>
+   561→                        <input type="text" id="table-search" placeholder="جستجو..." 
+   562→                               class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 text-sm" style="width: 150px;">
+   563→                    </div>
+   564→                </div>
+   565→                
+   566→                <div class="data-table">
+   567→                    <table class="w-full text-sm">
+   568→                        <thead class="bg-gray-700 sticky top-0">
+   569→                            <tr>
+   570→                                <th class="px-4 py-3 text-right">تاریخ</th>
+   571→                                <th class="px-4 py-3 text-right">بازگشایی</th>
+   572→                                <th class="px-4 py-3 text-right">بسته</th>
+   573→                                <th class="px-4 py-3 text-right">بالاترین</th>
+   574→                                <th class="px-4 py-3 text-right">پایین‌ترین</th>
+   575→                                <th class="px-4 py-3 text-right">حجم</th>
+   576→                                <th class="px-4 py-3 text-right">RSI</th>
+   577→                                <th class="px-4 py-3 text-right">ATR</th>
+   578→                                <th class="px-4 py-3 text-right">سیگنال</th>
+   579→                                <th class="px-4 py-3 text-right">TP</th>
+   580→                                <th class="px-4 py-3 text-right">SL</th>
+   581→                                <th class="px-4 py-3 text-right">کد سفارش</th>
+   582→                            </tr>
+   583→                        </thead>
+   584→                        <tbody id="market-data-body">
+   585→                            <tr>
+   586→                                <td colspan="12" class="px-4 py-8 text-center text-gray-400">داده‌ای برای نمایش وجود ندارد</td>
+   587→                            </tr>
+   588→                        </tbody>
+   589→                    </table>
+   590→                </div>
+   591→            </div>
+   592→
+   593→            <!-- History Table -->
+   594→            <div class="glass-effect rounded-2xl p-6">
+   595→                <div class="flex justify-between items-center mb-6">
+   596→                    <h2 class="text-2xl font-semibold text-gradient">
+   597→                        <i class="fas fa-history ml-2"></i>
+   598→                        سوابق پوزیشن‌ها
+   599→                    </h2>
+   600→                    <div class="flex items-center space-x-reverse space-x-4">
+   601→                        <button id="refresh-all-data-btn" class="glass-effect px-3 py-1.5 text-xs rounded-lg hover:bg-green-600 transition-all duration-300" title="بروزرسانی کامل داده‌ها (تاریخچه + بازار + سیگنال + نمودار)">
+   602→                            <i class="fas fa-sync-alt ml-1"></i>
+   603→                            بروزرسانی
+   604→                        </button>
+   605→                        <button id="export-history-btn" class="glass-effect px-4 py-2 text-sm rounded-lg hover:bg-purple-600 transition-all duration-300" disabled>
+   606→                            <i class="fas fa-file-export ml-1"></i>
+   607→                            CSV
+   608→                        </button>
+   609→                        <input type="text" id="history-search" placeholder="جستجو..." 
+   610→                               class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 text-sm" style="width: 150px;">
+   611→                    </div>
+   612→                </div>
+   613→                
+   614→                <div class="data-table">
+   615→                    <table class="w-full text-sm">
+   616→                        <thead class="bg-gray-700 sticky top-0">
+   617→                            <tr>
+   618→                                <th class="px-4 py-3 text-right">زمان</th>
+   619→                                <th class="px-4 py-3 text-right">نماد</th>
+   620→                                <th class="px-4 py-3 text-right">قیمت</th>
+   621→                                <th class="px-4 py-3 text-right">مقدار</th>
+   622→                                <th class="px-4 py-3 text-right">کمیسیون</th>
+   623→                                <th class="px-4 py-3 text-right">سمت</th>
+   624→                                <th class="px-4 py-3 text-right">سود/زیان</th>
+   625→                            </tr>
+   626→                        </thead>
+   627→                        <tbody id="history-table-body">
+   628→                            <tr>
+   629→                                <td colspan="7" class="px-4 py-8 text-center text-gray-400">داده‌ای برای نمایش وجود ندارد</td>
+   630→                            </tr>
+   631→                        </tbody>
+   632→                    </table>
+   633→                </div>
+   634→            </div>
+   635→        </div>
+   636→    </main>
+   637→
+   638→    <!-- Settings Modal -->
+   639→    <div id="settings-modal" class="settings-modal">
+   640→        <div class="settings-modal-content" style="max-height: 85vh; overflow-y: auto;">
+   641→            <div class="settings-modal-header">
+   642→                <div class="settings-modal-header-title">
+   643→                    <h1 class="text-gradient text-2xl font-bold m-0">
+   644→                        <i class="fas fa-sliders-h ml-2"></i>
+   645→                        تنظیمات اتوماسیون
+   646→                    </h1>
+   647→                </div>
+   648→                <div class="settings-modal-header-buttons">
+   649→                    <button id="save-settings-btn" class="glass-effect px-3 py-2 rounded-lg hover:bg-green-600 transition-all duration-300 whitespace-nowrap text-sm">
+   650→                        <i class="fas fa-save ml-1"></i>
+   651→                        ذخیره
+   652→                    </button>
+   653→                    <button id="reset-settings-btn" class="glass-effect px-3 py-2 rounded-lg hover:bg-gray-600 transition-all duration-300 whitespace-nowrap text-sm">
+   654→                        <i class="fas fa-undo ml-1"></i>
+   655→                        پیش‌فرض
+   656→                    </button>
+   657→                    <button class="settings-modal-close" onclick="automationManager.toggleSettings()">
+   658→                        <i class="fas fa-times"></i>
+   659→                    </button>
+   660→                </div>
+   661→            </div>
+   662→
+   663→            <div style="padding: 1.5rem;">
+   664→                <!-- ========================================================== -->
+   665→                <!-- Group 1: مدیریت ریسک (Risk) -->
+   666→                <!-- ========================================================== -->
+   667→                <section class="glass-effect rounded-xl p-4 mb-4">
+   668→                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+   669→                        <i class="fas fa-shield-alt"></i>
+   670→                        <span>مدیریت ریسک</span>
+   671→                    </h3>
+   672→                    <div class="space-y-3">
+   673→                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+   674→                            <div>
+   675→                                <label class="block text-xs text-gray-300 mb-1">دارایی امن %</label>
+   676→                                <input type="number" id="safe-asset-percent" class="input-field text-sm" value="50" min="0" max="100" step="1">
+   677→                                <div class="text-xs text-gray-500 mt-0.5">حداقل درصد کل دارایی که باید آزاد بماند</div>
+   678→                            </div>
+   679→                            <div>
+   680→                                <label class="block text-xs text-gray-300 mb-1">سقف مارجین نماد %</label>
+   681→                                <input type="number" id="max-margin-per-symbol-percent" class="input-field text-sm" value="10" min="1" max="100" step="1">
+   682→                                <div class="text-xs text-gray-500 mt-0.5">حداکثر درصد کل دارایی برای مارجین یک نماد</div>
+   683→                            </div>
+   684→                            <div>
+   685→                                <label class="block text-xs text-gray-300 mb-1">انقضا سیگنال (ساعت)</label>
+   686→                                <input type="number" id="signal-expiration" class="input-field text-sm" value="6" min="1" max="48" step="1">
+   687→                                <div class="text-xs text-gray-500 mt-0.5">مدت اعتبار سیگنال قبل از انقضا</div>
+   688→                            </div>
+   689→                            <div>
+   690→                                <label class="block text-xs text-gray-300 mb-1">حداقل کندل هم‌جهت</label>
+   691→                                <input type="number" id="min-same-direction-candles" class="input-field text-sm" value="0" min="0" max="10" step="1" title="حداقل تعداد کندل هم‌جهت بعد از سیگنال (0 = غیرفعال)">
+   692→                                <div class="text-xs text-gray-500 mt-0.5">حداقل تعداد کندل هم‌جهت بعد از سیگنال (0 = غیرفعال)</div>
+   693→                            </div>
+   694→                        </div>
+   695→                        <!-- Long/Short: فاصله قیمت بهتر % -->
+   696→                        <div>
+   697→                            <label class="block text-xs text-gray-300 mb-1">فاصله قیمت بهتر %</label>
+   698→                            <div class="grid grid-cols-2 gap-2">
+   699→                                <div>
+   700→                                    <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+   701→                                    <input type="number" id="min-price-distance-percent-long" class="input-field text-sm" value="0.5" min="0" max="50" step="0.1">
+   702→                                </div>
+   703→                                <div>
+   704→                                    <label class="block text-xs text-gray-400 mb-1">شورت</label>
+   705→                                    <input type="number" id="min-price-distance-percent-short" class="input-field text-sm" value="0.5" min="0" max="50" step="0.1">
+   706→                                </div>
+   707→                            </div>
+   708→                            <div class="text-xs text-gray-500 mt-0.5">حداقل فاصله قیمت بهتر برای ورود دوم بر روی یک نماد</div>
+   709→                        </div>
+   710→                    </div>
+   711→                </section>
+   712→
+   713→                <!-- ========================================================== -->
+   714→                <!-- Group 2: اجرای معاملات (Execution) -->
+   715→                <!-- ========================================================== -->
+   716→                <section class="glass-effect rounded-xl p-4 mb-4">
+   717→                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+   718→                        <i class="fas fa-cogs"></i>
+   719→                        <span>اجرای معاملات</span>
+   720→                    </h3>
+   721→                    <div class="space-y-3">
+   722→                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+   723→                            <div>
+   724→                                <label class="block text-xs text-gray-300 mb-1">انتظار (دقیقه)</label>
+   725→                                <input type="number" id="trade-wait-time" class="input-field text-sm" value="60" min="1" max="1440" step="1">
+   726→                            </div>
+   727→                            <div>
+   728→                                <label class="block text-xs text-gray-300 mb-1">خطای مجاز</label>
+   729→                                <input type="number" id="allowed-errors" class="input-field text-sm" value="3" min="1" max="10" step="1">
+   730→                            </div>
+   731→                            <div>
+   732→                                <label class="block text-xs text-gray-300 mb-1">تعداد چرخه</label>
+   733→                                <input type="number" id="cycles-per-run" class="input-field text-sm" value="1" min="1" max="10" step="1" title="تعداد چرخه در هر بار زدن دکمه «یک چرخه»">
+   734→                            </div>
+   735→                            <div>
+   736→                                <label class="block text-xs text-gray-300 mb-1">تعداد نوتیف تاریخچه</label>
+   737→                                <input type="number" id="closed-positions-notify-count" class="input-field text-sm" value="10" min="1" max="50" step="1" title="تعداد رکوردهای ارسالی در نوتیف تاریخچه پوزیشن‌های بسته">
+   738→                            </div>
+   739→                        </div>
+   740→                        <!-- Long/Short: اهرم -->
+   741→                        <div>
+   742→                            <label class="block text-xs text-gray-300 mb-1">اهرم</label>
+   743→                            <div class="grid grid-cols-2 gap-2">
+   744→                                <div>
+   745→                                    <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+   746→                                    <input type="number" id="leverage-long" class="input-field text-sm" value="4" min="1" max="125" step="1">
+   747→                                </div>
+   748→                                <div>
+   749→                                    <label class="block text-xs text-gray-400 mb-1">شورت</label>
+   750→                                    <input type="number" id="leverage-short" class="input-field text-sm" value="4" min="1" max="125" step="1">
+   751→                                </div>
+   752→                            </div>
+   753→                        </div>
+   754→                        <!-- Long/Short: نسبت مارجین ورودی % -->
+   755→                        <div>
+   756→                            <label class="block text-xs text-gray-300 mb-1">نسبت مارجین ورودی %</label>
+   757→                            <div class="grid grid-cols-2 gap-2">
+   758→                                <div>
+   759→                                    <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+   760→                                    <input type="number" id="entry-margin-percent-long" class="input-field text-sm" value="5" min="0" max="100" step="0.5">
+   761→                                </div>
+   762→                                <div>
+   763→                                    <label class="block text-xs text-gray-400 mb-1">شورت</label>
+   764→                                    <input type="number" id="entry-margin-percent-short" class="input-field text-sm" value="5" min="0" max="100" step="0.5">
+   765→                                </div>
+   766→                            </div>
+   767→                            <div class="text-xs text-gray-500 mt-0.5">درصد کل دارایی برای مارجین هر ورودی جدید</div>
+   768→                        </div>
+   769→                    </div>
+   770→                </section>
+   771→
+   772→                <!-- ========================================================== -->
+   773→                <!-- Group 3: بازار (Market) — strategy params moved from settings.html (Task 19) -->
+   774→                <!-- ========================================================== -->
+   775→                <section class="glass-effect rounded-xl p-4 mb-4">
+   776→                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+   777→                        <i class="fas fa-chart-bar"></i>
+   778→                        <span>بازار</span>
+   779→                    </h3>
+   780→                    <div class="space-y-3">
+   781→                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+   782→                            <div>
+   783→                                <label class="block text-xs text-gray-300 mb-1">تایم فریم</label>
+   784→                                <select id="interval" class="input-field text-sm" style="cursor: pointer;">
+   785→                                    <option value="1h" selected>۱ ساعته</option>
+   786→                                    <option value="30m">۳۰ دقیقه</option>
+   787→                                    <option value="15m">۱۵ دقیقه</option>
+   788→                                    <option value="4h">۴ ساعته</option>
+   789→                                    <option value="1d">۱ روزه</option>
+   790→                                </select>
+   791→                            </div>
+   792→                            <div>
+   793→                                <label class="block text-xs text-gray-300 mb-1">تعداد داده‌ها</label>
+   794→                                <input type="number" id="limit" class="input-field text-sm" value="1000" min="10" max="2000" step="1">
+   795→                            </div>
+   796→                            <div>
+   797→                                <label class="block text-xs text-gray-300 mb-1">دوره برگشت (LookBack)</label>
+   798→                                <input type="number" id="lookback" class="input-field text-sm" value="50" min="10" max="200" step="1">
+   799→                            </div>
+   800→                        </div>
+   801→                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+   802→                            <div>
+   803→                                <label class="block text-xs text-gray-300 mb-1">دوره ATR</label>
+   804→                                <input type="number" id="atr-period" class="input-field text-sm" value="14" min="5" max="50" step="1">
+   805→                            </div>
+   806→                            <div>
+   807→                                <label class="block text-xs text-gray-300 mb-1">دوره RSI</label>
+   808→                                <input type="number" id="rsi-period" class="input-field text-sm" value="14" min="5" max="50" step="1">
+   809→                            </div>
+   810→                            <div>
+   811→                                <label class="block text-xs text-gray-300 mb-1">دوره میانگین حجم</label>
+   812→                                <input type="number" id="avg-vol-period" class="input-field text-sm" value="50" min="10" max="200" step="1">
+   813→                            </div>
+   814→                        </div>
+   815→                    </div>
+   816→                </section>
+   817→
+   818→                <!-- ========================================================== -->
+   819→                <!-- Group 4: اندیکاتورها (Indicators) -->
+   820→                <!-- ========================================================== -->
+   821→                <section class="glass-effect rounded-xl p-4 mb-4">
+   822→                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+   823→                        <i class="fas fa-chart-line"></i>
+   824→                        <span>اندیکاتورها</span>
+   825→                    </h3>
+   826→                    <div class="space-y-3">
+   827→                        <div>
+   828→                            <label class="block text-xs text-gray-300 mb-1">مبنای HTF Confirmation</label>
+   829→                            <select id="htf-confirmation-source" class="input-field text-sm" style="cursor: pointer;">
+   830→                                <option value="signalCandleClose">Signal Candle Close</option>
+   831→                                <option value="previousDayClose">Previous Day Close</option>
+   832→                            </select>
+   833→                            <div class="text-xs text-gray-500 mt-1">
+   834→                                <span id="htf-source-description">کلوز کندل سیگنال با سطوح روز قبل مقایسه می‌شود</span>
+   835→                            </div>
+   836→                        </div>
+   837→                        <!-- Long/Short: آستانه RSI -->
+   838→                        <div>
+   839→                            <label class="block text-xs text-gray-300 mb-1">آستانه RSI</label>
+   840→                            <div class="grid grid-cols-2 gap-2">
+   841→                                <div>
+   842→                                    <label class="block text-xs text-gray-400 mb-1">لانگ (اشباع فروش)</label>
+   843→                                    <input type="number" id="rsi-long-threshold" class="input-field text-sm" value="30" min="0" max="100" step="1">
+   844→                                </div>
+   845→                                <div>
+   846→                                    <label class="block text-xs text-gray-400 mb-1">شورت (اشباع خرید)</label>
+   847→                                    <input type="number" id="rsi-short-threshold" class="input-field text-sm" value="70" min="0" max="100" step="1">
+   848→                                </div>
+   849→                            </div>
+   850→                        </div>
+   851→                        <!-- Long/Short: ضریب حجم -->
+   852→                        <div>
+   853→                            <label class="block text-xs text-gray-300 mb-1">ضریب حجم</label>
+   854→                            <div class="grid grid-cols-2 gap-2">
+   855→                                <div>
+   856→                                    <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+   857→                                    <input type="number" id="vol-mult-long" class="input-field text-sm" value="0.2" min="0" max="5" step="0.05">
+   858→                                </div>
+   859→                                <div>
+   860→                                    <label class="block text-xs text-gray-400 mb-1">شورت</label>
+   861→                                    <input type="number" id="vol-mult-short" class="input-field text-sm" value="0.2" min="0" max="5" step="0.05">
+   862→                                </div>
+   863→                            </div>
+   864→                        </div>
+   865→                    </div>
+   866→                </section>
+   867→
+   868→                <!-- ========================================================== -->
+   869→                <!-- Group 5: اهداف TP/SL (TP/SL Targets) — moved from settings.html (Task 19) -->
+   870→                <!-- ========================================================== -->
+   871→                <section class="glass-effect rounded-xl p-4 mb-4">
+   872→                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+   873→                        <i class="fas fa-bullseye"></i>
+   874→                        <span>اهداف TP/SL</span>
+   875→                    </h3>
+   876→                    <div class="space-y-3">
+   877→                        <!-- Long Position Settings -->
+   878→                        <div class="border border-gray-600/40 rounded-lg p-3">
+   879→                            <h4 class="text-sm font-medium mb-2 text-blue-400">
+   880→                                <i class="fas fa-arrow-up ml-1"></i>
+   881→                                پوزیشن Long
+   882→                            </h4>
+   883→                            <div class="grid grid-cols-2 gap-2 mb-2">
+   884→                                <div>
+   885→                                    <label class="block text-xs text-gray-400 mb-1">ضریب TP</label>
+   886→                                    <input type="number" id="tp-long-mult" class="input-field text-sm" value="20" min="1" max="100" step="1">
+   887→                                </div>
+   888→                                <div>
+   889→                                    <label class="block text-xs text-gray-400 mb-1">ضریب SL</label>
+   890→                                    <input type="number" id="sl-long-mult" class="input-field text-sm" value="6" min="1" max="50" step="1">
+   891→                                </div>
+   892→                            </div>
+   893→                            <div class="grid grid-cols-2 gap-2">
+   894→                                <div>
+   895→                                    <label class="block text-xs text-gray-400 mb-1">TP ثابت (%)</label>
+   896→                                    <input type="number" id="long-fixed-tp" class="input-field text-sm" placeholder="خالی = ATR-based" min="0.1" max="50" step="0.1">
+   897→                                </div>
+   898→                                <div>
+   899→                                    <label class="block text-xs text-gray-400 mb-1">SL ثابت (%)</label>
+   900→                                    <input type="number" id="long-fixed-sl" class="input-field text-sm" placeholder="خالی = ATR-based" min="0.1" max="50" step="0.1">
+   901→                                </div>
+   902→                            </div>
+   903→                        </div>
+   904→                        <!-- Short Position Settings -->
+   905→                        <div class="border border-gray-600/40 rounded-lg p-3">
+   906→                            <h4 class="text-sm font-medium mb-2 text-red-400">
+   907→                                <i class="fas fa-arrow-down ml-1"></i>
+   908→                                پوزیشن Short
+   909→                            </h4>
+   910→                            <div class="grid grid-cols-2 gap-2 mb-2">
+   911→                                <div>
+   912→                                    <label class="block text-xs text-gray-400 mb-1">ضریب TP</label>
+   913→                                    <input type="number" id="tp-short-mult" class="input-field text-sm" value="24" min="1" max="100" step="1">
+   914→                                </div>
+   915→                                <div>
+   916→                                    <label class="block text-xs text-gray-400 mb-1">ضریب SL</label>
+   917→                                    <input type="number" id="sl-short-mult" class="input-field text-sm" value="4" min="1" max="50" step="1">
+   918→                                </div>
+   919→                            </div>
+   920→                            <div class="grid grid-cols-2 gap-2">
+   921→                                <div>
+   922→                                    <label class="block text-xs text-gray-400 mb-1">TP ثابت (%)</label>
+   923→                                    <input type="number" id="short-fixed-tp" class="input-field text-sm" placeholder="خالی = ATR-based" min="0.1" max="50" step="0.1">
+   924→                                </div>
+   925→                                <div>
+   926→                                    <label class="block text-xs text-gray-400 mb-1">SL ثابت (%)</label>
+   927→                                    <input type="number" id="short-fixed-sl" class="input-field text-sm" placeholder="مثلا: 6" min="0.1" max="50" step="0.1">
+   928→                                </div>
+   929→                            </div>
+   930→                        </div>
+   931→                    </div>
+   932→                </section>
+   933→
+   934→                <!-- ========================================================== -->
+   935→                <!-- Group 6: Fake Breakout -->
+   936→                <!-- ========================================================== -->
+   937→                <section class="glass-effect rounded-xl p-4 mb-4">
+   938→                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+   939→                        <i class="fas fa-bolt"></i>
+   940→                        <span>Fake Breakout</span>
+   941→                    </h3>
+   942→                    <div class="space-y-3">
+   943→                        <div class="flex items-center gap-2">
+   944→                            <input type="checkbox" id="enable-meaningful-break-filter" class="rounded" checked>
+   945→                            <label for="enable-meaningful-break-filter" class="text-xs text-gray-300">فیلتر شکست معنادار (ATR)</label>
+   946→                        </div>
+   947→                        <div>
+   948→                            <label class="block text-xs text-gray-300 mb-1">روش تشخیص شکست</label>
+   949→                            <select id="break-detection-method" class="input-field text-sm">
+   950→                                <option value="Wick">Wick (High/Low)</option>
+   951→                                <option value="Close">Close (قیمت بسته)</option>
+   952→                            </select>
+   953→                        </div>
+   954→                        <div class="flex items-center gap-2">
+   955→                            <input type="checkbox" id="enable-break-lifecycle" class="rounded" checked>
+   956→                            <label for="enable-break-lifecycle" class="text-xs text-gray-300">مدیریت چرخه شکست</label>
+   957→                        </div>
+   958→                        <div>
+   959→                            <label class="block text-xs text-gray-300 mb-1">عمر چرخه شکست (0 = LookBack)</label>
+   960→                            <input type="number" id="break-sequence-lifetime" class="input-field text-sm" value="0" min="0" max="100" step="1">
+   961→                        </div>
+   962→                        <!-- Long/Short: ضریب ATR شکست -->
+   963→                        <div>
+   964→                            <label class="block text-xs text-gray-300 mb-1">ضریب ATR شکست</label>
+   965→                            <div class="grid grid-cols-2 gap-2">
+   966→                                <div>
+   967→                                    <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+   968→                                    <input type="number" id="break-atr-multiplier-long" class="input-field text-sm" value="0.20" min="0.05" max="1.00" step="0.05">
+   969→                                </div>
+   970→                                <div>
+   971→                                    <label class="block text-xs text-gray-400 mb-1">شورت</label>
+   972→                                    <input type="number" id="break-atr-multiplier-short" class="input-field text-sm" value="0.20" min="0.05" max="1.00" step="0.05">
+   973→                                </div>
+   974→                            </div>
+   975→                        </div>
+   976→                    </div>
+   977→                </section>
+   978→
+   979→                <!-- ========================================================== -->
+   980→                <!-- Group 7: مدیریت نمادها (Symbol Management) -->
+   981→                <!-- ========================================================== -->
+   982→                <section class="glass-effect rounded-xl p-4 mb-4">
+   983→                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+   984→                        <i class="fas fa-coins"></i>
+   985→                        <span>مدیریت نمادها</span>
+   986→                    </h3>
+   987→                    <div class="space-y-3">
+   988→                        <div class="flex gap-2">
+   989→                            <input type="text" id="new-symbol-name" class="input-field text-sm flex-1" placeholder="مثال: BTC">
+   990→                            <button id="add-symbol-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-green-600 transition-all duration-300 text-sm whitespace-nowrap">
+   991→                                <i class="fas fa-plus ml-1"></i>
+   992→                                افزودن
+   993→                            </button>
+   994→                        </div>
+   995→                    </div>
+   996→                </section>
+   997→            </div>
+   998→        </div>
+   999→    </div>
+  1000→
+  1001→</body>
+  1002→</html>
+  1003→

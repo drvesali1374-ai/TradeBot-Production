@@ -322,6 +322,10 @@
                         <i class="fas fa-robot ml-1"></i>
                         اتوماسیون
                     </a>
+                    <a href="backtest.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-history ml-1"></i>
+                        بکتست
+                    </a>
                 </div>
                 <div class="flex items-center">
                     <div class="text-2xl font-bold text-gradient">
@@ -770,7 +774,53 @@
                 </section>
 
                 <!-- ========================================================== -->
-                <!-- Group 3: اندیکاتورها (Indicators) -->
+                <!-- Group 3: بازار (Market) — strategy params moved from settings.html (Task 19) -->
+                <!-- ========================================================== -->
+                <section class="glass-effect rounded-xl p-4 mb-4">
+                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>بازار</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-300 mb-1">تایم فریم</label>
+                                <select id="interval" class="input-field text-sm" style="cursor: pointer;">
+                                    <option value="1h" selected>۱ ساعته</option>
+                                    <option value="30m">۳۰ دقیقه</option>
+                                    <option value="15m">۱۵ دقیقه</option>
+                                    <option value="4h">۴ ساعته</option>
+                                    <option value="1d">۱ روزه</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-300 mb-1">تعداد داده‌ها</label>
+                                <input type="number" id="limit" class="input-field text-sm" value="1000" min="10" max="2000" step="1">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-300 mb-1">دوره برگشت (LookBack)</label>
+                                <input type="number" id="lookback" class="input-field text-sm" value="50" min="10" max="200" step="1">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-300 mb-1">دوره ATR</label>
+                                <input type="number" id="atr-period" class="input-field text-sm" value="14" min="5" max="50" step="1">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-300 mb-1">دوره RSI</label>
+                                <input type="number" id="rsi-period" class="input-field text-sm" value="14" min="5" max="50" step="1">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-300 mb-1">دوره میانگین حجم</label>
+                                <input type="number" id="avg-vol-period" class="input-field text-sm" value="50" min="10" max="200" step="1">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================================== -->
+                <!-- Group 4: اندیکاتورها (Indicators) -->
                 <!-- ========================================================== -->
                 <section class="glass-effect rounded-xl p-4 mb-4">
                     <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
@@ -820,7 +870,73 @@
                 </section>
 
                 <!-- ========================================================== -->
-                <!-- Group 4: Fake Breakout -->
+                <!-- Group 5: اهداف TP/SL (TP/SL Targets) — moved from settings.html (Task 19) -->
+                <!-- ========================================================== -->
+                <section class="glass-effect rounded-xl p-4 mb-4">
+                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+                        <i class="fas fa-bullseye"></i>
+                        <span>اهداف TP/SL</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <!-- Long Position Settings -->
+                        <div class="border border-gray-600/40 rounded-lg p-3">
+                            <h4 class="text-sm font-medium mb-2 text-blue-400">
+                                <i class="fas fa-arrow-up ml-1"></i>
+                                پوزیشن Long
+                            </h4>
+                            <div class="grid grid-cols-2 gap-2 mb-2">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">ضریب TP</label>
+                                    <input type="number" id="tp-long-mult" class="input-field text-sm" value="20" min="1" max="100" step="1">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">ضریب SL</label>
+                                    <input type="number" id="sl-long-mult" class="input-field text-sm" value="6" min="1" max="50" step="1">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">TP ثابت (%)</label>
+                                    <input type="number" id="long-fixed-tp" class="input-field text-sm" placeholder="خالی = ATR-based" min="0.1" max="50" step="0.1">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">SL ثابت (%)</label>
+                                    <input type="number" id="long-fixed-sl" class="input-field text-sm" placeholder="خالی = ATR-based" min="0.1" max="50" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Short Position Settings -->
+                        <div class="border border-gray-600/40 rounded-lg p-3">
+                            <h4 class="text-sm font-medium mb-2 text-red-400">
+                                <i class="fas fa-arrow-down ml-1"></i>
+                                پوزیشن Short
+                            </h4>
+                            <div class="grid grid-cols-2 gap-2 mb-2">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">ضریب TP</label>
+                                    <input type="number" id="tp-short-mult" class="input-field text-sm" value="24" min="1" max="100" step="1">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">ضریب SL</label>
+                                    <input type="number" id="sl-short-mult" class="input-field text-sm" value="4" min="1" max="50" step="1">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">TP ثابت (%)</label>
+                                    <input type="number" id="short-fixed-tp" class="input-field text-sm" placeholder="خالی = ATR-based" min="0.1" max="50" step="0.1">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">SL ثابت (%)</label>
+                                    <input type="number" id="short-fixed-sl" class="input-field text-sm" placeholder="مثلا: 6" min="0.1" max="50" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================================== -->
+                <!-- Group 6: Fake Breakout -->
                 <!-- ========================================================== -->
                 <section class="glass-effect rounded-xl p-4 mb-4">
                     <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
@@ -865,31 +981,7 @@
                 </section>
 
                 <!-- ========================================================== -->
-                <!-- Group 5: اطلاع‌رسانی (Notification) -->
-                <!-- ========================================================== -->
-                <section class="glass-effect rounded-xl p-4 mb-4">
-                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
-                        <i class="fas fa-bell"></i>
-                        <span>اطلاع‌رسانی</span>
-                    </h3>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-xs text-gray-300 mb-1">Bot Token</label>
-                            <input type="text" id="bale-token" class="input-field text-sm" placeholder="توکن ربات بله">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-300 mb-1">Chat ID</label>
-                            <input type="text" id="bale-chat-id" class="input-field text-sm" placeholder="شناسه چت بله">
-                        </div>
-                        <button id="test-bale-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-blue-600 transition-all duration-300 text-sm w-full">
-                            <i class="fas fa-paper-plane ml-1"></i>
-                            ارسال پیام تست
-                        </button>
-                    </div>
-                </section>
-
-                <!-- ========================================================== -->
-                <!-- Group 6: مدیریت نمادها (Symbol Management) -->
+                <!-- Group 7: مدیریت نمادها (Symbol Management) -->
                 <!-- ========================================================== -->
                 <section class="glass-effect rounded-xl p-4 mb-4">
                     <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">

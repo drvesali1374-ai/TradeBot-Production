@@ -1,0 +1,699 @@
+     1→<!DOCTYPE html>
+     2→<html lang="fa" dir="rtl">
+     3→<head>
+     4→    <script src="/auth-check.js"></script>
+     5→    <meta charset="UTF-8">
+     6→    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     7→    <title>تنظیمات - اتوماسیون هوشمند</title>
+     8→    <script src="https://cdn.tailwindcss.com"></script>
+     9→    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    10→    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    11→    <style>
+    12→        body {
+    13→            font-family: 'Vazirmatn', sans-serif;
+    14→            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    15→            min-height: 100vh;
+    16→        }
+    17→        
+    18→        .glass-effect {
+    19→            background: rgba(255, 255, 255, 0.05);
+    20→            backdrop-filter: blur(10px);
+    21→            border: 1px solid rgba(255, 255, 255, 0.1);
+    22→        }
+    23→        
+    24→        .text-gradient {
+    25→            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    26→            -webkit-background-clip: text;
+    27→            -webkit-text-fill-color: transparent;
+    28→            background-clip: text;
+    29→        }
+    30→        
+    31→        .form-input {
+    32→            background: rgba(255, 255, 255, 0.1);
+    33→            border: 1px solid rgba(255, 255, 255, 0.2);
+    34→            color: white;
+    35→        }
+    36→        
+    37→        .form-input:focus {
+    38→            border-color: #667eea;
+    39→            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    40→        }
+    41→        
+    42→        .form-input::placeholder {
+    43→            color: rgba(255, 255, 255, 0.5);
+    44→        }
+    45→
+    46→        .sticky-buttons {
+    47→            position: sticky;
+    48→            top: 64px;
+    49→            z-index: 40;
+    50→            background: rgba(26, 26, 46, 0.95);
+    51→            backdrop-filter: blur(10px);
+    52→            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    53→        }
+    54→    </style>
+    55→</head>
+    56→<body class="text-white">
+    57→    <!-- Navigation -->
+    58→    <nav class="fixed top-0 w-full z-50 glass-effect">
+    59→        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    60→            <div class="flex justify-between items-center h-16">
+    61→                <div class="flex items-center space-x-reverse space-x-6">
+    62→                    <a href="home.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+    63→                        <i class="fas fa-home ml-1"></i>
+    64→                        خانه
+    65→                    </a>
+    66→                    <a href="settings.html" class="text-purple-400 transition-colors duration-200">
+    67→                        <i class="fas fa-cog ml-1"></i>
+    68→                        تنظیمات
+    69→                    </a>
+    70→                    <a href="market_signal.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+    71→                        <i class="fas fa-chart-line ml-1"></i>
+    72→                        داشبورد
+    73→                    </a>
+    74→                    <a href="trading.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+    75→                        <i class="fas fa-exchange-alt ml-1"></i>
+    76→                        خرید و فروش
+    77→                    </a>
+    78→                    <a href="automation.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+    79→                        <i class="fas fa-robot ml-1"></i>
+    80→                        اتوماسیون
+    81→                    </a>
+    82→                </div>
+    83→                <div class="flex items-center">
+    84→                    <div class="text-2xl font-bold text-gradient">
+    85→                        اتوماسیون هوشمند
+    86→                        <i class="fas fa-robot mr-2"></i>
+    87→                    </div>
+    88→                </div>
+    89→            </div>
+    90→        </div>
+    91→    </nav>
+    92→
+    93→    <!-- Sticky Action Buttons -->
+    94→    <div class="sticky-buttons py-4">
+    95→        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    96→            <div class="flex justify-center space-x-reverse space-x-4">
+    97→                <button id="save-settings" class="glass-effect px-6 py-2 rounded-lg hover:bg-purple-600 transition-all duration-300">
+    98→                    <i class="fas fa-save ml-2"></i>
+    99→                    ذخیره تنظیمات
+   100→                </button>
+   101→                <button id="reset-settings" class="glass-effect px-6 py-2 rounded-lg hover:bg-red-600 transition-all duration-300">
+   102→                    <i class="fas fa-undo ml-2"></i>
+   103→                    بازنشانی پیش‌فرض
+   104→                </button>
+   105→            </div>
+   106→        </div>
+   107→    </div>
+   108→
+   109→    <!-- Main Content -->
+   110→    <main class="pt-32 pb-12">
+   111→        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   112→            <!-- Header -->
+   113→            <div class="text-center mb-12">
+   114→                <h1 class="text-4xl font-bold text-gradient mb-4">
+   115→                    <i class="fas fa-cog ml-3"></i>
+   116→                    تنظیمات سیستم
+   117→                </h1>
+   118→            </div>
+   119→
+   120→            <!-- Settings Form -->
+   121→            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+   122→                <!-- Basic Settings -->
+   123→                <div class="glass-effect rounded-2xl p-6">
+   124→                    <h2 class="text-2xl font-semibold mb-6 text-gradient">
+   125→                        <i class="fas fa-sliders-h ml-2"></i>
+   126→                        تنظیمات پایه
+   127→                    </h2>
+   128→                    
+   129→                    <div class="space-y-6">
+   130→                        <div>
+   131→                            <label class="block text-sm font-medium mb-2">
+   132→                                <i class="fas fa-coins ml-1"></i>
+   133→                                نام نماد معاملاتی
+   134→                            </label>
+   135→                            <input type="text" id="symbol-name" class="form-input w-full px-4 py-3 rounded-lg" 
+   136→                                   placeholder="مثلا: DOT" value="DOT">
+   137→                        </div>
+   138→                        
+   139→                        <div>
+   140→                            <label class="block text-sm font-medium mb-2">
+   141→                                <i class="fas fa-clock ml-1"></i>
+   142→                                تایم فریم
+   143→                            </label>
+   144→                            <select id="interval" class="form-input w-full px-4 py-3 rounded-lg">
+   145→                                <option value="1h" selected>۱ ساعته</option>
+   146→                                <option value="30m">۳۰ دقیقه</option>
+   147→                                <option value="15m">۱۵ دقیقه</option>
+   148→                                <option value="4h">۴ ساعته</option>
+   149→                                <option value="1d">۱ روزه</option>
+   150→                            </select>
+   151→                        </div>
+   152→                        
+   153→                        <div>
+   154→                            <label class="block text-sm font-medium mb-2">
+   155→                                <i class="fas fa-list-ol ml-1"></i>
+   156→                                تعداد داده‌ها
+   157→                            </label>
+   158→                            <input type="number" id="limit" class="form-input w-full px-4 py-3 rounded-lg" 
+   159→                                   value="1000" min="100" max="2000">
+   160→                        </div>
+   161→                    </div>
+   162→                </div>
+   163→
+   164→                <!-- Signal Settings -->
+   165→                <div class="glass-effect rounded-2xl p-6">
+   166→                    <h2 class="text-2xl font-semibold mb-6 text-gradient">
+   167→                        <i class="fas fa-signal ml-2"></i>
+   168→                        پارامترهای سیگنال
+   169→                    </h2>
+   170→                    
+   171→                    <div class="space-y-6">
+   172→                        <div>
+   173→                            <label class="block text-sm font-medium mb-2">
+   174→                                <i class="fas fa-history ml-1"></i>
+   175→                                دوره برگشت (LookBack)
+   176→                            </label>
+   177→                            <input type="number" id="lookback" class="form-input w-full px-4 py-3 rounded-lg" 
+   178→                                   value="50" min="10" max="200">
+   179→                        </div>
+   180→                        
+   181→                        <div>
+   182→                            <label class="block text-sm font-medium mb-2">
+   183→                                <i class="fas fa-chart-bar ml-1"></i>
+   184→                                ضریب حجم معاملات
+   185→                            </label>
+   186→                            <input type="number" id="vol-mult" class="form-input w-full px-4 py-3 rounded-lg" 
+   187→                                   value="0.2" step="0.1" min="0.1" max="2">
+   188→                        </div>
+   189→                        
+   190→                        <div>
+   191→                            <label class="block text-sm font-medium mb-2">
+   192→                                <i class="fas fa-calculator ml-1"></i>
+   193→                                دوره میانگین حجم
+   194→                            </label>
+   195→                            <input type="number" id="avg-vol-period" class="form-input w-full px-4 py-3 rounded-lg" 
+   196→                                   value="50" min="10" max="200">
+   197→                        </div>
+   198→                        
+   199→                        <div>
+   200→                            <label class="block text-sm font-medium mb-2">
+   201→                                <i class="fas fa-crosshairs ml-1"></i>
+   202→                                آستانه RSI
+   203→                            </label>
+   204→                            <input type="number" id="rsi-threshold" class="form-input w-full px-4 py-3 rounded-lg" 
+   205→                                   value="50" min="0" max="100">
+   206→                        </div>
+   207→                    </div>
+   208→                </div>
+   209→
+   210→                <!-- Technical Indicators -->
+   211→                <div class="glass-effect rounded-2xl p-6">
+   212→                    <h2 class="text-2xl font-semibold mb-6 text-gradient">
+   213→                        <i class="fas fa-chart-area ml-2"></i>
+   214→                        اندیکاتورهای تکنیکال
+   215→                    </h2>
+   216→                    
+   217→                    <div class="space-y-6">
+   218→                        <div>
+   219→                            <label class="block text-sm font-medium mb-2">
+   220→                                <i class="fas fa-wave-square ml-1"></i>
+   221→                                دوره RSI
+   222→                            </label>
+   223→                            <input type="number" id="rsi-period" class="form-input w-full px-4 py-3 rounded-lg" 
+   224→                                   value="14" min="5" max="50">
+   225→                        </div>
+   226→                        
+   227→                        <div>
+   228→                            <label class="block text-sm font-medium mb-2">
+   229→                                <i class="fas fa-arrows-alt-h ml-1"></i>
+   230→                                دوره ATR
+   231→                            </label>
+   232→                            <input type="number" id="atr-period" class="form-input w-full px-4 py-3 rounded-lg" 
+   233→                                   value="14" min="5" max="50">
+   234→                        </div>
+   235→                    </div>
+   236→                </div>
+   237→
+   238→                <!-- Risk Management -->
+   239→                <div class="glass-effect rounded-2xl p-6">
+   240→                    <h2 class="text-2xl font-semibold mb-6 text-gradient">
+   241→                        <i class="fas fa-shield-alt ml-2"></i>
+   242→                        مدیریت ریسک
+   243→                    </h2>
+   244→                    
+   245→                    <div class="space-y-6">
+   246→                        <!-- Long Position Settings -->
+   247→                        <div class="border border-gray-600 rounded-lg p-4">
+   248→                            <h3 class="text-lg font-medium mb-4 text-blue-400">
+   249→                                <i class="fas fa-arrow-up ml-1"></i>
+   250→                                پوزیشن Long
+   251→                            </h3>
+   252→                            
+   253→                            <div class="grid grid-cols-2 gap-4">
+   254→                                <div>
+   255→                                    <label class="block text-sm font-medium mb-2">ضریب TP</label>
+   256→                                    <input type="number" id="tp-long-mult" class="form-input w-full px-3 py-2 rounded-lg" 
+   257→                                           value="20" min="1" max="100">
+   258→                                </div>
+   259→                                <div>
+   260→                                    <label class="block text-sm font-medium mb-2">ضریب SL</label>
+   261→                                    <input type="number" id="sl-long-mult" class="form-input w-full px-3 py-2 rounded-lg" 
+   262→                                           value="6" min="1" max="50">
+   263→                                </div>
+   264→                            </div>
+   265→                            
+   266→                            <div class="mt-4">
+   267→                                <label class="block text-sm font-medium mb-2">TP ثابت (%)</label>
+   268→                                <input type="number" id="long-fixed-tp" class="form-input w-full px-3 py-2 rounded-lg" 
+   269→                                       placeholder="خالی برای ATR-based" min="0.1" max="50" step="0.1">
+   270→                            </div>
+   271→                            
+   272→                            <div class="mt-4">
+   273→                                <label class="block text-sm font-medium mb-2">SL ثابت (%)</label>
+   274→                                <input type="number" id="long-fixed-sl" class="form-input w-full px-3 py-2 rounded-lg" 
+   275→                                       placeholder="خالی برای ATR-based" min="0.1" max="50" step="0.1">
+   276→                            </div>
+   277→                        </div>
+   278→                        
+   279→                        <!-- Short Position Settings -->
+   280→                        <div class="border border-gray-600 rounded-lg p-4">
+   281→                            <h3 class="text-lg font-medium mb-4 text-red-400">
+   282→                                <i class="fas fa-arrow-down ml-1"></i>
+   283→                                پوزیشن Short
+   284→                            </h3>
+   285→                            
+   286→                            <div class="grid grid-cols-2 gap-4">
+   287→                                <div>
+   288→                                    <label class="block text-sm font-medium mb-2">ضریب TP</label>
+   289→                                    <input type="number" id="tp-short-mult" class="form-input w-full px-3 py-2 rounded-lg" 
+   290→                                           value="24" min="1" max="100">
+   291→                                </div>
+   292→                                <div>
+   293→                                    <label class="block text-sm font-medium mb-2">ضریب SL</label>
+   294→                                    <input type="number" id="sl-short-mult" class="form-input w-full px-3 py-2 rounded-lg" 
+   295→                                           value="4" min="1" max="50">
+   296→                                </div>
+   297→                            </div>
+   298→                            
+   299→                            <div class="mt-4">
+   300→                                <label class="block text-sm font-medium mb-2">TP ثابت (%)</label>
+   301→                                <input type="number" id="short-fixed-tp" class="form-input w-full px-3 py-2 rounded-lg" 
+   302→                                       placeholder="خالی برای ATR-based" min="0.1" max="50" step="0.1">
+   303→                            </div>
+   304→                            
+   305→                            <div class="mt-4">
+   306→                                <label class="block text-sm font-medium mb-2">SL ثابت (%)</label>
+   307→                                <input type="number" id="short-fixed-sl" class="form-input w-full px-3 py-2 rounded-lg" 
+   308→                                       placeholder="مثلا: 6" min="0.1" max="50" step="0.1">
+   309→                            </div>
+   310→                        </div>
+   311→                    </div>
+   312→                </div>
+   313→
+   314→                <!-- API Credentials -->
+   315→                <div class="glass-effect rounded-2xl p-6 lg:col-span-2">
+   316→                    <h2 class="text-2xl font-semibold mb-6 text-gradient">
+   317→                        <i class="fas fa-key ml-2"></i>
+   318→                        تنظیمات API صرافی
+   319→                    </h2>
+   320→                    
+   321→                    <div class="space-y-6">
+   322→                        <div class="glass-effect rounded-lg p-3 mb-4 text-sm text-blue-300">
+   323→                            <i class="fas fa-database ml-2"></i>
+   324→                            کلیدها در دیتابیس سرور ذخیره می‌شوند و از پاک شدن مرورگر در امان‌اند
+   325→                        </div>
+   326→                        <div>
+   327→                            <label class="block text-sm font-medium mb-2">
+   328→                                <i class="fas fa-key ml-1"></i>
+   329→                                API Key
+   330→                            </label>
+   331→                            <input type="text" id="api-key" class="form-input w-full px-4 py-3 rounded-lg" 
+   332→                                   placeholder="کلید API صرافی را وارد کنید" value="X8eeI84g9PrhgxmfCqilP9GR8gTWy9TEyfh2vG8DoTGOXwxDSwqqh2zusT69429j">
+   333→                        </div>
+   334→                        
+   335→                        <div>
+   336→                            <label class="block text-sm font-medium mb-2">
+   337→                                <i class="fas fa-lock ml-1"></i>
+   338→                                Secret Key
+   339→                            </label>
+   340→                            <input type="text" id="secret-key" class="form-input w-full px-4 py-3 rounded-lg" 
+   341→                                   placeholder="کلید مخفی صرافی را وارد کنید" value="CimriVFjSdI7POG4B4pzNRxsxZNrhltDnRwq95vshhtZFyjnW2JVrX6pcH8v9z6H">
+   342→                        </div>
+   343→                        
+   344→                        <div>
+   345→                            <label class="block text-sm font-medium mb-2">
+   346→                                <i class="fas fa-link ml-1"></i>
+   347→                                Exchange Base URL
+   348→                            </label>
+   349→                            <input type="text" id="base-url" class="form-input w-full px-4 py-3 rounded-lg" 
+   350→                                   placeholder="آدرس پایه API صرافی" value="https://api.toobit.com">
+   351→                        </div>
+   352→                    </div>
+   353→                </div>
+   354→            </div>
+   355→        </div>
+   356→    </main>
+   357→
+   358→    <!-- ✓ مورد ۵: بخش تغییر رمز عبور -->
+   359→    <section class="py-8">
+   360→        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   361→            <div class="glass-effect rounded-lg p-6">
+   362→                <h2 class="text-xl font-bold text-purple-400 mb-6">
+   363→                    <i class="fas fa-key ml-2"></i>
+   364→                    تغییر نام کاربری و رمز عبور
+   365→                </h2>
+   366→                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl">
+   367→                    <div>
+   368→                        <label class="block text-sm text-gray-300 mb-2">نام کاربری جدید</label>
+   369→                        <input type="text" id="auth-new-username" class="input-field text-sm" placeholder="نام کاربری جدید">
+   370→                    </div>
+   371→                    <div>
+   372→                        <label class="block text-sm text-gray-300 mb-2">رمز عبور فعلی</label>
+   373→                        <input type="password" id="auth-current-password" class="input-field text-sm" placeholder="رمز عبور فعلی">
+   374→                    </div>
+   375→                    <div>
+   376→                        <label class="block text-sm text-gray-300 mb-2">رمز عبور جدید</label>
+   377→                        <input type="password" id="auth-new-password" class="input-field text-sm" placeholder="رمز عبور جدید">
+   378→                    </div>
+   379→                </div>
+   380→                <div class="mt-4">
+   381→                    <button id="update-credentials-btn" class="glass-effect px-6 py-2 rounded-lg hover:bg-purple-600 transition-all duration-300">
+   382→                        <i class="fas fa-save ml-2"></i>
+   383→                        ذخیره اعتبارنامه‌ها
+   384→                    </button>
+   385→                    <button id="logout-btn" class="glass-effect px-6 py-2 rounded-lg hover:bg-red-600 transition-all duration-300 mr-2">
+   386→                        <i class="fas fa-sign-out-alt ml-2"></i>
+   387→                        خروج از حساب
+   388→                    </button>
+   389→                </div>
+   390→                <div id="auth-message" class="mt-4 text-sm hidden"></div>
+   391→            </div>
+   392→        </div>
+   393→    </section>
+   394→
+   395→    <!-- Footer -->
+   396→    <footer class="py-12">
+   397→        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   398→            <div class="text-center">
+   399→                <div class="text-2xl font-bold text-gradient mb-4">
+   400→                    <i class="fas fa-robot ml-2"></i>
+   401→                    اتوماسیون هوشمند
+   402→                </div>
+   403→                <p class="text-gray-400 mb-6">سیستم تحلیل تکنیکال پیشرفته</p>
+   404→                <div class="text-gray-500">
+   405→                    © 2025 اتوماسیون هوشمند. تمام حقوق محفوظ است.
+   406→                </div>
+   407→            </div>
+   408→        </div>
+   409→    </footer>
+   410→
+   411→    <script>
+   412→        class SettingsManager {
+   413→            constructor() {
+   414→                // Load synchronously from localStorage first (immediate UI population)
+   415→                this.loadSettings();
+   416→                // Then async-load from database (DB takes priority)
+   417→                this.loadSettingsAsync();
+   418→                this.bindEvents();
+   419→            }
+   420→
+   421→            getDefaultSettings() {
+   422→                return {
+   423→                    symbolName: 'DOT',
+   424→                    interval: '1h',
+   425→                    limit: 1000,
+   426→                    lookback: 50,
+   427→                    volMult: 0.2,
+   428→                    avgVolPeriod: 50,
+   429→                    rsiThreshold: 50,
+   430→                    rsiPeriod: 14,
+   431→                    atrPeriod: 14,
+   432→                    tpLongMult: 20,
+   433→                    slLongMult: 6,
+   434→                    tpShortMult: 24,
+   435→                    slShortMult: 4,
+   436→                    longFixedTp: null,
+   437→                    longFixedSl: null,
+   438→                    shortFixedTp: null,
+   439→                    shortFixedSl: 6,
+   440→                    apiKey: '',
+   441→                    secretKey: '',
+   442→                    baseUrl: 'https://api.toobit.com'
+   443→                };
+   444→            }
+   445→
+   446→            async dbGet(key) {
+   447→                try {
+   448→                    const response = await fetch(`/api/db/automation-state?key=${encodeURIComponent(key)}`);
+   449→                    if (!response.ok) return null;
+   450→                    const data = await response.json();
+   451→                    // API returns { success: true, data: value }
+   452→                    if (data.success && data.data !== undefined && data.data !== null) {
+   453→                        return data.data;
+   454→                    }
+   455→                    return data.value !== undefined ? data.value : null;
+   456→                } catch (e) { return null; }
+   457→            }
+   458→
+   459→            async dbSet(key, value) {
+   460→                try {
+   461→                    await fetch('/api/db/automation-state', {
+   462→                        method: 'POST',
+   463→                        headers: { 'Content-Type': 'application/json' },
+   464→                        body: JSON.stringify({ key, value })
+   465→                    });
+   466→                } catch (e) { /* ignore */ }
+   467→            }
+   468→
+   469→            async dbDelete(key) {
+   470→                try {
+   471→                    await fetch(`/api/db/automation-state?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
+   472→                } catch (e) { /* ignore */ }
+   473→            }
+   474→
+   475→            async loadApiKeysFromDB() {
+   476→                try {
+   477→                    const dbKeys = await this.dbGet('settings_apiKeys');
+   478→                    if (dbKeys) {
+   479→                        const keys = typeof dbKeys === 'string' ? JSON.parse(dbKeys) : dbKeys;
+   480→                        if (keys.apiKey) document.getElementById('api-key').value = keys.apiKey;
+   481→                        if (keys.secretKey) document.getElementById('secret-key').value = keys.secretKey;
+   482→                        if (keys.baseUrl) document.getElementById('base-url').value = keys.baseUrl;
+   483→                    }
+   484→                } catch (e) { /* ignore */ }
+   485→            }
+   486→
+   487→            /**
+   488→             * ✓ Cloudflare-ready: Save the full marketSignalSettings object to the database.
+   489→             * This ensures ALL settings (indicators, symbol, API keys, etc.) are persisted
+   490→             * server-side and available to the cron-triggered run-cycle.
+   491→             */
+   492→            async saveSettingsToDB(settings) {
+   493→                try {
+   494→                    // Save the complete settings object under 'marketSignalSettings' key
+   495→                    await this.dbSet('marketSignalSettings', settings);
+   496→                    // Also keep the apiKeys entry for backwards compatibility
+   497→                    await this.dbSet('settings_apiKeys', {
+   498→                        apiKey: settings.apiKey || '',
+   499→                        secretKey: settings.secretKey || '',
+   500→                        baseUrl: settings.baseUrl || 'https://api.toobit.com'
+   501→                    });
+   502→                    console.log('✓ Settings saved to database (permanent storage)');
+   503→                } catch (e) {
+   504→                    console.warn('Could not save settings to database:', e);
+   505→                }
+   506→            }
+   507→
+   508→            /**
+   509→             * ✓ Cloudflare-ready: Load full settings from the database on page load.
+   510→             * DB takes priority over localStorage. Falls back gracefully if DB is unavailable.
+   511→             */
+   512→            async loadSettingsFromDB() {
+   513→                try {
+   514→                    const dbSettings = await this.dbGet('marketSignalSettings');
+   515→                    if (dbSettings) {
+   516→                        const settings = typeof dbSettings === 'string' ? JSON.parse(dbSettings) : dbSettings;
+   517→                        // Merge DB settings over localStorage (DB wins)
+   518→                        const local = JSON.parse(localStorage.getItem('marketSignalSettings') || '{}');
+   519→                        const merged = { ...this.getDefaultSettings(), ...local, ...settings };
+   520→                        localStorage.setItem('marketSignalSettings', JSON.stringify(merged));
+   521→                        return merged;
+   522→                    }
+   523→                } catch (e) { /* ignore */ }
+   524→                return null;
+   525→            }
+   526→
+   527→            loadSettings() {
+   528→                const saved = localStorage.getItem('marketSignalSettings');
+   529→                const settings = saved ? JSON.parse(saved) : this.getDefaultSettings();
+   530→                
+   531→                // Apply settings to form
+   532→                Object.keys(settings).forEach(key => {
+   533→                    const element = document.getElementById(key.replace(/([A-Z])/g, '-$1').toLowerCase());
+   534→                    if (element) {
+   535→                        if (settings[key] === null || settings[key] === '') {
+   536→                            element.value = '';
+   537→                        } else {
+   538→                            element.value = settings[key];
+   539→                        }
+   540→                    }
+   541→                });
+   542→
+   543→                // Load API keys from DB (takes priority)
+   544→                this.loadApiKeysFromDB();
+   545→            }
+   546→
+   547→            /**
+   548→             * ✓ Cloudflare-ready: Async load full settings from database.
+   549→             * DB takes priority over localStorage. Re-populates the form if DB has newer data.
+   550→             */
+   551→            async loadSettingsAsync() {
+   552→                const dbSettings = await this.loadSettingsFromDB();
+   553→                if (dbSettings) {
+   554→                    // Re-apply merged settings to the form
+   555→                    Object.keys(dbSettings).forEach(key => {
+   556→                        const element = document.getElementById(key.replace(/([A-Z])/g, '-$1').toLowerCase());
+   557→                        if (element) {
+   558→                            if (dbSettings[key] === null || dbSettings[key] === '') {
+   559→                                element.value = '';
+   560→                            } else {
+   561→                                element.value = dbSettings[key];
+   562→                            }
+   563→                        }
+   564→                    });
+   565→                    console.log('✓ Settings loaded from database (permanent storage)');
+   566→                }
+   567→            }
+   568→
+   569→            saveSettings() {
+   570→                const settings = {};
+   571→                const inputs = document.querySelectorAll('input, select');
+   572→                
+   573→                inputs.forEach(input => {
+   574→                    const key = input.id.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+   575→                    if (input.type === 'number') {
+   576→                        settings[key] = input.value === '' ? null : parseFloat(input.value);
+   577→                    } else {
+   578→                        // تبدیل نماد به حروف بزرگ قبل از ذخیره
+   579→                        if (key === 'symbolName') {
+   580→                            settings[key] = input.value.toUpperCase();
+   581→                        } else {
+   582→                            settings[key] = input.value;
+   583→                        }
+   584→                    }
+   585→                });
+   586→                
+   587→                localStorage.setItem('marketSignalSettings', JSON.stringify(settings));
+   588→
+   589→                // ✓ Cloudflare-ready: Save ALL settings to the permanent database (KV in Cloudflare)
+   590→                // This makes settings available to server-side operations (cron-triggered run-cycle)
+   591→                // and persists across devices/browsers.
+   592→                this.saveSettingsToDB(settings);
+   593→
+   594→                // Show success message
+   595→                this.showNotification('تنظیمات با موفقیت ذخیره شد!', 'success');
+   596→            }
+   597→
+   598→            resetSettings() {
+   599→                if (confirm('آیا مطمئن هستید که می‌خواهید تنظیمات را به حالت پیش‌فرض بازنشانی کنید؟')) {
+   600→                    localStorage.removeItem('marketSignalSettings');
+   601→                    // ✓ Also clear from permanent database
+   602→                    this.dbDelete('settings_apiKeys');
+   603→                    this.dbDelete('marketSignalSettings');
+   604→                    this.loadSettings();
+   605→                    this.showNotification('تنظیمات به حالت پیش‌فرض بازنشانی شد.', 'info');
+   606→                }
+   607→            }
+   608→
+   609→            showNotification(message, type = 'success') {
+   610→                const notification = document.createElement('div');
+   611→                notification.className = `fixed top-32 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg glass-effect ${
+   612→                    type === 'success' ? 'text-green-400' : 'text-blue-400'
+   613→                }`;
+   614→                notification.innerHTML = `
+   615→                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'} ml-2"></i>
+   616→                    ${message}
+   617→                `;
+   618→                
+   619→                document.body.appendChild(notification);
+   620→                
+   621→                setTimeout(() => {
+   622→                    notification.remove();
+   623→                }, 3000);
+   624→            }
+   625→
+   626→            bindEvents() {
+   627→                document.getElementById('save-settings').addEventListener('click', () => {
+   628→                    this.saveSettings();
+   629→                });
+   630→                
+   631→                document.getElementById('reset-settings').addEventListener('click', () => {
+   632→                    this.resetSettings();
+   633→                });
+   634→                
+   635→                // ✓ مورد ۵: Update credentials button
+   636→                document.getElementById('update-credentials-btn').addEventListener('click', async () => {
+   637→                    const newUsername = document.getElementById('auth-new-username').value.trim();
+   638→                    const currentPassword = document.getElementById('auth-current-password').value;
+   639→                    const newPassword = document.getElementById('auth-new-password').value;
+   640→                    const msgDiv = document.getElementById('auth-message');
+   641→
+   642→                    if (!newUsername || !currentPassword || !newPassword) {
+   643→                        msgDiv.className = 'mt-4 text-sm text-red-400';
+   644→                        msgDiv.textContent = 'همه فیلدها الزامی است';
+   645→                        msgDiv.classList.remove('hidden');
+   646→                        return;
+   647→                    }
+   648→
+   649→                    try {
+   650→                        const response = await fetch('/api/auth/update-credentials', {
+   651→                            method: 'POST',
+   652→                            headers: { 'Content-Type': 'application/json' },
+   653→                            body: JSON.stringify({ newUsername, currentPassword, newPassword })
+   654→                        });
+   655→                        const data = await response.json();
+   656→                        if (data.success) {
+   657→                            msgDiv.className = 'mt-4 text-sm text-green-400';
+   658→                            msgDiv.textContent = 'اعتبارنامه‌ها با موفقیت ذخیره شدند ✓';
+   659→                            document.getElementById('auth-current-password').value = '';
+   660→                            document.getElementById('auth-new-password').value = '';
+   661→                            setTimeout(() => msgDiv.classList.add('hidden'), 5000);
+   662→                        } else {
+   663→                            msgDiv.className = 'mt-4 text-sm text-red-400';
+   664→                            msgDiv.textContent = data.error || 'خطا در ذخیره اعتبارنامه‌ها';
+   665→                        }
+   666→                        msgDiv.classList.remove('hidden');
+   667→                    } catch (e) {
+   668→                        msgDiv.className = 'mt-4 text-sm text-red-400';
+   669→                        msgDiv.textContent = 'خطا در ارتباط با سرور';
+   670→                        msgDiv.classList.remove('hidden');
+   671→                    }
+   672→                });
+   673→
+   674→                // ✓ مورد ۵: Logout button
+   675→                document.getElementById('logout-btn').addEventListener('click', async () => {
+   676→                    try {
+   677→                        await fetch('/api/auth/logout', { method: 'POST' });
+   678→                        window.location.href = '/login.html';
+   679→                    } catch (e) {
+   680→                        window.location.href = '/login.html';
+   681→                    }
+   682→                });
+   683→
+   684→                // تبدیل خودکار نماد به حروف بزرگ در حین تایپ
+   685→                const symbolInput = document.getElementById('symbol-name');
+   686→                symbolInput.addEventListener('input', (e) => {
+   687→                    const cursorPosition = e.target.selectionStart;
+   688→                    e.target.value = e.target.value.toUpperCase();
+   689→                    e.target.setSelectionRange(cursorPosition, cursorPosition);
+   690→                });
+   691→            }
+   692→        }
+   693→
+   694→        // Initialize settings manager
+   695→        const settingsManager = new SettingsManager();
+   696→    </script>
+   697→</body>
+   698→</html>
+   699→

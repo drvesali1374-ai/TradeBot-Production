@@ -238,7 +238,29 @@ class AutomationManager {
             minPriceDistancePercent: 0.5,
             leverage: 4,
             breakAtrMultiplier: 0.20,
-            // Bale (فعلاً اینجا باقی می‌ماند، در فاز ۲ منتقل می‌شود)
+            // ✓ Task 19: Strategy params (moved from settings.html)
+            // Market params
+            interval: '1h',
+            limit: 1000,
+            lookback: 50,
+            // Indicator params
+            atrPeriod: 14,
+            rsiPeriod: 14,
+            avgVolPeriod: 50,
+            // TP/SL multipliers
+            tpLongMult: 20,
+            slLongMult: 6,
+            tpShortMult: 24,
+            slShortMult: 4,
+            // Fixed TP/SL (null = ATR-based)
+            longFixedTp: null,
+            longFixedSl: null,
+            shortFixedTp: null,
+            shortFixedSl: 6,
+            // Bale (Task 19: moved to settings.html, but kept here for backward compat —
+            //   sendBaleNotification() reads from this.settings.baleToken/baleChatId;
+            //   loadSettings() syncs them from marketSignalSettings so settings.html
+            //   remains the canonical source)
             baleToken: '',
             baleChatId: ''
         };
@@ -280,6 +302,48 @@ class AutomationManager {
                 localStorage.setItem('marketSignalSettings', JSON.stringify(merged));
             }
         } catch (e) { /* ignore */ }
+
+        // ✓ Task 19: Cross-source sync.
+        //   - Bale settings (baleToken/baleChatId) are now managed by settings.html
+        //     (saved to marketSignalSettings). Copy them into this.settings so
+        //     sendBaleNotification() picks up the latest values without requiring
+        //     the user to re-enter them on automation.html.
+        //   - Strategy params (interval, limit, lookback, atrPeriod, rsiPeriod,
+        //     avgVolPeriod, tpLongMult, slLongMult, tpShortMult, slShortMult,
+        //     longFixedTp, longFixedSl, shortFixedTp, shortFixedSl) — for backward
+        //     compat: if this.settings still has defaults (no automation_settings
+        //     saved yet) but marketSignalSettings has user-saved values (from the
+        //     old settings.html), migrate them into this.settings so the user's
+        //     existing configuration is preserved.
+        try {
+            const mss = JSON.parse(localStorage.getItem('marketSignalSettings') || '{}');
+            if (mss && typeof mss === 'object') {
+                // Bale — settings.html is canonical source, always wins
+                if (typeof mss.baleToken === 'string') this.settings.baleToken = mss.baleToken;
+                if (typeof mss.baleChatId === 'string') this.settings.baleChatId = mss.baleChatId;
+                // Strategy params — migrate from marketSignalSettings if this.settings
+                // still has defaults (i.e., the user hasn't saved automation_settings
+                // post-Task-19 yet). Once the user saves from automation.html,
+                // this.settings becomes the canonical source.
+                const savedAuto = localStorage.getItem('automation_settings');
+                if (!savedAuto) {
+                    if (mss.interval) this.settings.interval = mss.interval;
+                    if (typeof mss.limit === 'number') this.settings.limit = mss.limit;
+                    if (typeof mss.lookback === 'number') this.settings.lookback = mss.lookback;
+                    if (typeof mss.atrPeriod === 'number') this.settings.atrPeriod = mss.atrPeriod;
+                    if (typeof mss.rsiPeriod === 'number') this.settings.rsiPeriod = mss.rsiPeriod;
+                    if (typeof mss.avgVolPeriod === 'number') this.settings.avgVolPeriod = mss.avgVolPeriod;
+                    if (typeof mss.tpLongMult === 'number') this.settings.tpLongMult = mss.tpLongMult;
+                    if (typeof mss.slLongMult === 'number') this.settings.slLongMult = mss.slLongMult;
+                    if (typeof mss.tpShortMult === 'number') this.settings.tpShortMult = mss.tpShortMult;
+                    if (typeof mss.slShortMult === 'number') this.settings.slShortMult = mss.slShortMult;
+                    if (mss.longFixedTp !== undefined) this.settings.longFixedTp = mss.longFixedTp;
+                    if (mss.longFixedSl !== undefined) this.settings.longFixedSl = mss.longFixedSl;
+                    if (mss.shortFixedTp !== undefined) this.settings.shortFixedTp = mss.shortFixedTp;
+                    if (mss.shortFixedSl !== undefined) this.settings.shortFixedSl = mss.shortFixedSl;
+                }
+            }
+        } catch (e) { /* ignore */ }
         
         this.populateSettingsForm();
     }
@@ -317,20 +381,58 @@ class AutomationManager {
             minPriceDistancePercent: parseFloat(document.getElementById('min-price-distance-percent-long').value) || 0.5,
             leverage: parseInt(document.getElementById('leverage-long').value) || 4,
             breakAtrMultiplier: parseFloat(document.getElementById('break-atr-multiplier-long').value) || 0.20,
-            baleToken: document.getElementById('bale-token').value.trim(),
-            baleChatId: document.getElementById('bale-chat-id').value.trim()
+            // ✓ Task 19: Strategy params (moved from settings.html — now read from automation.html DOM)
+            // Market params
+            interval: document.getElementById('interval').value || '1h',
+            limit: parseInt(document.getElementById('limit').value) || 1000,
+            lookback: parseInt(document.getElementById('lookback').value) || 50,
+            // Indicator params
+            atrPeriod: parseInt(document.getElementById('atr-period').value) || 14,
+            rsiPeriod: parseInt(document.getElementById('rsi-period').value) || 14,
+            avgVolPeriod: parseInt(document.getElementById('avg-vol-period').value) || 50,
+            // TP/SL multipliers
+            tpLongMult: parseFloat(document.getElementById('tp-long-mult').value) || 20,
+            slLongMult: parseFloat(document.getElementById('sl-long-mult').value) || 6,
+            tpShortMult: parseFloat(document.getElementById('tp-short-mult').value) || 24,
+            slShortMult: parseFloat(document.getElementById('sl-short-mult').value) || 4,
+            // Fixed TP/SL (empty = null = ATR-based)
+            longFixedTp: document.getElementById('long-fixed-tp').value === '' ? null : parseFloat(document.getElementById('long-fixed-tp').value),
+            longFixedSl: document.getElementById('long-fixed-sl').value === '' ? null : parseFloat(document.getElementById('long-fixed-sl').value),
+            shortFixedTp: document.getElementById('short-fixed-tp').value === '' ? null : parseFloat(document.getElementById('short-fixed-tp').value),
+            shortFixedSl: document.getElementById('short-fixed-sl').value === '' ? null : parseFloat(document.getElementById('short-fixed-sl').value),
+            // Bale — DOM elements moved to settings.html (Task 19). Preserve existing
+            // this.settings.baleToken/baleChatId (which loadSettings() syncs from marketSignalSettings).
+            baleToken: this.settings.baleToken || '',
+            baleChatId: this.settings.baleChatId || ''
         };
         localStorage.setItem('automation_settings', JSON.stringify(this.settings));
         
         // Also save to DB
         this.dbSet('automation_settings', this.settings);
 
-        // Save HTF Confirmation Source to marketSignalSettings (used by analyzeMarketData)
+        // ✓ Task 19: Save HTF Confirmation Source + new strategy params to marketSignalSettings
+        // (used by analyzeMarketData fallback AND by the server-side cycle-engine.ts cron —
+        //  the backend reads strategy params from marketSignalSettings, so we keep them in sync).
         const htfSource = document.getElementById('htf-confirmation-source').value;
         const marketSettings = JSON.parse(localStorage.getItem('marketSignalSettings') || '{}');
         marketSettings.htfConfirmationSource = htfSource;
+        // Sync strategy params (moved from settings.html) so backend cron continues to use latest values
+        marketSettings.interval = this.settings.interval;
+        marketSettings.limit = this.settings.limit;
+        marketSettings.lookback = this.settings.lookback;
+        marketSettings.atrPeriod = this.settings.atrPeriod;
+        marketSettings.rsiPeriod = this.settings.rsiPeriod;
+        marketSettings.avgVolPeriod = this.settings.avgVolPeriod;
+        marketSettings.tpLongMult = this.settings.tpLongMult;
+        marketSettings.slLongMult = this.settings.slLongMult;
+        marketSettings.tpShortMult = this.settings.tpShortMult;
+        marketSettings.slShortMult = this.settings.slShortMult;
+        marketSettings.longFixedTp = this.settings.longFixedTp;
+        marketSettings.longFixedSl = this.settings.longFixedSl;
+        marketSettings.shortFixedTp = this.settings.shortFixedTp;
+        marketSettings.shortFixedSl = this.settings.shortFixedSl;
         localStorage.setItem('marketSignalSettings', JSON.stringify(marketSettings));
-        // ✓ Cloudflare-ready: persist marketSignalSettings (incl. HTF source) to permanent DB
+        // ✓ Cloudflare-ready: persist marketSignalSettings (incl. HTF source + strategy params) to permanent DB
         // so server-side run-cycle can read the same indicator configuration.
         this.dbSet('marketSignalSettings', marketSettings);
         this.updateHtfDescription(htfSource);
@@ -367,8 +469,42 @@ class AutomationManager {
         document.getElementById('entry-margin-percent-short').value = this.settings.entryMarginPercentShort ?? 5;
         document.getElementById('min-price-distance-percent-long').value = this.settings.minPriceDistancePercentLong ?? 0.5;
         document.getElementById('min-price-distance-percent-short').value = this.settings.minPriceDistancePercentShort ?? 0.5;
-        document.getElementById('bale-token').value = this.settings.baleToken || '';
-        document.getElementById('bale-chat-id').value = this.settings.baleChatId || '';
+        // ✓ Task 19: Strategy params (moved from settings.html — populate from this.settings)
+        // Market params
+        const intervalEl = document.getElementById('interval');
+        if (intervalEl) intervalEl.value = this.settings.interval ?? '1h';
+        const limitEl = document.getElementById('limit');
+        if (limitEl) limitEl.value = this.settings.limit ?? 1000;
+        const lookbackEl = document.getElementById('lookback');
+        if (lookbackEl) lookbackEl.value = this.settings.lookback ?? 50;
+        // Indicator params
+        const atrPeriodEl = document.getElementById('atr-period');
+        if (atrPeriodEl) atrPeriodEl.value = this.settings.atrPeriod ?? 14;
+        const rsiPeriodEl = document.getElementById('rsi-period');
+        if (rsiPeriodEl) rsiPeriodEl.value = this.settings.rsiPeriod ?? 14;
+        const avgVolPeriodEl = document.getElementById('avg-vol-period');
+        if (avgVolPeriodEl) avgVolPeriodEl.value = this.settings.avgVolPeriod ?? 50;
+        // TP/SL multipliers
+        const tpLongMultEl = document.getElementById('tp-long-mult');
+        if (tpLongMultEl) tpLongMultEl.value = this.settings.tpLongMult ?? 20;
+        const slLongMultEl = document.getElementById('sl-long-mult');
+        if (slLongMultEl) slLongMultEl.value = this.settings.slLongMult ?? 6;
+        const tpShortMultEl = document.getElementById('tp-short-mult');
+        if (tpShortMultEl) tpShortMultEl.value = this.settings.tpShortMult ?? 24;
+        const slShortMultEl = document.getElementById('sl-short-mult');
+        if (slShortMultEl) slShortMultEl.value = this.settings.slShortMult ?? 4;
+        // Fixed TP/SL (null = empty = ATR-based)
+        const longFixedTpEl = document.getElementById('long-fixed-tp');
+        if (longFixedTpEl) longFixedTpEl.value = (this.settings.longFixedTp === null || this.settings.longFixedTp === undefined) ? '' : this.settings.longFixedTp;
+        const longFixedSlEl = document.getElementById('long-fixed-sl');
+        if (longFixedSlEl) longFixedSlEl.value = (this.settings.longFixedSl === null || this.settings.longFixedSl === undefined) ? '' : this.settings.longFixedSl;
+        const shortFixedTpEl = document.getElementById('short-fixed-tp');
+        if (shortFixedTpEl) shortFixedTpEl.value = (this.settings.shortFixedTp === null || this.settings.shortFixedTp === undefined) ? '' : this.settings.shortFixedTp;
+        const shortFixedSlEl = document.getElementById('short-fixed-sl');
+        if (shortFixedSlEl) shortFixedSlEl.value = (this.settings.shortFixedSl === null || this.settings.shortFixedSl === undefined) ? '' : this.settings.shortFixedSl;
+        // Bale — DOM elements moved to settings.html (Task 19). sendBaleNotification()
+        // still reads from this.settings.baleToken/baleChatId (kept in sync by loadSettings()
+        // from marketSignalSettings). No form elements to populate on automation.html.
 
         // Load HTF Confirmation Source from marketSignalSettings
         const marketSettings = JSON.parse(localStorage.getItem('marketSignalSettings') || '{}');
@@ -556,7 +692,30 @@ class AutomationManager {
             throw new Error('داده‌های بازار موجود نیست');
         }
 
-        const settings = JSON.parse(localStorage.getItem('marketSignalSettings')) || {};
+        // ✓ Task 19: Strategy params now read from this.settings (automation_settings),
+        //   which is the canonical source after the split from settings.html.
+        //   Fall back to marketSignalSettings for backward compat (e.g., if
+        //   this.settings hasn't been saved yet, or for legacy users).
+        const settings = {
+            // Fall back to marketSignalSettings for backward compat
+            ...(JSON.parse(localStorage.getItem('marketSignalSettings') || '{}')),
+            // Override with automation settings (takes priority)
+            interval: this.settings.interval || '1h',
+            limit: this.settings.limit || 1000,
+            lookback: this.settings.lookback || 50,
+            atrPeriod: this.settings.atrPeriod || 14,
+            rsiPeriod: this.settings.rsiPeriod || 14,
+            avgVolPeriod: this.settings.avgVolPeriod || 50,
+            tpLongMult: this.settings.tpLongMult || 20,
+            slLongMult: this.settings.slLongMult || 6,
+            tpShortMult: this.settings.tpShortMult || 24,
+            slShortMult: this.settings.slShortMult || 4,
+            longFixedTp: this.settings.longFixedTp,
+            longFixedSl: this.settings.longFixedSl,
+            shortFixedTp: this.settings.shortFixedTp,
+            shortFixedSl: this.settings.shortFixedSl,
+            htfConfirmationSource: document.getElementById('htf-confirmation-source')?.value || 'signalCandleClose',
+        };
         // ✓ Phase 17: Independent Long/Short params (fall back to legacy `settings` with ??)
         const autoSettings = this.settings || {};
         const N = this.marketData.length;

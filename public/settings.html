@@ -79,6 +79,10 @@
                         <i class="fas fa-robot ml-1"></i>
                         اتوماسیون
                     </a>
+                    <a href="backtest.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+                        <i class="fas fa-history ml-1"></i>
+                        بکتست
+                    </a>
                 </div>
                 <div class="flex items-center">
                     <div class="text-2xl font-bold text-gradient">
@@ -119,200 +123,8 @@
 
             <!-- Settings Form -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Basic Settings -->
+                <!-- ✓ Task 19: API Credentials (kept — only system-level settings remain on settings.html) -->
                 <div class="glass-effect rounded-2xl p-6">
-                    <h2 class="text-2xl font-semibold mb-6 text-gradient">
-                        <i class="fas fa-sliders-h ml-2"></i>
-                        تنظیمات پایه
-                    </h2>
-                    
-                    <div class="space-y-6">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">
-                                <i class="fas fa-coins ml-1"></i>
-                                نام نماد معاملاتی
-                            </label>
-                            <input type="text" id="symbol-name" class="form-input w-full px-4 py-3 rounded-lg" 
-                                   placeholder="مثلا: DOT" value="DOT">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium mb-2">
-                                <i class="fas fa-clock ml-1"></i>
-                                تایم فریم
-                            </label>
-                            <select id="interval" class="form-input w-full px-4 py-3 rounded-lg">
-                                <option value="1h" selected>۱ ساعته</option>
-                                <option value="30m">۳۰ دقیقه</option>
-                                <option value="15m">۱۵ دقیقه</option>
-                                <option value="4h">۴ ساعته</option>
-                                <option value="1d">۱ روزه</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium mb-2">
-                                <i class="fas fa-list-ol ml-1"></i>
-                                تعداد داده‌ها
-                            </label>
-                            <input type="number" id="limit" class="form-input w-full px-4 py-3 rounded-lg" 
-                                   value="1000" min="100" max="2000">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Signal Settings -->
-                <div class="glass-effect rounded-2xl p-6">
-                    <h2 class="text-2xl font-semibold mb-6 text-gradient">
-                        <i class="fas fa-signal ml-2"></i>
-                        پارامترهای سیگنال
-                    </h2>
-                    
-                    <div class="space-y-6">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">
-                                <i class="fas fa-history ml-1"></i>
-                                دوره برگشت (LookBack)
-                            </label>
-                            <input type="number" id="lookback" class="form-input w-full px-4 py-3 rounded-lg" 
-                                   value="50" min="10" max="200">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium mb-2">
-                                <i class="fas fa-chart-bar ml-1"></i>
-                                ضریب حجم معاملات
-                            </label>
-                            <input type="number" id="vol-mult" class="form-input w-full px-4 py-3 rounded-lg" 
-                                   value="0.2" step="0.1" min="0.1" max="2">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium mb-2">
-                                <i class="fas fa-calculator ml-1"></i>
-                                دوره میانگین حجم
-                            </label>
-                            <input type="number" id="avg-vol-period" class="form-input w-full px-4 py-3 rounded-lg" 
-                                   value="50" min="10" max="200">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium mb-2">
-                                <i class="fas fa-crosshairs ml-1"></i>
-                                آستانه RSI
-                            </label>
-                            <input type="number" id="rsi-threshold" class="form-input w-full px-4 py-3 rounded-lg" 
-                                   value="50" min="0" max="100">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Technical Indicators -->
-                <div class="glass-effect rounded-2xl p-6">
-                    <h2 class="text-2xl font-semibold mb-6 text-gradient">
-                        <i class="fas fa-chart-area ml-2"></i>
-                        اندیکاتورهای تکنیکال
-                    </h2>
-                    
-                    <div class="space-y-6">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">
-                                <i class="fas fa-wave-square ml-1"></i>
-                                دوره RSI
-                            </label>
-                            <input type="number" id="rsi-period" class="form-input w-full px-4 py-3 rounded-lg" 
-                                   value="14" min="5" max="50">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium mb-2">
-                                <i class="fas fa-arrows-alt-h ml-1"></i>
-                                دوره ATR
-                            </label>
-                            <input type="number" id="atr-period" class="form-input w-full px-4 py-3 rounded-lg" 
-                                   value="14" min="5" max="50">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Risk Management -->
-                <div class="glass-effect rounded-2xl p-6">
-                    <h2 class="text-2xl font-semibold mb-6 text-gradient">
-                        <i class="fas fa-shield-alt ml-2"></i>
-                        مدیریت ریسک
-                    </h2>
-                    
-                    <div class="space-y-6">
-                        <!-- Long Position Settings -->
-                        <div class="border border-gray-600 rounded-lg p-4">
-                            <h3 class="text-lg font-medium mb-4 text-blue-400">
-                                <i class="fas fa-arrow-up ml-1"></i>
-                                پوزیشن Long
-                            </h3>
-                            
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">ضریب TP</label>
-                                    <input type="number" id="tp-long-mult" class="form-input w-full px-3 py-2 rounded-lg" 
-                                           value="20" min="1" max="100">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">ضریب SL</label>
-                                    <input type="number" id="sl-long-mult" class="form-input w-full px-3 py-2 rounded-lg" 
-                                           value="6" min="1" max="50">
-                                </div>
-                            </div>
-                            
-                            <div class="mt-4">
-                                <label class="block text-sm font-medium mb-2">TP ثابت (%)</label>
-                                <input type="number" id="long-fixed-tp" class="form-input w-full px-3 py-2 rounded-lg" 
-                                       placeholder="خالی برای ATR-based" min="0.1" max="50" step="0.1">
-                            </div>
-                            
-                            <div class="mt-4">
-                                <label class="block text-sm font-medium mb-2">SL ثابت (%)</label>
-                                <input type="number" id="long-fixed-sl" class="form-input w-full px-3 py-2 rounded-lg" 
-                                       placeholder="خالی برای ATR-based" min="0.1" max="50" step="0.1">
-                            </div>
-                        </div>
-                        
-                        <!-- Short Position Settings -->
-                        <div class="border border-gray-600 rounded-lg p-4">
-                            <h3 class="text-lg font-medium mb-4 text-red-400">
-                                <i class="fas fa-arrow-down ml-1"></i>
-                                پوزیشن Short
-                            </h3>
-                            
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">ضریب TP</label>
-                                    <input type="number" id="tp-short-mult" class="form-input w-full px-3 py-2 rounded-lg" 
-                                           value="24" min="1" max="100">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">ضریب SL</label>
-                                    <input type="number" id="sl-short-mult" class="form-input w-full px-3 py-2 rounded-lg" 
-                                           value="4" min="1" max="50">
-                                </div>
-                            </div>
-                            
-                            <div class="mt-4">
-                                <label class="block text-sm font-medium mb-2">TP ثابت (%)</label>
-                                <input type="number" id="short-fixed-tp" class="form-input w-full px-3 py-2 rounded-lg" 
-                                       placeholder="خالی برای ATR-based" min="0.1" max="50" step="0.1">
-                            </div>
-                            
-                            <div class="mt-4">
-                                <label class="block text-sm font-medium mb-2">SL ثابت (%)</label>
-                                <input type="number" id="short-fixed-sl" class="form-input w-full px-3 py-2 rounded-lg" 
-                                       placeholder="مثلا: 6" min="0.1" max="50" step="0.1">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- API Credentials -->
-                <div class="glass-effect rounded-2xl p-6 lg:col-span-2">
                     <h2 class="text-2xl font-semibold mb-6 text-gradient">
                         <i class="fas fa-key ml-2"></i>
                         تنظیمات API صرافی
@@ -349,6 +161,44 @@
                             <input type="text" id="base-url" class="form-input w-full px-4 py-3 rounded-lg" 
                                    placeholder="آدرس پایه API صرافی" value="https://api.toobit.com">
                         </div>
+                    </div>
+                </div>
+
+                <!-- ✓ Task 19: Bale Notification (moved from automation.html) -->
+                <div class="glass-effect rounded-2xl p-6">
+                    <h2 class="text-2xl font-semibold mb-6 text-gradient">
+                        <i class="fas fa-bell ml-2"></i>
+                        اطلاع‌رسانی بله
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <div class="glass-effect rounded-lg p-3 mb-4 text-sm text-blue-300">
+                            <i class="fas fa-info-circle ml-2"></i>
+                            تنظیمات ربات بله برای ارسال نوتیفیکیشن‌های اتوماسیون
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-robot ml-1"></i>
+                                Bot Token
+                            </label>
+                            <input type="text" id="bale-token" class="form-input w-full px-4 py-3 rounded-lg" 
+                                   placeholder="توکن ربات بله">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-comment ml-1"></i>
+                                Chat ID
+                            </label>
+                            <input type="text" id="bale-chat-id" class="form-input w-full px-4 py-3 rounded-lg" 
+                                   placeholder="شناسه چت بله">
+                        </div>
+                        
+                        <button id="test-bale-btn" class="glass-effect px-6 py-3 rounded-lg hover:bg-purple-600 transition-all duration-300 w-full">
+                            <i class="fas fa-paper-plane ml-2"></i>
+                            ارسال پیام تست
+                        </button>
+                        <div id="bale-test-message" class="text-sm hidden mt-2"></div>
                     </div>
                 </div>
             </div>
@@ -419,27 +269,14 @@
             }
 
             getDefaultSettings() {
+                // ✓ Task 19: Strategy params moved to automation.html. settings.html
+                //   now ONLY holds system-level settings (API keys + Bale).
                 return {
-                    symbolName: 'DOT',
-                    interval: '1h',
-                    limit: 1000,
-                    lookback: 50,
-                    volMult: 0.2,
-                    avgVolPeriod: 50,
-                    rsiThreshold: 50,
-                    rsiPeriod: 14,
-                    atrPeriod: 14,
-                    tpLongMult: 20,
-                    slLongMult: 6,
-                    tpShortMult: 24,
-                    slShortMult: 4,
-                    longFixedTp: null,
-                    longFixedSl: null,
-                    shortFixedTp: null,
-                    shortFixedSl: 6,
                     apiKey: '',
                     secretKey: '',
-                    baseUrl: 'https://api.toobit.com'
+                    baseUrl: 'https://api.toobit.com',
+                    baleToken: '',
+                    baleChatId: ''
                 };
             }
 
@@ -681,13 +518,72 @@
                     }
                 });
 
-                // تبدیل خودکار نماد به حروف بزرگ در حین تایپ
-                const symbolInput = document.getElementById('symbol-name');
-                symbolInput.addEventListener('input', (e) => {
-                    const cursorPosition = e.target.selectionStart;
-                    e.target.value = e.target.value.toUpperCase();
-                    e.target.setSelectionRange(cursorPosition, cursorPosition);
-                });
+                // ✓ Task 19: Test Bale notification button (moved from automation.html)
+                const testBaleBtn = document.getElementById('test-bale-btn');
+                if (testBaleBtn) {
+                    testBaleBtn.addEventListener('click', async () => {
+                        await this.testBaleNotification();
+                    });
+                }
+            }
+
+            /**
+             * ✓ Task 19: Send a test Bale notification directly from browser.
+             *   Uses mode: 'no-cors' + Content-Type: text/plain to bypass Bale's CORS
+             *   restrictions (same approach as automation-manager.js sendBaleNotification).
+             *   Falls back to /api/bale-send server-side route if direct send fails.
+             */
+            async sendBaleNotification(text) {
+                const token = (document.getElementById('bale-token')?.value || '').trim();
+                const chatId = (document.getElementById('bale-chat-id')?.value || '').trim();
+
+                if (!token || !chatId) {
+                    return { ok: false, error: 'Not configured' };
+                }
+
+                try {
+                    const baleUrl = `https://tapi.bale.ai/bot${token}/sendMessage`;
+                    await fetch(baleUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({
+                            chat_id: String(chatId),
+                            text: String(text)
+                        })
+                    });
+                    return { ok: true };
+                } catch (directError) {
+                    // Fallback to server-side /api/bale-send
+                    try {
+                        const response = await fetch('/api/bale-send', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token, chatId, text })
+                        });
+                        return await response.json();
+                    } catch (error) {
+                        return { ok: false, error: error.message };
+                    }
+                }
+            }
+
+            async testBaleNotification() {
+                const msgDiv = document.getElementById('bale-test-message');
+                const text = '🔔 پیام تست از صفحه تنظیمات سیستم\nآماده ارسال اطلاعات هستم ✅';
+                const result = await this.sendBaleNotification(text);
+                if (msgDiv) {
+                    if (result.ok) {
+                        msgDiv.className = 'text-sm text-green-400 mt-2';
+                        msgDiv.textContent = 'پیام تست ارسال شد ✓';
+                    } else {
+                        msgDiv.className = 'text-sm text-red-400 mt-2';
+                        msgDiv.textContent = 'خطا: ' + (result.error || 'توکن یا Chat ID تنظیم نشده');
+                    }
+                    msgDiv.classList.remove('hidden');
+                    setTimeout(() => msgDiv.classList.add('hidden'), 5000);
+                }
+                return result;
             }
         }
 
