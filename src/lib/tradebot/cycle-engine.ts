@@ -87,6 +87,19 @@ export interface AutomationSettings {
   breakDetectionMethod: 'Wick' | 'Close'
   enableBreakLifecycleManagement: boolean
   breakSequenceLifetime: number
+  // ✓ Phase 17: Independent Long/Short params (fall back to legacy fields with ??)
+  rsiLongThreshold?: number
+  rsiShortThreshold?: number
+  volMultLong?: number
+  volMultShort?: number
+  breakAtrMultiplierLong?: number
+  breakAtrMultiplierShort?: number
+  leverageLong?: number
+  leverageShort?: number
+  entryMarginPercentLong?: number
+  entryMarginPercentShort?: number
+  minPriceDistancePercentLong?: number
+  minPriceDistancePercentShort?: number
   baleToken: string
   baleChatId: string
 }
@@ -191,6 +204,19 @@ function getDefaultAutomationSettings(): AutomationSettings {
     breakDetectionMethod: 'Wick',
     enableBreakLifecycleManagement: true,
     breakSequenceLifetime: 0,
+    // ✓ Phase 17: Independent Long/Short params (fall back to legacy fields with ??)
+    rsiLongThreshold: 30,
+    rsiShortThreshold: 70,
+    volMultLong: 0.2,
+    volMultShort: 0.2,
+    breakAtrMultiplierLong: 0.20,
+    breakAtrMultiplierShort: 0.20,
+    leverageLong: 4,
+    leverageShort: 4,
+    entryMarginPercentLong: 5,
+    entryMarginPercentShort: 5,
+    minPriceDistancePercentLong: 0.5,
+    minPriceDistancePercentShort: 0.5,
     baleToken: '',
     baleChatId: ''
   }
@@ -594,38 +620,44 @@ export async function runCycle(
 
     // ✓ Fake Breakout settings (read from automationSettings — present in scope)
     const enableMeaningfulBreakFilter = automationSettings.enableMeaningfulBreakFilter !== false
-    const breakAtrMultiplier = automationSettings.breakAtrMultiplier ?? 0.20
+    // ✓ Phase 17: Direction-specific break ATR multipliers (fall back to legacy breakAtrMultiplier)
+    const breakAtrMultiplierLong =
+      automationSettings.breakAtrMultiplierLong ?? automationSettings.breakAtrMultiplier ?? 0.20
+    const breakAtrMultiplierShort =
+      automationSettings.breakAtrMultiplierShort ?? automationSettings.breakAtrMultiplier ?? 0.20
     const breakDetectionMethod: 'Wick' | 'Close' =
       automationSettings.breakDetectionMethod === 'Close' ? 'Close' : 'Wick'
     const enableBreakLifecycleManagement = automationSettings.enableBreakLifecycleManagement !== false
     const breakSequenceLifetime = automationSettings.breakSequenceLifetime ?? 0
 
     // ✓ Track meaningful breaks (used when enableMeaningfulBreakFilter is true)
-    //   A meaningful break for Long = price goes BELOW prevDailyLow by (atr * breakAtrMultiplier)
-    //   A meaningful break for Short = price goes ABOVE prevDailyHigh by (atr * breakAtrMultiplier)
+    //   A meaningful break for Long = price goes BELOW prevDailyLow by (atr * breakAtrMultiplierLong)
+    //   A meaningful break for Short = price goes ABOVE prevDailyHigh by (atr * breakAtrMultiplierShort)
     const lastMeaningfulBreakLong = new Array(N).fill(Infinity)
     const lastMeaningfulBreakShort = new Array(N).fill(Infinity)
     {
       let lastMBL: number | null = null
       let lastMBS: number | null = null
       for (let i = 1; i < N; i++) {
-        const bd = (atr[i] ?? 0) * breakAtrMultiplier
+        // ✓ Phase 17: Direction-specific ATR multipliers
+        const bdLong = (atr[i] ?? 0) * breakAtrMultiplierLong
+        const bdShort = (atr[i] ?? 0) * breakAtrMultiplierShort
         let mbl = false
         let mbs = false
         if (breakDetectionMethod === 'Wick') {
           mbl =
             prevDailyLows[i] !== null &&
-            data[i].low <= ((prevDailyLows[i] as number) - bd)
+            data[i].low <= ((prevDailyLows[i] as number) - bdLong)
           mbs =
             prevDailyHighs[i] !== null &&
-            data[i].high >= ((prevDailyHighs[i] as number) + bd)
+            data[i].high >= ((prevDailyHighs[i] as number) + bdShort)
         } else {
           mbl =
             prevDailyLows[i] !== null &&
-            data[i].close <= ((prevDailyLows[i] as number) - bd)
+            data[i].close <= ((prevDailyLows[i] as number) - bdLong)
           mbs =
             prevDailyHighs[i] !== null &&
-            data[i].close >= ((prevDailyHighs[i] as number) + bd)
+            data[i].close >= ((prevDailyHighs[i] as number) + bdShort)
         }
         if (mbl) lastMBL = i
         if (mbs) lastMBS = i
@@ -680,23 +712,25 @@ export async function runCycle(
         // ===========================================================
 
         // Compute meaningful break conditions for this candle
-        const breakDistance = (atr[i] ?? 0) * breakAtrMultiplier
+        // ✓ Phase 17: Direction-specific ATR multipliers
+        const breakDistanceLong = (atr[i] ?? 0) * breakAtrMultiplierLong
+        const breakDistanceShort = (atr[i] ?? 0) * breakAtrMultiplierShort
         let isMeaningfulBreakLong = false
         let isMeaningfulBreakShort = false
         if (breakDetectionMethod === 'Wick') {
           isMeaningfulBreakLong =
             prevDailyLows[i] !== null &&
-            data[i].low <= ((prevDailyLows[i] as number) - breakDistance)
+            data[i].low <= ((prevDailyLows[i] as number) - breakDistanceLong)
           isMeaningfulBreakShort =
             prevDailyHighs[i] !== null &&
-            data[i].high >= ((prevDailyHighs[i] as number) + breakDistance)
+            data[i].high >= ((prevDailyHighs[i] as number) + breakDistanceShort)
         } else {
           isMeaningfulBreakLong =
             prevDailyLows[i] !== null &&
-            data[i].close <= ((prevDailyLows[i] as number) - breakDistance)
+            data[i].close <= ((prevDailyLows[i] as number) - breakDistanceLong)
           isMeaningfulBreakShort =
             prevDailyHighs[i] !== null &&
-            data[i].close >= ((prevDailyHighs[i] as number) + breakDistance)
+            data[i].close >= ((prevDailyHighs[i] as number) + breakDistanceShort)
         }
 
         // 1. Check expiry — if a break has been waiting too long without recovery, discard it
@@ -777,9 +811,9 @@ export async function runCycle(
           if (breakState.type === 'Long') {
             const condLong =
               avgVols[i] !== null &&
-              data[i].amount > (avgVols[i] as number) * (marketSettings.volMult || 0.2) &&
+              data[i].amount > (avgVols[i] as number) * (automationSettings.volMultLong ?? marketSettings.volMult ?? 0.2) &&
               rsi[i] !== null &&
-              (rsi[i] as number) < (marketSettings.rsiThreshold || 50) &&
+              (rsi[i] as number) < (automationSettings.rsiLongThreshold ?? marketSettings.rsiThreshold ?? 30) &&
               htfConfirmLong
 
             if (condLong) {
@@ -810,9 +844,9 @@ export async function runCycle(
           } else if (breakState.type === 'Short') {
             const condShort =
               avgVols[i] !== null &&
-              data[i].amount > (avgVols[i] as number) * (marketSettings.volMult || 0.2) &&
+              data[i].amount > (avgVols[i] as number) * (automationSettings.volMultShort ?? marketSettings.volMult ?? 0.2) &&
               rsi[i] !== null &&
-              (rsi[i] as number) > (marketSettings.rsiThreshold || 50) &&
+              (rsi[i] as number) > (automationSettings.rsiShortThreshold ?? marketSettings.rsiThreshold ?? 70) &&
               htfConfirmShort
 
             if (condShort) {
@@ -868,18 +902,18 @@ export async function runCycle(
           isCrossOverPL &&
           recentBreakLong <= (marketSettings.lookback || 50) &&
           avgVols[i] !== null &&
-          data[i].amount > (avgVols[i] as number) * (marketSettings.volMult || 0.2) &&
+          data[i].amount > (avgVols[i] as number) * (automationSettings.volMultLong ?? marketSettings.volMult ?? 0.2) &&
           rsi[i] !== null &&
-          (rsi[i] as number) < (marketSettings.rsiThreshold || 50) &&
+          (rsi[i] as number) < (automationSettings.rsiLongThreshold ?? marketSettings.rsiThreshold ?? 30) &&
           htfConfirmLong
 
         const condShort =
           isCrossUnderPH &&
           recentBreakShort <= (marketSettings.lookback || 50) &&
           avgVols[i] !== null &&
-          data[i].amount > (avgVols[i] as number) * (marketSettings.volMult || 0.2) &&
+          data[i].amount > (avgVols[i] as number) * (automationSettings.volMultShort ?? marketSettings.volMult ?? 0.2) &&
           rsi[i] !== null &&
-          (rsi[i] as number) > (marketSettings.rsiThreshold || 50) &&
+          (rsi[i] as number) > (automationSettings.rsiShortThreshold ?? marketSettings.rsiThreshold ?? 70) &&
           htfConfirmShort
 
         if (condLong) {
@@ -1071,6 +1105,18 @@ export async function runCycle(
     }
 
     log(`${symbol.name}: سیگنال آماده ورود - ${selectedSignal.type}`, 'success', symbol.name)
+
+    // ✓ Phase 17: Direction-specific risk control params (fall back to legacy with ??)
+    const isLongSignal = selectedSignal.type === 'Long'
+    const effLeverage = isLongSignal
+      ? (automationSettings.leverageLong ?? automationSettings.leverage)
+      : (automationSettings.leverageShort ?? automationSettings.leverage)
+    const effEntryMarginPercent = isLongSignal
+      ? (automationSettings.entryMarginPercentLong ?? automationSettings.entryMarginPercent)
+      : (automationSettings.entryMarginPercentShort ?? automationSettings.entryMarginPercent)
+    const effMinPriceDistancePercent = isLongSignal
+      ? (automationSettings.minPriceDistancePercentLong ?? automationSettings.minPriceDistancePercent)
+      : (automationSettings.minPriceDistancePercentShort ?? automationSettings.minPriceDistancePercent)
 
     // -------------------------------------------------------------------
     // Step 7: fetchPrice()
@@ -1407,8 +1453,8 @@ export async function runCycle(
     // -------------------------------------------------------------------
     // ✓ Step 12: calculateNewMargin() + Risk Controls
     // -------------------------------------------------------------------
-    log(`${symbol.name}: محاسبه مارجین (${automationSettings.entryMarginPercent}% از کل دارایی)...`, 'info', symbol.name)
-    const newMargin = parseFloat((totalAssets * (automationSettings.entryMarginPercent / 100)).toFixed(2))
+    log(`${symbol.name}: محاسبه مارجین (${effEntryMarginPercent}% از کل دارایی)...`, 'info', symbol.name)
+    const newMargin = parseFloat((totalAssets * (effEntryMarginPercent / 100)).toFixed(2))
     log(`${symbol.name}: مارجین محاسبه شده = ${newMargin} USDT`, 'success', symbol.name)
 
     // Helper to send Bale notification for risk-control blocks
@@ -1557,9 +1603,9 @@ export async function runCycle(
         } else {
           distancePercent = ((price - symbolLastEntryPrice) / symbolLastEntryPrice) * 100
         }
-        if (distancePercent < automationSettings.minPriceDistancePercent) {
+        if (distancePercent < effMinPriceDistancePercent) {
           log(
-            `${symbol.name}: فاصله قیمت کافی نیست (آخرین ورود: ${symbolLastEntryPrice}, فعلی: ${price}, فاصله: ${distancePercent.toFixed(2)}% < ${automationSettings.minPriceDistancePercent}%) — رد شد`,
+            `${symbol.name}: فاصله قیمت کافی نیست (آخرین ورود: ${symbolLastEntryPrice}, فعلی: ${price}, فاصله: ${distancePercent.toFixed(2)}% < ${effMinPriceDistancePercent}%) — رد شد`,
             'warning',
             symbol.name
           )
@@ -1574,8 +1620,8 @@ export async function runCycle(
               `جهت سیگنال = ${selectedSignal.type === 'Long' ? 'لانگ' : 'شورت'}\n` +
               `${distanceFormula}\n` +
               `فاصله = ${distancePercent.toFixed(4)}%\n` +
-              `حداقل فاصله قیمت = ${automationSettings.minPriceDistancePercent}%\n` +
-              `${distancePercent.toFixed(4)}% < ${automationSettings.minPriceDistancePercent}% ✗`
+              `حداقل فاصله قیمت = ${effMinPriceDistancePercent}%\n` +
+              `${distancePercent.toFixed(4)}% < ${effMinPriceDistancePercent}% ✗`
           )
           updateSymbolStateInMemory({ status: 'waiting' })
           return {
@@ -1588,7 +1634,7 @@ export async function runCycle(
             symbols
           }
         }
-        log(`${symbol.name}: فاصله قیمت OK (${distancePercent.toFixed(2)}% ≥ ${automationSettings.minPriceDistancePercent}%)`, 'success', symbol.name)
+        log(`${symbol.name}: فاصله قیمت OK (${distancePercent.toFixed(2)}% ≥ ${effMinPriceDistancePercent}%)`, 'success', symbol.name)
       } else {
         log(`${symbol.name}: آخرین ورود هم‌جهت در تاریخچه یافت نشد — کنترل قیمت انجام نشد`, 'info', symbol.name)
       }
@@ -1640,8 +1686,8 @@ export async function runCycle(
       await notifyRiskControlBlocked(
         'مارجین مثبت (Positive Margin)',
         `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
-          `درصد مارجین ورودی = ${automationSettings.entryMarginPercent}%\n` +
-          `مارجین محاسبه‌شده = ${totalAssets.toFixed(4)} × ${automationSettings.entryMarginPercent}% = ${newMargin.toFixed(4)} USDT\n` +
+          `درصد مارجین ورودی = ${effEntryMarginPercent}%\n` +
+          `مارجین محاسبه‌شده = ${totalAssets.toFixed(4)} × ${effEntryMarginPercent}% = ${newMargin.toFixed(4)} USDT\n` +
           `مارجین نهایی = max(${newMargin.toFixed(4)}, 0) = ${finalMargin.toFixed(4)} USDT\n` +
           `${finalMargin.toFixed(4)} ≤ 0 ✗`
       )
@@ -1669,7 +1715,7 @@ export async function runCycle(
         symbol: symbol.name,
         direction: signalType,
         usdtAmount: finalMargin,
-        leverage: automationSettings.leverage,
+        leverage: effLeverage,
         tpPrice: selectedSignal.tp,
         slPrice: selectedSignal.sl,
         clientOrderId: generateOrderId(Date.now(), symbol.name),
@@ -1745,7 +1791,7 @@ export async function runCycle(
       `🎯 حد سود: ${selectedSignal.tp.toFixed(4)}\n` +
       `🛑 حد ضرر: ${selectedSignal.sl.toFixed(4)}\n` +
       `💵 مارجین: ${finalMargin} USDT\n` +
-      `🔢 اهرم: ${automationSettings.leverage}x\n` +
+      `🔢 اهرم: ${effLeverage}x\n` +
       `🏦 موجودی کل: ${updatedBalance.total || '-'} USDT\n` +
       `🏦 موجودی آزاد: ${updatedBalance.free || '-'} USDT\n` +
       `🕐 زمان صدور سیگنال: ${signalTime}\n` +

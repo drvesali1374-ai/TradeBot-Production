@@ -661,44 +661,20 @@
             </div>
 
             <div style="padding: 1.5rem;">
-                <!-- Row 1: Strategy + Capital + Timing -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <!-- Strategy Settings -->
-                    <div>
-                        <h3 class="text-base font-semibold mb-3 text-purple-400">
-                            <i class="fas fa-chess ml-1"></i>
-                            استراتژی
-                        </h3>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="block text-xs text-gray-300 mb-1">مبنای HTF Confirmation</label>
-                                <select id="htf-confirmation-source" class="input-field text-sm" style="cursor: pointer;">
-                                    <option value="signalCandleClose">Signal Candle Close</option>
-                                    <option value="previousDayClose">Previous Day Close</option>
-                                </select>
-                                <div class="text-xs text-gray-500 mt-1">
-                                    <span id="htf-source-description">کلوز کندل سیگنال با سطوح روز قبل مقایسه می‌شود</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Capital Management -->
-                    <div>
-                        <h3 class="text-base font-semibold mb-3 text-purple-400">
-                            <i class="fas fa-wallet ml-1"></i>
-                            مدیریت سرمایه
-                        </h3>
-                        <div class="space-y-3">
+                <!-- ========================================================== -->
+                <!-- Group 1: مدیریت ریسک (Risk) -->
+                <!-- ========================================================== -->
+                <section class="glass-effect rounded-xl p-4 mb-4">
+                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>مدیریت ریسک</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs text-gray-300 mb-1">دارایی امن %</label>
                                 <input type="number" id="safe-asset-percent" class="input-field text-sm" value="50" min="0" max="100" step="1">
                                 <div class="text-xs text-gray-500 mt-0.5">حداقل درصد کل دارایی که باید آزاد بماند</div>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-300 mb-1">نسبت مارجین ورودی %</label>
-                                <input type="number" id="entry-margin-percent" class="input-field text-sm" value="5" min="0.1" max="100" step="0.5">
-                                <div class="text-xs text-gray-500 mt-0.5">درصد کل دارایی برای مارجین هر ورودی جدید</div>
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-300 mb-1">سقف مارجین نماد %</label>
@@ -706,131 +682,230 @@
                                 <div class="text-xs text-gray-500 mt-0.5">حداکثر درصد کل دارایی برای مارجین یک نماد</div>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-300 mb-1">فاصله قیمت بهتر %</label>
-                                <input type="number" id="min-price-distance-percent" class="input-field text-sm" value="0.5" min="0" max="50" step="0.1">
-                                <div class="text-xs text-gray-500 mt-0.5">حداقل فاصله قیمت بهتر برای ورود دوم بر روی یک نماد</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Timing Settings -->
-                    <div>
-                        <h3 class="text-base font-semibold mb-3 text-purple-400">
-                            <i class="fas fa-clock ml-1"></i>
-                            زمان‌بندی
-                        </h3>
-                        <div class="space-y-3">
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="block text-xs text-gray-300 mb-1">انتظار (دقیقه)</label>
-                                    <input type="number" id="trade-wait-time" class="input-field text-sm" value="60" min="1" max="1440" step="1">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-300 mb-1">خطای مجاز</label>
-                                    <input type="number" id="allowed-errors" class="input-field text-sm" value="3" min="1" max="10" step="1">
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="block text-xs text-gray-300 mb-1">اهرم</label>
-                                    <input type="number" id="leverage" class="input-field text-sm" value="4" min="1" max="125" step="1">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-300 mb-1">انقضا سیگنال (ساعت)</label>
-                                    <input type="number" id="signal-expiration" class="input-field text-sm" value="6" min="1" max="48" step="1">
-                                </div>
-                            </div>
-                            <!-- ✓ فیلدهای جدید (موردهای ۶، ۷، ۸) -->
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="block text-xs text-gray-300 mb-1">حداقل کندل هم‌جهت</label>
-                                    <input type="number" id="min-same-direction-candles" class="input-field text-sm" value="0" min="0" max="10" step="1" title="حداقل تعداد کندل هم‌جهت بعد از سیگنال (0 = غیرفعال)">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-300 mb-1">تعداد چرخه</label>
-                                    <input type="number" id="cycles-per-run" class="input-field text-sm" value="1" min="1" max="10" step="1" title="تعداد چرخه در هر بار زدن دکمه «یک چرخه»">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-300 mb-1">تعداد نوتیف تاریخچه</label>
-                                    <input type="number" id="closed-positions-notify-count" class="input-field text-sm" value="10" min="1" max="50" step="1" title="تعداد رکوردهای ارسالی در نوتیف تاریخچه پوزیشن‌های بسته">
-                                </div>
-                            </div>
-                            <!-- ✓ Fake Breakout Settings (اصلاحات پیشنهادی) -->
-                            <div class="border-t border-gray-700 pt-3 mt-3">
-                                <h4 class="text-sm font-semibold text-purple-400 mb-2">تنظیمات Fake Breakout</h4>
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" id="enable-meaningful-break-filter" class="rounded" checked>
-                                        <label for="enable-meaningful-break-filter" class="text-xs text-gray-300">فیلتر شکست معنادار (ATR)</label>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label class="block text-xs text-gray-300 mb-1">ضریب ATR شکست</label>
-                                            <input type="number" id="break-atr-multiplier" class="input-field text-sm" value="0.20" min="0.05" max="1.00" step="0.05">
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs text-gray-300 mb-1">روش تشخیص شکست</label>
-                                            <select id="break-detection-method" class="input-field text-sm">
-                                                <option value="Wick">Wick (High/Low)</option>
-                                                <option value="Close">Close (قیمت بسته)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" id="enable-break-lifecycle" class="rounded" checked>
-                                        <label for="enable-break-lifecycle" class="text-xs text-gray-300">مدیریت چرخه شکست</label>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-300 mb-1">عمر چرخه شکست (0 = LookBack)</label>
-                                        <input type="number" id="break-sequence-lifetime" class="input-field text-sm" value="0" min="0" max="100" step="1">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Row 2: Symbol Management + Bale Notifications -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Symbol Management -->
-                    <div>
-                        <h3 class="text-base font-semibold mb-3 text-purple-400">
-                            <i class="fas fa-coins ml-1"></i>
-                            مدیریت نمادها
-                        </h3>
-                        <div class="space-y-3">
-                            <div class="flex gap-2">
-                                <input type="text" id="new-symbol-name" class="input-field text-sm flex-1" placeholder="مثال: BTC">
-                                <button id="add-symbol-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-green-600 transition-all duration-300 text-sm whitespace-nowrap">
-                                    <i class="fas fa-plus ml-1"></i>
-                                    افزودن
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bale Notification Settings -->
-                    <div>
-                        <h3 class="text-base font-semibold mb-3 text-purple-400">
-                            <i class="fas fa-bell ml-1"></i>
-                            اطلاع‌رسانی بله
-                        </h3>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="block text-xs text-gray-300 mb-1">Bot Token</label>
-                                <input type="text" id="bale-token" class="input-field text-sm" placeholder="توکن ربات بله">
+                                <label class="block text-xs text-gray-300 mb-1">انقضا سیگنال (ساعت)</label>
+                                <input type="number" id="signal-expiration" class="input-field text-sm" value="6" min="1" max="48" step="1">
+                                <div class="text-xs text-gray-500 mt-0.5">مدت اعتبار سیگنال قبل از انقضا</div>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-300 mb-1">Chat ID</label>
-                                <input type="text" id="bale-chat-id" class="input-field text-sm" placeholder="شناسه چت بله">
+                                <label class="block text-xs text-gray-300 mb-1">حداقل کندل هم‌جهت</label>
+                                <input type="number" id="min-same-direction-candles" class="input-field text-sm" value="0" min="0" max="10" step="1" title="حداقل تعداد کندل هم‌جهت بعد از سیگنال (0 = غیرفعال)">
+                                <div class="text-xs text-gray-500 mt-0.5">حداقل تعداد کندل هم‌جهت بعد از سیگنال (0 = غیرفعال)</div>
                             </div>
-                            <button id="test-bale-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-blue-600 transition-all duration-300 text-sm w-full">
-                                <i class="fas fa-paper-plane ml-1"></i>
-                                ارسال پیام تست
+                        </div>
+                        <!-- Long/Short: فاصله قیمت بهتر % -->
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">فاصله قیمت بهتر %</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+                                    <input type="number" id="min-price-distance-percent-long" class="input-field text-sm" value="0.5" min="0" max="50" step="0.1">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">شورت</label>
+                                    <input type="number" id="min-price-distance-percent-short" class="input-field text-sm" value="0.5" min="0" max="50" step="0.1">
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-0.5">حداقل فاصله قیمت بهتر برای ورود دوم بر روی یک نماد</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================================== -->
+                <!-- Group 2: اجرای معاملات (Execution) -->
+                <!-- ========================================================== -->
+                <section class="glass-effect rounded-xl p-4 mb-4">
+                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+                        <i class="fas fa-cogs"></i>
+                        <span>اجرای معاملات</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-300 mb-1">انتظار (دقیقه)</label>
+                                <input type="number" id="trade-wait-time" class="input-field text-sm" value="60" min="1" max="1440" step="1">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-300 mb-1">خطای مجاز</label>
+                                <input type="number" id="allowed-errors" class="input-field text-sm" value="3" min="1" max="10" step="1">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-300 mb-1">تعداد چرخه</label>
+                                <input type="number" id="cycles-per-run" class="input-field text-sm" value="1" min="1" max="10" step="1" title="تعداد چرخه در هر بار زدن دکمه «یک چرخه»">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-300 mb-1">تعداد نوتیف تاریخچه</label>
+                                <input type="number" id="closed-positions-notify-count" class="input-field text-sm" value="10" min="1" max="50" step="1" title="تعداد رکوردهای ارسالی در نوتیف تاریخچه پوزیشن‌های بسته">
+                            </div>
+                        </div>
+                        <!-- Long/Short: اهرم -->
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">اهرم</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+                                    <input type="number" id="leverage-long" class="input-field text-sm" value="4" min="1" max="125" step="1">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">شورت</label>
+                                    <input type="number" id="leverage-short" class="input-field text-sm" value="4" min="1" max="125" step="1">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Long/Short: نسبت مارجین ورودی % -->
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">نسبت مارجین ورودی %</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+                                    <input type="number" id="entry-margin-percent-long" class="input-field text-sm" value="5" min="0" max="100" step="0.5">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">شورت</label>
+                                    <input type="number" id="entry-margin-percent-short" class="input-field text-sm" value="5" min="0" max="100" step="0.5">
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-0.5">درصد کل دارایی برای مارجین هر ورودی جدید</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================================== -->
+                <!-- Group 3: اندیکاتورها (Indicators) -->
+                <!-- ========================================================== -->
+                <section class="glass-effect rounded-xl p-4 mb-4">
+                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+                        <i class="fas fa-chart-line"></i>
+                        <span>اندیکاتورها</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">مبنای HTF Confirmation</label>
+                            <select id="htf-confirmation-source" class="input-field text-sm" style="cursor: pointer;">
+                                <option value="signalCandleClose">Signal Candle Close</option>
+                                <option value="previousDayClose">Previous Day Close</option>
+                            </select>
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span id="htf-source-description">کلوز کندل سیگنال با سطوح روز قبل مقایسه می‌شود</span>
+                            </div>
+                        </div>
+                        <!-- Long/Short: آستانه RSI -->
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">آستانه RSI</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">لانگ (اشباع فروش)</label>
+                                    <input type="number" id="rsi-long-threshold" class="input-field text-sm" value="30" min="0" max="100" step="1">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">شورت (اشباع خرید)</label>
+                                    <input type="number" id="rsi-short-threshold" class="input-field text-sm" value="70" min="0" max="100" step="1">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Long/Short: ضریب حجم -->
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">ضریب حجم</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+                                    <input type="number" id="vol-mult-long" class="input-field text-sm" value="0.2" min="0" max="5" step="0.05">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">شورت</label>
+                                    <input type="number" id="vol-mult-short" class="input-field text-sm" value="0.2" min="0" max="5" step="0.05">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================================== -->
+                <!-- Group 4: Fake Breakout -->
+                <!-- ========================================================== -->
+                <section class="glass-effect rounded-xl p-4 mb-4">
+                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+                        <i class="fas fa-bolt"></i>
+                        <span>Fake Breakout</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="enable-meaningful-break-filter" class="rounded" checked>
+                            <label for="enable-meaningful-break-filter" class="text-xs text-gray-300">فیلتر شکست معنادار (ATR)</label>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">روش تشخیص شکست</label>
+                            <select id="break-detection-method" class="input-field text-sm">
+                                <option value="Wick">Wick (High/Low)</option>
+                                <option value="Close">Close (قیمت بسته)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="enable-break-lifecycle" class="rounded" checked>
+                            <label for="enable-break-lifecycle" class="text-xs text-gray-300">مدیریت چرخه شکست</label>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">عمر چرخه شکست (0 = LookBack)</label>
+                            <input type="number" id="break-sequence-lifetime" class="input-field text-sm" value="0" min="0" max="100" step="1">
+                        </div>
+                        <!-- Long/Short: ضریب ATR شکست -->
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">ضریب ATR شکست</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+                                    <input type="number" id="break-atr-multiplier-long" class="input-field text-sm" value="0.20" min="0.05" max="1.00" step="0.05">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">شورت</label>
+                                    <input type="number" id="break-atr-multiplier-short" class="input-field text-sm" value="0.20" min="0.05" max="1.00" step="0.05">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================================== -->
+                <!-- Group 5: اطلاع‌رسانی (Notification) -->
+                <!-- ========================================================== -->
+                <section class="glass-effect rounded-xl p-4 mb-4">
+                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+                        <i class="fas fa-bell"></i>
+                        <span>اطلاع‌رسانی</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">Bot Token</label>
+                            <input type="text" id="bale-token" class="input-field text-sm" placeholder="توکن ربات بله">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-300 mb-1">Chat ID</label>
+                            <input type="text" id="bale-chat-id" class="input-field text-sm" placeholder="شناسه چت بله">
+                        </div>
+                        <button id="test-bale-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-blue-600 transition-all duration-300 text-sm w-full">
+                            <i class="fas fa-paper-plane ml-1"></i>
+                            ارسال پیام تست
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ========================================================== -->
+                <!-- Group 6: مدیریت نمادها (Symbol Management) -->
+                <!-- ========================================================== -->
+                <section class="glass-effect rounded-xl p-4 mb-4">
+                    <h3 class="text-base font-semibold mb-3 text-purple-400 flex items-center gap-2">
+                        <i class="fas fa-coins"></i>
+                        <span>مدیریت نمادها</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex gap-2">
+                            <input type="text" id="new-symbol-name" class="input-field text-sm flex-1" placeholder="مثال: BTC">
+                            <button id="add-symbol-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-green-600 transition-all duration-300 text-sm whitespace-nowrap">
+                                <i class="fas fa-plus ml-1"></i>
+                                افزودن
                             </button>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
         </div>
     </div>

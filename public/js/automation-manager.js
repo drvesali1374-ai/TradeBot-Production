@@ -202,25 +202,43 @@ class AutomationManager {
     getDefaultSettings() {
         return {
             safeAssetPercent: 50,
-            entryMarginPercent: 5,
             maxMarginPerSymbolPercent: 10,
-            minPriceDistancePercent: 0.5,
             tradeWaitTime: 60,
             allowedErrors: 3,
-            leverage: 4,
             signalExpirationHours: 6,
-            // ✓ مورد ۶: حداقل تعداد کندل هم‌جهت بعد از سیگنال (0 = غیرفعال)
             minSameDirectionCandles: 0,
-            // ✓ مورد ۷: تعداد چرخه در هر بار زدن دکمه «یک چرخه» (1 = فقط یک چرخه)
             cyclesPerRun: 1,
-            // ✓ مورد ۸: تعداد رکوردهای ارسالی در نوتیف تاریخچه پوزیشن‌های بسته
             closedPositionsNotifyCount: 10,
-            // ✓ Fake Breakout Settings (اصلاحات پیشنهادی)
-            enableMeaningfulBreakFilter: true,      // فیلتر شکست معنادار
-            breakAtrMultiplier: 0.20,               // ضریب ATR برای حداقل قدرت شکست
-            breakDetectionMethod: 'Wick',           // روش تشخیص: 'Wick' یا 'Close'
-            enableBreakLifecycleManagement: true,   // مدیریت چرخه شکست
-            breakSequenceLifetime: 0,               // 0 = استفاده از LookBack
+            // ✓ Fake Breakout Settings
+            enableMeaningfulBreakFilter: true,
+            breakDetectionMethod: 'Wick',
+            enableBreakLifecycleManagement: true,
+            breakSequenceLifetime: 0,
+            // ✓ فاز ۱: پارامترهای مستقل Long/Short
+            // RSI
+            rsiLongThreshold: 30,       // لانگ: RSI باید زیر این آستانه باشد (اشباع فروش)
+            rsiShortThreshold: 70,     // شورت: RSI باید بالای این آستانه باشد (اشباع خرید)
+            // Volume Multiplier
+            volMultLong: 0.2,
+            volMultShort: 0.2,
+            // Leverage
+            leverageLong: 4,
+            leverageShort: 4,
+            // Break ATR Multiplier
+            breakAtrMultiplierLong: 0.20,
+            breakAtrMultiplierShort: 0.20,
+            // Entry Margin %
+            entryMarginPercentLong: 5,
+            entryMarginPercentShort: 5,
+            // Min Price Distance %
+            minPriceDistancePercentLong: 0.5,
+            minPriceDistancePercentShort: 0.5,
+            // Legacy fallback (برای سازگاری به عقب)
+            entryMarginPercent: 5,
+            minPriceDistancePercent: 0.5,
+            leverage: 4,
+            breakAtrMultiplier: 0.20,
+            // Bale (فعلاً اینجا باقی می‌ماند، در فاز ۲ منتقل می‌شود)
             baleToken: '',
             baleChatId: ''
         };
@@ -269,25 +287,36 @@ class AutomationManager {
     saveSettings() {
         this.settings = {
             safeAssetPercent: parseFloat(document.getElementById('safe-asset-percent').value),
-            entryMarginPercent: parseFloat(document.getElementById('entry-margin-percent').value),
             maxMarginPerSymbolPercent: parseFloat(document.getElementById('max-margin-per-symbol-percent').value),
-            minPriceDistancePercent: parseFloat(document.getElementById('min-price-distance-percent').value),
             tradeWaitTime: parseInt(document.getElementById('trade-wait-time').value),
             allowedErrors: parseInt(document.getElementById('allowed-errors').value),
-            leverage: parseInt(document.getElementById('leverage').value),
             signalExpirationHours: parseInt(document.getElementById('signal-expiration').value) || 6,
-            // ✓ مورد ۶: حداقل تعداد کندل هم‌جهت
             minSameDirectionCandles: parseInt(document.getElementById('min-same-direction-candles').value) || 0,
-            // ✓ مورد ۷: تعداد چرخه در هر بار زدن دکمه
             cyclesPerRun: parseInt(document.getElementById('cycles-per-run').value) || 1,
-            // ✓ مورد ۸: تعداد رکوردهای نوتیف تاریخچه
             closedPositionsNotifyCount: parseInt(document.getElementById('closed-positions-notify-count').value) || 10,
             // ✓ Fake Breakout Settings
             enableMeaningfulBreakFilter: document.getElementById('enable-meaningful-break-filter').checked,
-            breakAtrMultiplier: parseFloat(document.getElementById('break-atr-multiplier').value) || 0.20,
             breakDetectionMethod: document.getElementById('break-detection-method').value,
             enableBreakLifecycleManagement: document.getElementById('enable-break-lifecycle').checked,
             breakSequenceLifetime: parseInt(document.getElementById('break-sequence-lifetime').value) || 0,
+            // ✓ فاز ۱: پارامترهای مستقل Long/Short
+            rsiLongThreshold: parseFloat(document.getElementById('rsi-long-threshold').value) || 30,
+            rsiShortThreshold: parseFloat(document.getElementById('rsi-short-threshold').value) || 70,
+            volMultLong: parseFloat(document.getElementById('vol-mult-long').value) || 0.2,
+            volMultShort: parseFloat(document.getElementById('vol-mult-short').value) || 0.2,
+            leverageLong: parseInt(document.getElementById('leverage-long').value) || 4,
+            leverageShort: parseInt(document.getElementById('leverage-short').value) || 4,
+            breakAtrMultiplierLong: parseFloat(document.getElementById('break-atr-multiplier-long').value) || 0.20,
+            breakAtrMultiplierShort: parseFloat(document.getElementById('break-atr-multiplier-short').value) || 0.20,
+            entryMarginPercentLong: parseFloat(document.getElementById('entry-margin-percent-long').value) || 5,
+            entryMarginPercentShort: parseFloat(document.getElementById('entry-margin-percent-short').value) || 5,
+            minPriceDistancePercentLong: parseFloat(document.getElementById('min-price-distance-percent-long').value) || 0.5,
+            minPriceDistancePercentShort: parseFloat(document.getElementById('min-price-distance-percent-short').value) || 0.5,
+            // Legacy fallback
+            entryMarginPercent: parseFloat(document.getElementById('entry-margin-percent-long').value) || 5,
+            minPriceDistancePercent: parseFloat(document.getElementById('min-price-distance-percent-long').value) || 0.5,
+            leverage: parseInt(document.getElementById('leverage-long').value) || 4,
+            breakAtrMultiplier: parseFloat(document.getElementById('break-atr-multiplier-long').value) || 0.20,
             baleToken: document.getElementById('bale-token').value.trim(),
             baleChatId: document.getElementById('bale-chat-id').value.trim()
         };
@@ -313,23 +342,31 @@ class AutomationManager {
 
     populateSettingsForm() {
         document.getElementById('safe-asset-percent').value = this.settings.safeAssetPercent;
-        document.getElementById('entry-margin-percent').value = this.settings.entryMarginPercent;
         document.getElementById('max-margin-per-symbol-percent').value = this.settings.maxMarginPerSymbolPercent;
-        document.getElementById('min-price-distance-percent').value = this.settings.minPriceDistancePercent;
         document.getElementById('trade-wait-time').value = this.settings.tradeWaitTime;
         document.getElementById('allowed-errors').value = this.settings.allowedErrors;
-        document.getElementById('leverage').value = this.settings.leverage;
         document.getElementById('signal-expiration').value = this.settings.signalExpirationHours;
-        // ✓ فیلدهای جدید
         document.getElementById('min-same-direction-candles').value = this.settings.minSameDirectionCandles || 0;
         document.getElementById('cycles-per-run').value = this.settings.cyclesPerRun || 1;
         document.getElementById('closed-positions-notify-count').value = this.settings.closedPositionsNotifyCount || 10;
         // ✓ Fake Breakout Settings
         document.getElementById('enable-meaningful-break-filter').checked = this.settings.enableMeaningfulBreakFilter !== false;
-        document.getElementById('break-atr-multiplier').value = this.settings.breakAtrMultiplier || 0.20;
         document.getElementById('break-detection-method').value = this.settings.breakDetectionMethod || 'Wick';
         document.getElementById('enable-break-lifecycle').checked = this.settings.enableBreakLifecycleManagement !== false;
         document.getElementById('break-sequence-lifetime').value = this.settings.breakSequenceLifetime || 0;
+        // ✓ فاز ۱: پارامترهای مستقل Long/Short
+        document.getElementById('rsi-long-threshold').value = this.settings.rsiLongThreshold ?? 30;
+        document.getElementById('rsi-short-threshold').value = this.settings.rsiShortThreshold ?? 70;
+        document.getElementById('vol-mult-long').value = this.settings.volMultLong ?? 0.2;
+        document.getElementById('vol-mult-short').value = this.settings.volMultShort ?? 0.2;
+        document.getElementById('leverage-long').value = this.settings.leverageLong ?? 4;
+        document.getElementById('leverage-short').value = this.settings.leverageShort ?? 4;
+        document.getElementById('break-atr-multiplier-long').value = this.settings.breakAtrMultiplierLong ?? 0.20;
+        document.getElementById('break-atr-multiplier-short').value = this.settings.breakAtrMultiplierShort ?? 0.20;
+        document.getElementById('entry-margin-percent-long').value = this.settings.entryMarginPercentLong ?? 5;
+        document.getElementById('entry-margin-percent-short').value = this.settings.entryMarginPercentShort ?? 5;
+        document.getElementById('min-price-distance-percent-long').value = this.settings.minPriceDistancePercentLong ?? 0.5;
+        document.getElementById('min-price-distance-percent-short').value = this.settings.minPriceDistancePercentShort ?? 0.5;
         document.getElementById('bale-token').value = this.settings.baleToken || '';
         document.getElementById('bale-chat-id').value = this.settings.baleChatId || '';
 
@@ -520,6 +557,8 @@ class AutomationManager {
         }
 
         const settings = JSON.parse(localStorage.getItem('marketSignalSettings')) || {};
+        // ✓ Phase 17: Independent Long/Short params (fall back to legacy `settings` with ??)
+        const autoSettings = this.settings || {};
         const N = this.marketData.length;
         
         // تبدیل داده‌ها به فرمت استفاده شده
@@ -594,29 +633,38 @@ class AutomationManager {
         // ✓ Fake Breakout settings (read from this.settings — Fake Breakout fields live there)
         const fbSettings = (this && this.settings) ? this.settings : {};
         const enableMeaningfulBreakFilter = fbSettings.enableMeaningfulBreakFilter !== false;
-        const breakAtrMultiplier = (fbSettings.breakAtrMultiplier !== undefined && fbSettings.breakAtrMultiplier !== null)
-            ? fbSettings.breakAtrMultiplier : 0.20;
+        // ✓ Phase 17: Direction-specific break ATR multipliers (fall back to legacy breakAtrMultiplier)
+        const breakAtrMultiplierLong = (fbSettings.breakAtrMultiplierLong !== undefined && fbSettings.breakAtrMultiplierLong !== null)
+            ? fbSettings.breakAtrMultiplierLong
+            : ((fbSettings.breakAtrMultiplier !== undefined && fbSettings.breakAtrMultiplier !== null)
+                ? fbSettings.breakAtrMultiplier : 0.20);
+        const breakAtrMultiplierShort = (fbSettings.breakAtrMultiplierShort !== undefined && fbSettings.breakAtrMultiplierShort !== null)
+            ? fbSettings.breakAtrMultiplierShort
+            : ((fbSettings.breakAtrMultiplier !== undefined && fbSettings.breakAtrMultiplier !== null)
+                ? fbSettings.breakAtrMultiplier : 0.20);
         const breakDetectionMethod = fbSettings.breakDetectionMethod === 'Close' ? 'Close' : 'Wick';
         const enableBreakLifecycleManagement = fbSettings.enableBreakLifecycleManagement !== false;
         const breakSequenceLifetime = (fbSettings.breakSequenceLifetime !== undefined && fbSettings.breakSequenceLifetime !== null)
             ? fbSettings.breakSequenceLifetime : 0;
 
         // ✓ Track meaningful breaks (used when enableMeaningfulBreakFilter is true)
-        //   A meaningful break for Long = price goes BELOW prevDailyLow by (atr * breakAtrMultiplier)
-        //   A meaningful break for Short = price goes ABOVE prevDailyHigh by (atr * breakAtrMultiplier)
+        //   A meaningful break for Long = price goes BELOW prevDailyLow by (atr * breakAtrMultiplierLong)
+        //   A meaningful break for Short = price goes ABOVE prevDailyHigh by (atr * breakAtrMultiplierShort)
         const lastMeaningfulBreakLong = new Array(N).fill(Infinity);
         const lastMeaningfulBreakShort = new Array(N).fill(Infinity);
         {
             let lastMBL = null, lastMBS = null;
             for (let i = 1; i < N; i++) {
-                const bd = (atr[i] || 0) * breakAtrMultiplier;
+                // ✓ Phase 17: Direction-specific ATR multipliers
+                const bdLong = (atr[i] || 0) * breakAtrMultiplierLong;
+                const bdShort = (atr[i] || 0) * breakAtrMultiplierShort;
                 let mbl = false, mbs = false;
                 if (breakDetectionMethod === 'Wick') {
-                    mbl = prevDailyLows[i] !== null && data[i].low <= (prevDailyLows[i] - bd);
-                    mbs = prevDailyHighs[i] !== null && data[i].high >= (prevDailyHighs[i] + bd);
+                    mbl = prevDailyLows[i] !== null && data[i].low <= (prevDailyLows[i] - bdLong);
+                    mbs = prevDailyHighs[i] !== null && data[i].high >= (prevDailyHighs[i] + bdShort);
                 } else {
-                    mbl = prevDailyLows[i] !== null && data[i].close <= (prevDailyLows[i] - bd);
-                    mbs = prevDailyHighs[i] !== null && data[i].close >= (prevDailyHighs[i] + bd);
+                    mbl = prevDailyLows[i] !== null && data[i].close <= (prevDailyLows[i] - bdLong);
+                    mbs = prevDailyHighs[i] !== null && data[i].close >= (prevDailyHighs[i] + bdShort);
                 }
                 if (mbl) lastMBL = i;
                 if (mbs) lastMBS = i;
@@ -663,15 +711,17 @@ class AutomationManager {
                 // ===========================================================
 
                 // Compute meaningful break conditions for this candle
-                const breakDistance = (atr[i] || 0) * breakAtrMultiplier;
+                // ✓ Phase 17: Direction-specific ATR multipliers
+                const breakDistanceLong = (atr[i] || 0) * breakAtrMultiplierLong;
+                const breakDistanceShort = (atr[i] || 0) * breakAtrMultiplierShort;
                 let isMeaningfulBreakLong = false;
                 let isMeaningfulBreakShort = false;
                 if (breakDetectionMethod === 'Wick') {
-                    isMeaningfulBreakLong = prevDailyLows[i] !== null && data[i].low <= (prevDailyLows[i] - breakDistance);
-                    isMeaningfulBreakShort = prevDailyHighs[i] !== null && data[i].high >= (prevDailyHighs[i] + breakDistance);
+                    isMeaningfulBreakLong = prevDailyLows[i] !== null && data[i].low <= (prevDailyLows[i] - breakDistanceLong);
+                    isMeaningfulBreakShort = prevDailyHighs[i] !== null && data[i].high >= (prevDailyHighs[i] + breakDistanceShort);
                 } else {
-                    isMeaningfulBreakLong = prevDailyLows[i] !== null && data[i].close <= (prevDailyLows[i] - breakDistance);
-                    isMeaningfulBreakShort = prevDailyHighs[i] !== null && data[i].close >= (prevDailyHighs[i] + breakDistance);
+                    isMeaningfulBreakLong = prevDailyLows[i] !== null && data[i].close <= (prevDailyLows[i] - breakDistanceLong);
+                    isMeaningfulBreakShort = prevDailyHighs[i] !== null && data[i].close >= (prevDailyHighs[i] + breakDistanceShort);
                 }
 
                 // 1. Check expiry — if a break has been waiting too long without recovery, discard it
@@ -735,9 +785,9 @@ class AutomationManager {
                 if (breakState.recovered && breakState.recoveryCandleIndex === i) {
                     if (breakState.type === 'Long') {
                         const condLong = avgVols[i] !== null
-                            && data[i].amount > avgVols[i] * (settings.volMult || 0.2)
+                            && data[i].amount > avgVols[i] * (autoSettings.volMultLong ?? settings.volMult ?? 0.2)
                             && rsi[i] !== null
-                            && rsi[i] < (settings.rsiThreshold || 50)
+                            && rsi[i] < (autoSettings.rsiLongThreshold ?? settings.rsiThreshold ?? 30)
                             && htfConfirmLong;
 
                         if (condLong) {
@@ -767,9 +817,9 @@ class AutomationManager {
                         }
                     } else if (breakState.type === 'Short') {
                         const condShort = avgVols[i] !== null
-                            && data[i].amount > avgVols[i] * (settings.volMult || 0.2)
+                            && data[i].amount > avgVols[i] * (autoSettings.volMultShort ?? settings.volMult ?? 0.2)
                             && rsi[i] !== null
-                            && rsi[i] > (settings.rsiThreshold || 50)
+                            && rsi[i] > (autoSettings.rsiShortThreshold ?? settings.rsiThreshold ?? 70)
                             && htfConfirmShort;
 
                         if (condShort) {
@@ -824,17 +874,17 @@ class AutomationManager {
                 const condLong = isCrossOverPL
                     && recentBreakLong <= (settings.lookback || 50)
                     && avgVols[i] !== null
-                    && data[i].amount > avgVols[i] * (settings.volMult || 0.2)
+                    && data[i].amount > avgVols[i] * (autoSettings.volMultLong ?? settings.volMult ?? 0.2)
                     && rsi[i] !== null
-                    && rsi[i] < (settings.rsiThreshold || 50)
+                    && rsi[i] < (autoSettings.rsiLongThreshold ?? settings.rsiThreshold ?? 30)
                     && htfConfirmLong;
 
                 const condShort = isCrossUnderPH
                     && recentBreakShort <= (settings.lookback || 50)
                     && avgVols[i] !== null
-                    && data[i].amount > avgVols[i] * (settings.volMult || 0.2)
+                    && data[i].amount > avgVols[i] * (autoSettings.volMultShort ?? settings.volMult ?? 0.2)
                     && rsi[i] !== null
-                    && rsi[i] > (settings.rsiThreshold || 50)
+                    && rsi[i] > (autoSettings.rsiShortThreshold ?? settings.rsiThreshold ?? 70)
                     && htfConfirmShort;
 
                 if (condLong) {

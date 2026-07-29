@@ -1231,3 +1231,231 @@ Stage Summary:
 - ✅ KV writes reduced from ~864/day to ~48-96/day (94% reduction!)
 - ✅ No existing functionality broken
 - ✅ Deployed to Cloudflare, tested, working
+
+---
+Task ID: 17
+Agent: General-Purpose Sub Agent
+Task: Update analyzeMarketData() in both automation-manager.js and cycle-engine.ts to use independent Long/Short RSI thresholds, volume multipliers, and break ATR multipliers. Also add the new fields to AutomationSettings interface and getDefaultAutomationSettings() in cycle-engine.ts, and update risk controls in runCycle() to use direction-specific leverage, entryMarginPercent, and minPriceDistancePercent.
+
+Work Log:
+
+[Phase 1] Added 13 new optional fields to AutomationSettings interface in cycle-engine.ts:
+- rsiLongThreshold?: number, rsiShortThreshold?: number
+- volMultLong?: number, volMultShort?: number
+- breakAtrMultiplierLong?: number, breakAtrMultiplierShort?: number
+- leverageLong?: number, leverageShort?: number
+- entryMarginPercentLong?: number, entryMarginPercentShort?: number
+- minPriceDistancePercentLong?: number, minPriceDistancePercentShort?: number
+
+[Phase 2] Added default values to getDefaultAutomationSettings() in cycle-engine.ts:
+- rsiLongThreshold: 30, rsiShortThreshold: 70
+- volMultLong: 0.2, volMultShort: 0.2
+- breakAtrMultiplierLong: 0.20, breakAtrMultiplierShort: 0.20
+- leverageLong: 4, leverageShort: 4
+- entryMarginPercentLong: 5, entryMarginPercentShort: 5
+- minPriceDistancePercentLong: 0.5, minPriceDistancePercentShort: 0.5
+
+[Phase 3] Updated analyzeMarketData() in BOTH automation-manager.js and cycle-engine.ts:
+
+  a) In automation-manager.js (uses `settings` from localStorage + new `autoSettings = this.settings || {}`):
+     - Added `const autoSettings = this.settings || {};` at top of analyzeMarketData()
+     - Replaced single `breakAtrMultiplier` with `breakAtrMultiplierLong` and `breakAtrMultiplierShort`
+       (each falls back to legacy `fbSettings.breakAtrMultiplier` then 0.20)
+     - Updated meaningful break tracking loop to compute `bdLong` and `bdShort` separately
+     - Updated Break Lifecycle state machine `breakDistance` to use `breakDistanceLong`/`breakDistanceShort`
+     - condLong (both branches): volMult → `autoSettings.volMultLong ?? settings.volMult ?? 0.2`,
+       rsiThreshold → `autoSettings.rsiLongThreshold ?? settings.rsiThreshold ?? 30`
+     - condShort (both branches): volMult → `autoSettings.volMultShort ?? settings.volMult ?? 0.2`,
+       rsiThreshold → `autoSettings.rsiShortThreshold ?? settings.rsiThreshold ?? 70`
+
+  b) In cycle-engine.ts (uses `marketSettings` from DB + `automationSettings` from DB):
+     - Replaced single `breakAtrMultiplier` with `breakAtrMultiplierLong` and `breakAtrMultiplierShort`
+       (each falls back to legacy `automationSettings.breakAtrMultiplier` then 0.20)
+     - Updated meaningful break tracking loop to compute `bdLong` and `bdShort` separately
+     - Updated Break Lifecycle state machine `breakDistance` to use `breakDistanceLong`/`breakDistanceShort`
+     - condLong (both branches): volMult → `automationSettings.volMultLong ?? marketSettings.volMult ?? 0.2`,
+       rsiThreshold → `automationSettings.rsiLongThreshold ?? marketSettings.rsiThreshold ?? 30`
+     - condShort (both branches): volMult → `automationSettings.volMultShort ?? marketSettings.volMult ?? 0.2`,
+       rsiThreshold → `automationSettings.rsiShortThreshold ?? marketSettings.rsiThreshold ?? 70`
+
+[Phase 4] Updated risk controls in runCycle() (cycle-engine.ts) for direction-specific values:
+  - Added after selectedSignal confirmed valid:
+      const isLongSignal = selectedSignal.type === 'Long'
+      const effLeverage = isLongSignal
+        ? (automationSettings.leverageLong ?? automationSettings.leverage)
+        : (automationSettings.leverageShort ?? automationSettings.leverage)
+      const effEntryMarginPercent = isLongSignal
+        ? (automationSettings.entryMarginPercentLong ?? automationSettings.entryMarginPercent)
+        : (automationSettings.entryMarginPercentShort ?? automationSettings.entryMarginPercent)
+      const effMinPriceDistancePercent = isLongSignal
+        ? (automationSettings.minPriceDistancePercentLong ?? automationSettings.minPriceDistancePercent)
+        : (automationSettings.minPriceDistancePercentShort ?? automationSettings.minPriceDistancePercent)
+  - Replaced `automationSettings.entryMarginPercent` → `effEntryMarginPercent`:
+      - newMargin calculation (Step 12: calculateNewMargin)
+      - Log message for margin calc
+      - Positive Margin (Control 5) Bale notification text
+  - Replaced `automationSettings.minPriceDistancePercent` → `effMinPriceDistancePercent`:
+      - Price Distance Check (Control 3) condition, log, and Bale notification
+  - Replaced `automationSettings.leverage` → `effLeverage`:
+      - Step 13: openPosition() createPosition API call body
+      - Step 14: notifyOpenPosition() Bale notification for NEW position
+  - Left `automationSettings.leverage` unchanged in closedPositionInfo display
+    (lines 1773 & 1781) since those reference the OPPOSITE direction closed position
+    and are display-only (not risk controls).
+
+[Backward Compatibility]
+- All new fields are optional (`?`) in AutomationSettings interface
+- All new defaults use `??` to fall back to legacy values:
+  - `autoSettings.rsiLongThreshold ?? settings.rsiThreshold ?? 30`
+  - `autoSettings.rsiShortThreshold ?? settings.rsiThreshold ?? 70`
+  - `autoSettings.volMultLong ?? settings.volMult ?? 0.2`
+  - `autoSettings.volMultShort ?? settings.volMult ?? 0.2`
+  - `breakAtrMultiplierLong = fbSettings.breakAtrMultiplierLong ?? fbSettings.breakAtrMultiplier ?? 0.20`
+  - `breakAtrMultiplierShort = fbSettings.breakAtrMultiplierShort ?? fbSettings.breakAtrMultiplier ?? 0.20`
+  - `effLeverage = isLongSignal ? (automationSettings.leverageLong ?? automationSettings.leverage) : (automationSettings.leverageShort ?? automationSettings.leverage)`
+  - `effEntryMarginPercent = isLongSignal ? (automationSettings.entryMarginPercentLong ?? automationSettings.entryMarginPercent) : (automationSettings.entryMarginPercentShort ?? automationSettings.entryMarginPercent)`
+  - `effMinPriceDistancePercent = isLongSignal ? (automationSettings.minPriceDistancePercentLong ?? automationSettings.minPriceDistancePercent) : (automationSettings.minPriceDistancePercentShort ?? automationSettings.minPriceDistancePercent)`
+- Legacy fields preserved in AutomationSettings interface and getDefaultAutomationSettings() — old settings JSON loaded from DB still works
+- No other logic changed (signal object structure, TP/SL calc, expiry, state machine, etc. all unchanged)
+
+[Verification]
+- `node --check public/js/automation-manager.js` → syntax OK
+- `bunx eslint src/lib/tradebot/cycle-engine.ts` → 0 errors, 0 warnings
+- `bunx tsc --noEmit` → all errors are pre-existing (verified via git stash comparison):
+  - cycle-engine.ts errors at lines 1248, 1306, 1830, 1928, 2151 — these exist in the
+    original (pre-task) version too (just at shifted line numbers due to added lines).
+    They are unrelated to the changes in this task (block-scoped function hoisting
+    quirks and missing symbols in unrelated helper functions).
+- No new TypeScript errors introduced by this task's changes.
+
+Stage Summary:
+- ✅ AutomationSettings interface extended with 13 new optional Long/Short fields
+- ✅ getDefaultAutomationSettings() returns new defaults (rsiLong=30, rsiShort=70, etc.)
+- ✅ analyzeMarketData() in automation-manager.js uses independent Long/Short params
+- ✅ analyzeMarketData() in cycle-engine.ts uses independent Long/Short params
+- ✅ runCycle() risk controls use direction-specific leverage/entryMarginPercent/minPriceDistancePercent
+- ✅ Backward compatibility preserved via `??` chains to legacy fields
+- ✅ No existing functionality broken (only the targeted params changed)
+
+---
+Task ID: 18
+Agent: General-Purpose Sub Agent
+Task: Redesign the settings modal in /home/z/my-project/public/automation.html to add Long/Short parameter tables, group settings into categories, and add the new Long/Short input fields.
+
+Work Log:
+
+[Phase 1 — Context verification]
+- Read /home/z/my-project/worklog.md (Tasks 0–17) for full project context.
+- Read /home/z/my-project/public/automation.html (current settings modal layout).
+- Verified `/home/z/my-project/public/js/automation-manager.js` already expects all 12 new Long/Short IDs in both:
+  - `saveSettings()` (lines 287–322) — reads from DOM via `document.getElementById('rsi-long-threshold')`, etc.
+  - `populateSettingsForm()` (lines 343–378) — writes back into DOM.
+  - `getDefaultSettings()` (lines ~220–244) — declares defaults.
+- Confirmed the JS code falls back to legacy fields via `??` chains, so loading old persisted settings still works.
+- Old shared IDs already removed from JS (`entry-margin-percent`, `min-price-distance-percent`, `leverage`, `break-atr-multiplier`); the HTML still had them — this task removes them from the DOM.
+
+[Phase 2 — Settings modal redesign]
+Replaced the previous 3-column "Strategy / Capital / Timing" + "Symbol / Bale" layout with 6 grouped `<section class="glass-effect rounded-xl p-4 mb-4">` panels (consistent with the existing dark glass-morphism theme):
+
+1. **Group 1: مدیریت ریسک (Risk)** — `fa-shield-alt` icon
+   - safe-asset-percent, max-margin-per-symbol-percent, signal-expiration, min-same-direction-candles (2-col grid)
+   - Long/Short table: min-price-distance-percent-long / min-price-distance-percent-short
+
+2. **Group 2: اجرای معاملات (Execution)** — `fa-cogs` icon
+   - trade-wait-time, allowed-errors, cycles-per-run, closed-positions-notify-count (4-col grid)
+   - Long/Short table: leverage-long / leverage-short
+   - Long/Short table: entry-margin-percent-long / entry-margin-percent-short
+
+3. **Group 3: اندیکاتورها (Indicators)** — `fa-chart-line` icon
+   - htf-confirmation-source (select) + htf-source-description (existing span, preserved)
+   - Long/Short table: rsi-long-threshold (default 30, 0–100) / rsi-short-threshold (default 70, 0–100)
+   - Long/Short table: vol-mult-long / vol-mult-short (default 0.2, 0–5, step 0.05)
+
+4. **Group 4: Fake Breakout** — `fa-bolt` icon
+   - enable-meaningful-break-filter (checkbox), break-detection-method (select),
+     enable-break-lifecycle (checkbox), break-sequence-lifetime (number)
+   - Long/Short table: break-atr-multiplier-long / break-atr-multiplier-short (default 0.20, 0.05–1.00, step 0.05)
+
+5. **Group 5: اطلاع‌رسانی (Notification)** — `fa-bell` icon
+   - bale-token, bale-chat-id, test-bale-btn (all preserved)
+
+6. **Group 6: مدیریت نمادها (Symbol Management)** — `fa-coins` icon (preserved from previous layout)
+   - new-symbol-name input + add-symbol-btn button (preserved; not in spec but still wired up in JS, so kept)
+
+[Phase 3 — Fields removed]
+Removed the 4 old shared parameter DOM elements (no longer referenced by `saveSettings()`):
+- `entry-margin-percent` → replaced by `entry-margin-percent-long` / `-short`
+- `min-price-distance-percent` → replaced by `min-price-distance-percent-long` / `-short`
+- `leverage` → replaced by `leverage-long` / `-short`
+- `break-atr-multiplier` → replaced by `break-atr-multiplier-long` / `-short`
+
+[Phase 4 — Long/Short two-column layout]
+Used the simple two-column grid format specified in the task (label + input in each cell), e.g.:
+```html
+<div class="grid grid-cols-2 gap-2">
+    <div>
+        <label class="block text-xs text-gray-400 mb-1">لانگ</label>
+        <input type="number" id="rsi-long-threshold" class="input-field text-sm" value="30" min="0" max="100" step="1">
+    </div>
+    <div>
+        <label class="block text-xs text-gray-400 mb-1">شورت</label>
+        <input type="number" id="rsi-short-threshold" class="input-field text-sm" value="70" min="0" max="100" step="1">
+    </div>
+</div>
+```
+Each Long/Short pair is preceded by a parent `<label>` describing the parameter (e.g. "آستانه RSI", "اهرم", "ضریب ATR شکست") so users know what the pair represents.
+
+[Phase 5 — Preservation checks]
+- Kept all existing field IDs still used by `saveSettings()` / `populateSettingsForm()` (21 IDs verified present).
+- Kept CSS classes: `input-field`, `glass-effect`, `text-gradient`, etc.
+- Kept modal structure: `#settings-modal`, `.settings-modal-content`, `.settings-modal-header`,
+  `#save-settings-btn`, `#reset-settings-btn`, `.settings-modal-close` close button.
+- Kept `#htf-confirmation-source` select and `#htf-source-description` span (moved into Group 3).
+- Kept `#test-bale-btn`, `#add-symbol-btn`, `#new-symbol-name`.
+- Header section unchanged (title, save/reset/close buttons, onclick handlers).
+- The `.settings-modal-content > div:not(.settings-modal-header) { padding: 2rem; overflow-y: auto; }` CSS rule still applies to the wrapping `<div style="padding: 1.5rem;">` container (inline padding overrides to 1.5rem, scroll behaviour preserved).
+
+[Phase 6 — Verification]
+- Programmatic check of all 21 required existing IDs → all `OK`.
+- Programmatic check of all 12 new Long/Short IDs → all `OK`.
+- Programmatic check of 4 removed IDs → all `OK_REMOVED` (none found in HTML).
+- Tag balance: 6 `<section>` opens / 6 `</section>` closes; 107 `<div>` opens / 107 `</div>` closes — HTML well-formed.
+- No JS changes needed — `automation-manager.js` already wired to the new IDs (Task 17 wired them up).
+- Settings modal still inside `<div id="settings-modal">`, still uses `.settings-modal` flex/active classes.
+
+Stage Summary:
+- ✅ Settings modal redesigned with 6 grouped glass-morphism sections (Risk, Execution, Indicators, Fake Breakout, Notification, Symbol Management).
+- ✅ 12 new Long/Short input fields added with correct IDs and defaults (rsi-long/short-threshold, vol-mult-long/short, leverage-long/short, break-atr-multiplier-long/short, entry-margin-percent-long/short, min-price-distance-percent-long/short).
+- ✅ All Long/Short fields use two-column grid layout with لانگ / شورت labels.
+- ✅ 4 old shared fields removed from DOM (entry-margin-percent, min-price-distance-percent, leverage, break-atr-multiplier) — JS no longer references them.
+- ✅ All existing IDs, CSS classes, modal structure, and required elements (save/reset/close buttons, test-bale-btn, htf-confirmation-source + htf-source-description, add-symbol-btn, new-symbol-name) preserved.
+- ✅ Backward compatibility: legacy fields still saved as derived values in `saveSettings()` (`leverage = leverage-long`, `entryMarginPercent = entry-margin-percent-long`, etc.) so any code reading the persisted settings JSON still works.
+- ✅ No JS or backend changes required.
+
+---
+Task ID: 18-final
+Agent: Main Orchestrator
+Task: Test phases 1+3 locally — Long/Short independent parameters + UI redesign
+
+Work Log:
+- Tested on local dev server (localhost:3000):
+  - Login works ✓
+  - Settings modal shows 6 grouped sections: مدیریت ریسک, اجرای معاملات, اندیکاتورها, Fake Breakout, اطلاع‌رسانی, مدیریت نمادها ✓
+  - All 12 new Long/Short fields exist with correct default values ✓:
+    * rsi-long-threshold: 30, rsi-short-threshold: 70
+    * vol-mult-long: 0.2, vol-mult-short: 0.2
+    * leverage-long: 4, leverage-short: 4
+    * break-atr-multiplier-long: 0.2, break-atr-multiplier-short: 0.2
+    * entry-margin-percent-long: 5, entry-margin-percent-short: 5
+    * min-price-distance-percent-long: 0.5, min-price-distance-percent-short: 0.5
+  - "یک چرخه" button test: 5 signals generated for DOT (3 Long, 2 Short) ✓
+  - Signal distribution is balanced (not skewed like before with single rsiThreshold)
+  - No console errors ✓
+
+Stage Summary:
+- ✅ Phase 1 (Long/Short independent params) — working correctly
+- ✅ Phase 3 (UI redesign) — 6 grouped sections with Long/Short tables
+- ✅ RSI bug fixed — Long uses rsiLongThreshold (30), Short uses rsiShortThreshold (70)
+- ✅ Signal distribution balanced (3 Long, 2 Short with defaults 30/70)
+- ✅ No existing functionality broken
+- Next: Phase 2 (split settings), Phase 4-6 (backtest)
