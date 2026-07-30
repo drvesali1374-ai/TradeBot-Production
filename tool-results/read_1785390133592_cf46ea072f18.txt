@@ -1,0 +1,1101 @@
+     1→/**
+     2→ * Backtest Engine
+     3→ * ===============
+     4→ *
+     5→ * Phase 4 + 5 + 6 — Backtest system for the TradeBot project.
+     6→ *
+     7→ * Copies the EXACT signal generation logic from automation-manager.js's
+     8→ * analyzeMarketData() function and the SAME risk controls from runCycle().
+     9→ * Instead of opening real positions, simulates them against historical
+    10→ * candle data to produce a backtest report (overall + Long/Short stats,
+    11→ * equity curve, drawdown curve, trade history).
+    12→ *
+    13→ * Dependencies (must be loaded BEFORE this file):
+    14→ *   - /js/shared/signal-utils.js  (window.SignalUtils)
+    15→ *
+    16→ * Settings:
+    17→ *   - Read from localStorage.getItem('automation_settings') (same as automation page)
+    18→ *   - Falls back to defaults if missing
+    19→ *
+    20→ * API:
+    21→ *   - Fetches historical candles from /api/toobit-proxy (same as automation page)
+    22→ *
+    23→ * Browser-only — no server-side state changes.
+    24→ */
+    25→
+    26→// ==================== Default Settings (mirror of automation-manager.js) ====================
+    27→
+    28→function getDefaultSettings() {
+    29→    return {
+    30→        safeAssetPercent: 50,
+    31→        maxMarginPerSymbolPercent: 10,
+    32→        tradeWaitTime: 60,
+    33→        allowedErrors: 3,
+    34→        signalExpirationHours: 6,
+    35→        minSameDirectionCandles: 0,
+    36→        cyclesPerRun: 1,
+    37→        closedPositionsNotifyCount: 10,
+    38→        // Fake Breakout
+    39→        enableMeaningfulBreakFilter: true,
+    40→        breakDetectionMethod: 'Wick',
+    41→        enableBreakLifecycleManagement: true,
+    42→        breakSequenceLifetime: 0,
+    43→        // Long/Short independent params
+    44→        rsiLongThreshold: 30,
+    45→        rsiShortThreshold: 70,
+    46→        volMultLong: 0.2,
+    47→        volMultShort: 0.2,
+    48→        leverageLong: 4,
+    49→        leverageShort: 4,
+    50→        breakAtrMultiplierLong: 0.20,
+    51→        breakAtrMultiplierShort: 0.20,
+    52→        entryMarginPercentLong: 5,
+    53→        entryMarginPercentShort: 5,
+    54→        minPriceDistancePercentLong: 0.5,
+    55→        minPriceDistancePercentShort: 0.5,
+    56→        // Legacy fallback
+    57→        entryMarginPercent: 5,
+    58→        minPriceDistancePercent: 0.5,
+    59→        leverage: 4,
+    60→        breakAtrMultiplier: 0.20,
+    61→        // Market params
+    62→        interval: '1h',
+    63→        limit: 1000,
+    64→        lookback: 50,
+    65→        // Indicator params
+    66→        atrPeriod: 14,
+    67→        rsiPeriod: 14,
+    68→        avgVolPeriod: 50,
+    69→        // TP/SL multipliers
+    70→        tpLongMult: 20,
+    71→        slLongMult: 6,
+    72→        tpShortMult: 24,
+    73→        slShortMult: 4,
+    74→        // Fixed TP/SL (null = ATR-based)
+    75→        longFixedTp: null,
+    76→        longFixedSl: null,
+    77→        shortFixedTp: null,
+    78→        shortFixedSl: 6
+    79→    };
+    80→}
+    81→
+    82→function loadBacktestSettings() {
+    83→    const defaults = getDefaultSettings();
+    84→    const saved = localStorage.getItem('automation_settings');
+    85→    if (!saved) return defaults;
+    86→    try {
+    87→        return { ...defaults, ...JSON.parse(saved) };
+    88→    } catch (e) {
+    89→        return defaults;
+    90→    }
+    91→}
+    92→
+    93→// ==================== Backtest Engine ====================
+    94→
+    95→class BacktestEngine {
+    96→    /**
+    97→     * @param {Object} settings  - automation_settings (use loadBacktestSettings())
+    98→     */
+    99→    constructor(settings) {
+   100→        this.settings = settings || getDefaultSettings();
+   101→        // Per-signal last-entry-price cache (used by Price Distance control)
+   102→        this.lastEntryPrice = { Long: null, Short: null };
+   103→    }
+   104→
+   105→    /**
+   106→     * Fetch historical candle data from /api/toobit-proxy.
+   107→     * @param {string} symbol   - e.g. 'DOT'
+   108→     * @param {string} interval - e.g. '1h'
+   109→     * @param {number} limit    - e.g. 1000
+   110→     * @returns {Promise<Array>} Raw klines array (array of arrays)
+   111→     */
+   112→    async fetchCandles(symbol, interval, limit) {
+   113→        const fullSymbol = `${symbol}-SWAP-USDT`;
+   114→        const url = `/api/toobit-proxy?symbol=${encodeURIComponent(fullSymbol)}&interval=${encodeURIComponent(interval)}&limit=${encodeURIComponent(limit)}`;
+   115→        const response = await fetch(url);
+   116→        if (!response.ok) {
+   117→            throw new Error(`HTTP ${response.status}: ${await response.text().catch(() => '')}`);
+   118→        }
+   119→        const rawData = await response.json();
+   120→        if (!Array.isArray(rawData)) {
+   121→            throw new Error('داده‌های دریافتی آرایه نیست');
+   122→        }
+   123→        if (rawData.length === 0) {
+   124→            throw new Error('هیچ داده‌ای دریافت نشد');
+   125→        }
+   126→        if (!Array.isArray(rawData[0])) {
+   127→            throw new Error('فرمت داده نادرست است - باید آرایه‌ای از آرایه‌ها باشد');
+   128→        }
+   129→        return rawData;
+   130→    }
+   131→
+   132→    /**
+   133→     * Generate signals from candle data.
+   134→     * COPIES the EXACT analyzeMarketData() logic from automation-manager.js.
+   135→     * @param {string} symbol
+   136→     * @param {Array}  rawData  - raw klines array
+   137→     * @returns {Object} { data, signals } — data is the per-candle array with
+   138→     *   signal/tp/sl/rsi/atr fields, signals is the array of generated signals.
+   139→     */
+   140→    generateSignals(symbol, rawData) {
+   141→        // Build the settings object exactly like analyzeMarketData does:
+   142→        //   spread marketSignalSettings (backward compat) then override with
+   143→        //   this.settings values (canonical source post-Task-19).
+   144→        const settings = {
+   145→            ...(JSON.parse(localStorage.getItem('marketSignalSettings') || '{}')),
+   146→            interval: this.settings.interval || '1h',
+   147→            limit: this.settings.limit || 1000,
+   148→            lookback: this.settings.lookback || 50,
+   149→            atrPeriod: this.settings.atrPeriod || 14,
+   150→            rsiPeriod: this.settings.rsiPeriod || 14,
+   151→            avgVolPeriod: this.settings.avgVolPeriod || 50,
+   152→            tpLongMult: this.settings.tpLongMult || 20,
+   153→            slLongMult: this.settings.slLongMult || 6,
+   154→            tpShortMult: this.settings.tpShortMult || 24,
+   155→            slShortMult: this.settings.slShortMult || 4,
+   156→            longFixedTp: this.settings.longFixedTp,
+   157→            longFixedSl: this.settings.longFixedSl,
+   158→            shortFixedTp: this.settings.shortFixedTp,
+   159→            shortFixedSl: this.settings.shortFixedSl,
+   160→            htfConfirmationSource:
+   161→                (typeof document !== 'undefined'
+   162→                    && document.getElementById('htf-confirmation-source')
+   163→                    && document.getElementById('htf-confirmation-source').value)
+   164→                || 'signalCandleClose'
+   165→        };
+   166→        const autoSettings = this.settings || {};
+   167→        const N = rawData.length;
+   168→
+   169→        // Convert raw klines to candle objects
+   170→        const data = rawData.map(c => ({
+   171→            timestamp: new Date(c[0]),
+   172→            open: parseFloat(c[1]),
+   173→            high: parseFloat(c[2]),
+   174→            low: parseFloat(c[3]),
+   175→            close: parseFloat(c[4]),
+   176→            amount: parseFloat(c[5])
+   177→        }));
+   178→
+   179→        // ---- Daily data (offset 3.5 hours) ----
+   180→        const offset = 3.5 * 3600 * 1000;
+   181→        const dailyData = {};
+   182→        for (let i = 0; i < N; i++) {
+   183→            const localTs = data[i].timestamp.getTime() + offset;
+   184→            const day = Math.floor(localTs / 86400000);
+   185→            if (!dailyData[day]) {
+   186→                dailyData[day] = {
+   187→                    maxHigh: -Infinity,
+   188→                    minLow: Infinity,
+   189→                    lastClose: 0,
+   190→                    lastTs: -Infinity
+   191→                };
+   192→            }
+   193→            dailyData[day].maxHigh = Math.max(dailyData[day].maxHigh, data[i].high);
+   194→            dailyData[day].minLow = Math.min(dailyData[day].minLow, data[i].low);
+   195→            if (localTs > dailyData[day].lastTs) {
+   196→                dailyData[day].lastTs = localTs;
+   197→                dailyData[day].lastClose = data[i].close;
+   198→            }
+   199→        }
+   200→
+   201→        const days = Object.keys(dailyData).sort((a, b) => a - b).map(Number);
+   202→
+   203→        const prevDailyHighs = [];
+   204→        const prevDailyLows = [];
+   205→        const prevDayCloses = [];
+   206→        for (let i = 0; i < N; i++) {
+   207→            const localTs = data[i].timestamp.getTime() + offset;
+   208→            const day = Math.floor(localTs / 86400000);
+   209→            const prevDayIndex = days.indexOf(day) - 1;
+   210→            if (prevDayIndex >= 0) {
+   211→                const prevDay = days[prevDayIndex];
+   212→                prevDailyHighs.push(dailyData[prevDay].maxHigh);
+   213→                prevDailyLows.push(dailyData[prevDay].minLow);
+   214→                prevDayCloses.push(dailyData[prevDay].lastClose);
+   215→            } else {
+   216→                prevDailyHighs.push(null);
+   217→                prevDailyLows.push(null);
+   218→                prevDayCloses.push(null);
+   219→            }
+   220→        }
+   221→
+   222→        // ---- Indicators ----
+   223→        const atr = SignalUtils.calculateATR(data, settings.atrPeriod || 14);
+   224→        const avgVols = SignalUtils.calculateSMA(data.map(d => d.amount), settings.avgVolPeriod || 50);
+   225→        const rsi = SignalUtils.calculateRSI(data, settings.rsiPeriod || 14);
+   226→
+   227→        // ---- Crossover tracking (kept for backward compatibility — used when filters are disabled) ----
+   228→        let lastUL = null, lastOH = null;
+   229→        const lastCrossUnderPL = new Array(N).fill(Infinity);
+   230→        const lastCrossOverPH = new Array(N).fill(Infinity);
+   231→        for (let i = 1; i < N; i++) {
+   232→            if (data[i].close < prevDailyLows[i] && data[i - 1].close >= prevDailyLows[i - 1]) lastUL = i;
+   233→            if (data[i].close > prevDailyHighs[i] && data[i - 1].close <= prevDailyHighs[i - 1]) lastOH = i;
+   234→            lastCrossUnderPL[i] = lastUL === null ? Infinity : i - lastUL;
+   235→            lastCrossOverPH[i] = lastOH === null ? Infinity : i - lastOH;
+   236→        }
+   237→
+   238→        // ---- Fake Breakout settings ----
+   239→        const fbSettings = this.settings || {};
+   240→        const enableMeaningfulBreakFilter = fbSettings.enableMeaningfulBreakFilter !== false;
+   241→        const breakAtrMultiplierLong =
+   242→            (fbSettings.breakAtrMultiplierLong !== undefined && fbSettings.breakAtrMultiplierLong !== null)
+   243→                ? fbSettings.breakAtrMultiplierLong
+   244→                : ((fbSettings.breakAtrMultiplier !== undefined && fbSettings.breakAtrMultiplier !== null)
+   245→                    ? fbSettings.breakAtrMultiplier : 0.20);
+   246→        const breakAtrMultiplierShort =
+   247→            (fbSettings.breakAtrMultiplierShort !== undefined && fbSettings.breakAtrMultiplierShort !== null)
+   248→                ? fbSettings.breakAtrMultiplierShort
+   249→                : ((fbSettings.breakAtrMultiplier !== undefined && fbSettings.breakAtrMultiplier !== null)
+   250→                    ? fbSettings.breakAtrMultiplier : 0.20);
+   251→        const breakDetectionMethod = fbSettings.breakDetectionMethod === 'Close' ? 'Close' : 'Wick';
+   252→        const enableBreakLifecycleManagement = fbSettings.enableBreakLifecycleManagement !== false;
+   253→        const breakSequenceLifetime =
+   254→            (fbSettings.breakSequenceLifetime !== undefined && fbSettings.breakSequenceLifetime !== null)
+   255→                ? fbSettings.breakSequenceLifetime : 0;
+   256→
+   257→        // ---- Track meaningful breaks (used when enableMeaningfulBreakFilter is true) ----
+   258→        const lastMeaningfulBreakLong = new Array(N).fill(Infinity);
+   259→        const lastMeaningfulBreakShort = new Array(N).fill(Infinity);
+   260→        {
+   261→            let lastMBL = null, lastMBS = null;
+   262→            for (let i = 1; i < N; i++) {
+   263→                const bdLong = (atr[i] || 0) * breakAtrMultiplierLong;
+   264→                const bdShort = (atr[i] || 0) * breakAtrMultiplierShort;
+   265→                let mbl = false, mbs = false;
+   266→                if (breakDetectionMethod === 'Wick') {
+   267→                    mbl = prevDailyLows[i] !== null && data[i].low <= (prevDailyLows[i] - bdLong);
+   268→                    mbs = prevDailyHighs[i] !== null && data[i].high >= (prevDailyHighs[i] + bdShort);
+   269→                } else {
+   270→                    mbl = prevDailyLows[i] !== null && data[i].close <= (prevDailyLows[i] - bdLong);
+   271→                    mbs = prevDailyHighs[i] !== null && data[i].close >= (prevDailyHighs[i] + bdShort);
+   272→                }
+   273→                if (mbl) lastMBL = i;
+   274→                if (mbs) lastMBS = i;
+   275→                lastMeaningfulBreakLong[i] = lastMBL === null ? Infinity : i - lastMBL;
+   276→                lastMeaningfulBreakShort[i] = lastMBS === null ? Infinity : i - lastMBS;
+   277→            }
+   278→        }
+   279→
+   280→        // ---- Generate signals ----
+   281→        const signals = [];
+   282→        const htfSource = settings.htfConfirmationSource || 'signalCandleClose';
+   283→
+   284→        // Break Lifecycle state machine
+   285→        const resetBreakState = () => ({
+   286→            active: false,
+   287→            type: null,
+   288→            breakCandleIndex: null,
+   289→            waitingRecovery: false,
+   290→            recovered: false,
+   291→            recoveryCandleIndex: null
+   292→        });
+   293→        let breakState = resetBreakState();
+   294→
+   295→        for (let i = 1; i < N - 1; i++) {
+   296→            // HTF confirmation
+   297→            let htfConfirmLong, htfConfirmShort;
+   298→            if (htfSource === 'previousDayClose') {
+   299→                htfConfirmLong = prevDayCloses[i] !== null && prevDayCloses[i] > prevDailyLows[i];
+   300→                htfConfirmShort = prevDayCloses[i] !== null && prevDayCloses[i] < prevDailyHighs[i];
+   301→            } else {
+   302→                htfConfirmLong = prevDailyLows[i] !== null && data[i].close > prevDailyLows[i];
+   303→                htfConfirmShort = prevDailyHighs[i] !== null && data[i].close < prevDailyHighs[i];
+   304→            }
+   305→
+   306→            data[i].rsi = rsi[i];
+   307→            data[i].atr = atr[i];
+   308→
+   309→            if (enableBreakLifecycleManagement) {
+   310→                // ===== Break Lifecycle Management state machine =====
+   311→                const breakDistanceLong = (atr[i] || 0) * breakAtrMultiplierLong;
+   312→                const breakDistanceShort = (atr[i] || 0) * breakAtrMultiplierShort;
+   313→                let isMeaningfulBreakLong = false;
+   314→                let isMeaningfulBreakShort = false;
+   315→                if (breakDetectionMethod === 'Wick') {
+   316→                    isMeaningfulBreakLong =
+   317→                        prevDailyLows[i] !== null && data[i].low <= (prevDailyLows[i] - breakDistanceLong);
+   318→                    isMeaningfulBreakShort =
+   319→                        prevDailyHighs[i] !== null && data[i].high >= (prevDailyHighs[i] + breakDistanceShort);
+   320→                } else {
+   321→                    isMeaningfulBreakLong =
+   322→                        prevDailyLows[i] !== null && data[i].close <= (prevDailyLows[i] - breakDistanceLong);
+   323→                    isMeaningfulBreakShort =
+   324→                        prevDailyHighs[i] !== null && data[i].close >= (prevDailyHighs[i] + breakDistanceShort);
+   325→                }
+   326→
+   327→                // 1. Check expiry
+   328→                if (breakState.active && !breakState.recovered && breakState.breakCandleIndex !== null) {
+   329→                    const lifetime = breakSequenceLifetime > 0 ? breakSequenceLifetime : (settings.lookback || 50);
+   330→                    if (i - breakState.breakCandleIndex > lifetime) {
+   331→                        breakState = resetBreakState();
+   332→                    }
+   333→                }
+   334→
+   335→                // 2. Check for new meaningful break (only if no active break, or previous one recovered/consumed)
+   336→                if (!breakState.active || breakState.recovered) {
+   337→                    if (isMeaningfulBreakLong) {
+   338→                        breakState = {
+   339→                            active: true, type: 'Long', breakCandleIndex: i,
+   340→                            waitingRecovery: true, recovered: false, recoveryCandleIndex: null
+   341→                        };
+   342→                    } else if (isMeaningfulBreakShort) {
+   343→                        breakState = {
+   344→                            active: true, type: 'Short', breakCandleIndex: i,
+   345→                            waitingRecovery: true, recovered: false, recoveryCandleIndex: null
+   346→                        };
+   347→                    }
+   348→                }
+   349→
+   350→                // 3. Check for new break while waiting recovery (replace old break if OPPOSITE direction)
+   351→                if (breakState.active && !breakState.recovered) {
+   352→                    if (breakState.type === 'Long' && isMeaningfulBreakShort) {
+   353→                        breakState = {
+   354→                            active: true, type: 'Short', breakCandleIndex: i,
+   355→                            waitingRecovery: true, recovered: false, recoveryCandleIndex: null
+   356→                        };
+   357→                    } else if (breakState.type === 'Short' && isMeaningfulBreakLong) {
+   358→                        breakState = {
+   359→                            active: true, type: 'Long', breakCandleIndex: i,
+   360→                            waitingRecovery: true, recovered: false, recoveryCandleIndex: null
+   361→                        };
+   362→                    }
+   363→                }
+   364→
+   365→                // 4. Check recovery — price closes back inside the prior day range
+   366→                if (breakState.active && breakState.waitingRecovery) {
+   367→                    if (breakState.type === 'Long') {
+   368→                        if (data[i].close > prevDailyLows[i]) {
+   369→                            breakState.recovered = true;
+   370→                            breakState.recoveryCandleIndex = i;
+   371→                            breakState.waitingRecovery = false;
+   372→                        }
+   373→                    } else if (breakState.type === 'Short') {
+   374→                        if (data[i].close < prevDailyHighs[i]) {
+   375→                            breakState.recovered = true;
+   376→                            breakState.recoveryCandleIndex = i;
+   377→                            breakState.waitingRecovery = false;
+   378→                        }
+   379→                    }
+   380→                }
+   381→
+   382→                // 5. Generate signal ONLY if recovered, on the recovery candle
+   383→                if (breakState.recovered && breakState.recoveryCandleIndex === i) {
+   384→                    if (breakState.type === 'Long') {
+   385→                        const condLong = avgVols[i] !== null
+   386→                            && data[i].amount > avgVols[i] * (autoSettings.volMultLong ?? settings.volMult ?? 0.2)
+   387→                            && rsi[i] !== null
+   388→                            && rsi[i] < (autoSettings.rsiLongThreshold ?? settings.rsiThreshold ?? 30)
+   389→                            && htfConfirmLong;
+   390→
+   391→                        if (condLong) {
+   392→                            data[i].signal = 'Long';
+   393→                            if (settings.longFixedTp !== null && !isNaN(settings.longFixedTp)) {
+   394→                                data[i].tp = data[i].close + (data[i].close * (settings.longFixedTp / 100));
+   395→                            } else {
+   396→                                data[i].tp = data[i].close + (atr[i] * (settings.tpLongMult || 20));
+   397→                            }
+   398→                            if (settings.longFixedSl !== null && !isNaN(settings.longFixedSl)) {
+   399→                                data[i].sl = data[i].close - (data[i].close * (settings.longFixedSl / 100));
+   400→                            } else {
+   401→                                data[i].sl = data[i].close - (atr[i] * (settings.slLongMult || 6));
+   402→                            }
+   403→                            data[i].clientOrderId = SignalUtils.generateOrderId(data[i].timestamp, symbol);
+   404→                            signals.push({
+   405→                                type: 'Long',
+   406→                                timestamp: data[i].timestamp,
+   407→                                price: data[i].close,
+   408→                                tp: data[i].tp,
+   409→                                sl: data[i].sl,
+   410→                                orderId: data[i].clientOrderId,
+   411→                                symbol: symbol,
+   412→                                candleIndex: i
+   413→                            });
+   414→                        }
+   415→                    } else if (breakState.type === 'Short') {
+   416→                        const condShort = avgVols[i] !== null
+   417→                            && data[i].amount > avgVols[i] * (autoSettings.volMultShort ?? settings.volMult ?? 0.2)
+   418→                            && rsi[i] !== null
+   419→                            && rsi[i] > (autoSettings.rsiShortThreshold ?? settings.rsiThreshold ?? 70)
+   420→                            && htfConfirmShort;
+   421→
+   422→                        if (condShort) {
+   423→                            data[i].signal = 'Short';
+   424→                            if (settings.shortFixedTp !== null && !isNaN(settings.shortFixedTp)) {
+   425→                                data[i].tp = data[i].close - (data[i].close * (settings.shortFixedTp / 100));
+   426→                            } else {
+   427→                                data[i].tp = data[i].close - (atr[i] * (settings.tpShortMult || 24));
+   428→                            }
+   429→                            if (settings.shortFixedSl !== null && !isNaN(settings.shortFixedSl)) {
+   430→                                data[i].sl = data[i].close + (data[i].close * (settings.shortFixedSl / 100));
+   431→                            } else {
+   432→                                data[i].sl = data[i].close + (atr[i] * (settings.slShortMult || 4));
+   433→                            }
+   434→                            data[i].clientOrderId = SignalUtils.generateOrderId(data[i].timestamp, symbol);
+   435→                            signals.push({
+   436→                                type: 'Short',
+   437→                                timestamp: data[i].timestamp,
+   438→                                price: data[i].close,
+   439→                                tp: data[i].tp,
+   440→                                sl: data[i].sl,
+   441→                                orderId: data[i].clientOrderId,
+   442→                                symbol: symbol,
+   443→                                candleIndex: i
+   444→                            });
+   445→                        }
+   446→                    }
+   447→
+   448→                    // Reset after signal generation (break is consumed whether or not signal was generated)
+   449→                    breakState = resetBreakState();
+   450→                }
+   451→            } else {
+   452→                // ===== Backward compatible: original logic with optional meaningful break filter =====
+   453→                const isCrossOverPL =
+   454→                    data[i].close > prevDailyLows[i] && data[i - 1].close <= prevDailyLows[i - 1];
+   455→                const isCrossUnderPH =
+   456→                    data[i].close < prevDailyHighs[i] && data[i - 1].close >= prevDailyHighs[i - 1];
+   457→
+   458→                const recentBreakLong = enableMeaningfulBreakFilter
+   459→                    ? lastMeaningfulBreakLong[i]
+   460→                    : lastCrossUnderPL[i];
+   461→                const recentBreakShort = enableMeaningfulBreakFilter
+   462→                    ? lastMeaningfulBreakShort[i]
+   463→                    : lastCrossOverPH[i];
+   464→
+   465→                const condLong = isCrossOverPL
+   466→                    && recentBreakLong <= (settings.lookback || 50)
+   467→                    && avgVols[i] !== null
+   468→                    && data[i].amount > avgVols[i] * (autoSettings.volMultLong ?? settings.volMult ?? 0.2)
+   469→                    && rsi[i] !== null
+   470→                    && rsi[i] < (autoSettings.rsiLongThreshold ?? settings.rsiThreshold ?? 30)
+   471→                    && htfConfirmLong;
+   472→
+   473→                const condShort = isCrossUnderPH
+   474→                    && recentBreakShort <= (settings.lookback || 50)
+   475→                    && avgVols[i] !== null
+   476→                    && data[i].amount > avgVols[i] * (autoSettings.volMultShort ?? settings.volMult ?? 0.2)
+   477→                    && rsi[i] !== null
+   478→                    && rsi[i] > (autoSettings.rsiShortThreshold ?? settings.rsiThreshold ?? 70)
+   479→                    && htfConfirmShort;
+   480→
+   481→                if (condLong) {
+   482→                    data[i].signal = 'Long';
+   483→                    if (settings.longFixedTp !== null && !isNaN(settings.longFixedTp)) {
+   484→                        data[i].tp = data[i].close + (data[i].close * (settings.longFixedTp / 100));
+   485→                    } else {
+   486→                        data[i].tp = data[i].close + (atr[i] * (settings.tpLongMult || 20));
+   487→                    }
+   488→                    if (settings.longFixedSl !== null && !isNaN(settings.longFixedSl)) {
+   489→                        data[i].sl = data[i].close - (data[i].close * (settings.longFixedSl / 100));
+   490→                    } else {
+   491→                        data[i].sl = data[i].close - (atr[i] * (settings.slLongMult || 6));
+   492→                    }
+   493→                    data[i].clientOrderId = SignalUtils.generateOrderId(data[i].timestamp, symbol);
+   494→                    signals.push({
+   495→                        type: 'Long',
+   496→                        timestamp: data[i].timestamp,
+   497→                        price: data[i].close,
+   498→                        tp: data[i].tp,
+   499→                        sl: data[i].sl,
+   500→                        orderId: data[i].clientOrderId,
+   501→                        symbol: symbol,
+   502→                        candleIndex: i
+   503→                    });
+   504→                } else if (condShort) {
+   505→                    data[i].signal = 'Short';
+   506→                    if (settings.shortFixedTp !== null && !isNaN(settings.shortFixedTp)) {
+   507→                        data[i].tp = data[i].close - (data[i].close * (settings.shortFixedTp / 100));
+   508→                    } else {
+   509→                        data[i].tp = data[i].close - (atr[i] * (settings.tpShortMult || 24));
+   510→                    }
+   511→                    if (settings.shortFixedSl !== null && !isNaN(settings.shortFixedSl)) {
+   512→                        data[i].sl = data[i].close + (data[i].close * (settings.shortFixedSl / 100));
+   513→                    } else {
+   514→                        data[i].sl = data[i].close + (atr[i] * (settings.slShortMult || 4));
+   515→                    }
+   516→                    data[i].clientOrderId = SignalUtils.generateOrderId(data[i].timestamp, symbol);
+   517→                    signals.push({
+   518→                        type: 'Short',
+   519→                        timestamp: data[i].timestamp,
+   520→                        price: data[i].close,
+   521→                        tp: data[i].tp,
+   522→                        sl: data[i].sl,
+   523→                        orderId: data[i].clientOrderId,
+   524→                        symbol: symbol,
+   525→                        candleIndex: i
+   526→                    });
+   527→                }
+   528→            }
+   529→        }
+   530→
+   531→        return { data, signals };
+   532→    }
+   533→
+   534→    // ==================== Risk Controls (mirror of runCycle) ====================
+   535→
+   536→    /**
+   537→     * Direction-specific entry margin percent (Long uses entryMarginPercentLong, etc.)
+   538→     * Falls back to legacy entryMarginPercent.
+   539→     */
+   540→    getEntryMarginPercent(direction) {
+   541→        if (direction === 'Long') {
+   542→            return (this.settings.entryMarginPercentLong ?? this.settings.entryMarginPercent ?? 5);
+   543→        }
+   544→        return (this.settings.entryMarginPercentShort ?? this.settings.entryMarginPercent ?? 5);
+   545→    }
+   546→
+   547→    getLeverage(direction) {
+   548→        if (direction === 'Long') {
+   549→            return (this.settings.leverageLong ?? this.settings.leverage ?? 4);
+   550→        }
+   551→        return (this.settings.leverageShort ?? this.settings.leverage ?? 4);
+   552→    }
+   553→
+   554→    getMinPriceDistancePercent(direction) {
+   555→        if (direction === 'Long') {
+   556→            return (this.settings.minPriceDistancePercentLong ?? this.settings.minPriceDistancePercent ?? 0.5);
+   557→        }
+   558→        return (this.settings.minPriceDistancePercentShort ?? this.settings.minPriceDistancePercent ?? 0.5);
+   559→    }
+   560→
+   561→    /**
+   562→     * Run all risk controls for a candidate signal. Returns { passed, reason }.
+   563→     * Mirrors runCycle's controls: Safe Asset, Price Distance, Max Margin,
+   564→     * Positive Margin, Min Same Direction Candles, Signal Expiration.
+   565→     *
+   566→     * @param {Object} signal          - the generated signal
+   567→     * @param {Object} data            - the per-candle data array
+   568→     * @param {Object} ctx             - simulation context:
+   569→     *   { currentCapital, lockedMargin, lockedMarginByDirection }
+   570→     */
+   571→    checkRiskControls(signal, data, ctx) {
+   572→        const direction = signal.type; // 'Long' | 'Short'
+   573→        const totalAssets = ctx.currentCapital;
+   574→        const freeBalance = ctx.currentCapital - ctx.lockedMargin;
+   575→        const newMargin =
+   576→            totalAssets * (this.getEntryMarginPercent(direction) / 100);
+   577→
+   578→        // 1. Safe Asset Check (always runs)
+   579→        const safeAmount = totalAssets * (this.settings.safeAssetPercent / 100);
+   580→        const projectedFree = freeBalance - newMargin;
+   581→        if (projectedFree < safeAmount) {
+   582→            return {
+   583→                passed: false,
+   584→                reason: 'دارایی امن',
+   585→                margin: newMargin,
+   586→                math:
+   587→                    `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
+   588→                    `موجودی آزاد = ${freeBalance.toFixed(4)} USDT\n` +
+   589→                    `مارجین ورودی جدید = ${newMargin.toFixed(4)} USDT\n` +
+   590→                    `درصد دارایی امن = ${this.settings.safeAssetPercent}%\n` +
+   591→                    `دارایی امن = ${totalAssets.toFixed(4)} × ${this.settings.safeAssetPercent}% = ${safeAmount.toFixed(4)} USDT\n` +
+   592→                    `موجودی آزاد پیش‌بینی‌شده = ${freeBalance.toFixed(4)} - ${newMargin.toFixed(4)} = ${projectedFree.toFixed(4)} USDT\n` +
+   593→                    `${projectedFree.toFixed(4)} < ${safeAmount.toFixed(4)} ✗`
+   594→            };
+   595→        }
+   596→
+   597→        // 2. Price Distance Check (only if same-direction position already open for this symbol)
+   598→        const lastEntry = this.lastEntryPrice[direction];
+   599→        if (lastEntry !== null && lastEntry !== undefined) {
+   600→            const currentPrice = signal.price;
+   601→            let distancePercent;
+   602→            if (direction === 'Long') {
+   603→                distancePercent = ((lastEntry - currentPrice) / lastEntry) * 100;
+   604→            } else {
+   605→                distancePercent = ((currentPrice - lastEntry) / lastEntry) * 100;
+   606→            }
+   607→            const minDist = this.getMinPriceDistancePercent(direction);
+   608→            if (distancePercent < minDist) {
+   609→                return {
+   610→                    passed: false,
+   611→                    reason: 'فاصله قیمت',
+   612→                    margin: newMargin,
+   613→                    math:
+   614→                        `آخرین قیمت ورود هم‌جهت = ${lastEntry}\n` +
+   615→                        `قیمت فعلی = ${currentPrice}\n` +
+   616→                        `جهت سیگنال = ${direction === 'Long' ? 'لانگ' : 'شورت'}\n` +
+   617→                        `فاصله = ${distancePercent.toFixed(4)}%\n` +
+   618→                        `حداقل فاصله قیمت = ${minDist}%\n` +
+   619→                        `${distancePercent.toFixed(4)}% < ${minDist}% ✗`
+   620→                };
+   621→            }
+   622→        }
+   623→
+   624→        // 3. Max Margin Per Symbol (only if same-direction position already open for this symbol)
+   625→        // In backtest, we only run one symbol — use lockedMarginByDirection[direction]
+   626→        const existingSymbolMargin = ctx.lockedMarginByDirection[direction] || 0;
+   627→        const maxMarginPerSymbol = totalAssets * (this.settings.maxMarginPerSymbolPercent / 100);
+   628→        const totalSymbolMargin = existingSymbolMargin + newMargin;
+   629→        if (totalSymbolMargin > maxMarginPerSymbol) {
+   630→            return {
+   631→                passed: false,
+   632→                reason: 'سقف مارجین',
+   633→                margin: newMargin,
+   634→                math:
+   635→                    `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
+   636→                    `درصد سقف مارجین نماد = ${this.settings.maxMarginPerSymbolPercent}%\n` +
+   637→                    `سقف مارجین نماد = ${maxMarginPerSymbol.toFixed(4)} USDT\n` +
+   638→                    `مارجین موجود نماد = ${existingSymbolMargin.toFixed(4)} USDT\n` +
+   639→                    `مارجین ورودی جدید = ${newMargin.toFixed(4)} USDT\n` +
+   640→                    `مجموع مارجین نماد = ${totalSymbolMargin.toFixed(4)} USDT\n` +
+   641→                    `${totalSymbolMargin.toFixed(4)} > ${maxMarginPerSymbol.toFixed(4)} ✗`
+   642→            };
+   643→        }
+   644→
+   645→        // 4. Positive Margin Check (always runs)
+   646→        const finalMargin = Math.max(newMargin, 0);
+   647→        if (finalMargin <= 0) {
+   648→            return {
+   649→                passed: false,
+   650→                reason: 'مارجین مثبت',
+   651→                margin: newMargin,
+   652→                math:
+   653→                    `کل دارایی = ${totalAssets.toFixed(4)} USDT\n` +
+   654→                    `درصد مارجین ورودی = ${this.getEntryMarginPercent(direction)}%\n` +
+   655→                    `مارجین محاسبه‌شده = ${newMargin.toFixed(4)} USDT\n` +
+   656→                    `مارجین نهایی = max(${newMargin.toFixed(4)}, 0) = ${finalMargin.toFixed(4)} USDT\n` +
+   657→                    `${finalMargin.toFixed(4)} ≤ 0 ✗`
+   658→            };
+   659→        }
+   660→
+   661→        // 5. Min Same Direction Candles (if minSameDirectionCandles > 0)
+   662→        const minSameDir = this.settings.minSameDirectionCandles || 0;
+   663→        if (minSameDir > 0) {
+   664→            const sigIdx =
+   665→                typeof signal.candleIndex === 'number' ? signal.candleIndex : -1;
+   666→            if (sigIdx < 0) {
+   667→                // can't verify — treat as fail (matches runCycle's "skip" path; here we reject)
+   668→                return {
+   669→                    passed: false,
+   670→                    reason: 'کندل هم‌جهت (شماره کندل نامشخص)',
+   671→                    margin: newMargin
+   672→                };
+   673→            }
+   674→            const candlesAfterSignal = data.length - sigIdx - 1;
+   675→            if (candlesAfterSignal < minSameDir) {
+   676→                return {
+   677→                    passed: false,
+   678→                    reason: 'کندل هم‌جهت (تعداد کافی نیست)',
+   679→                    margin: newMargin,
+   680→                    math:
+   681→                        `سیگنال روی کندل ${sigIdx} صادر شده\n` +
+   682→                        `حداقل کندل هم‌جهت مورد نیاز = ${minSameDir}\n` +
+   683→                        `کندل‌های موجود بعد از سیگنال: ${candlesAfterSignal}\n` +
+   684→                        `نتیجه: تعداد کندل کافی نیست`
+   685→                };
+   686→            }
+   687→            for (let k = 1; k <= minSameDir; k++) {
+   688→                const ci = sigIdx + k;
+   689→                const c = data[ci];
+   690→                if (!c) {
+   691→                    return {
+   692→                        passed: false,
+   693→                        reason: `کندل هم‌جهت (کندل ${ci} موجود نیست)`,
+   694→                        margin: newMargin
+   695→                    };
+   696→                }
+   697→                const isGreen = c.close > c.open;
+   698→                const isRed = c.close < c.open;
+   699→                if (direction === 'Long' && !isGreen) {
+   700→                    return {
+   701→                        passed: false,
+   702→                        reason: `کندل هم‌جهت (کندل ${ci} قرمز)`,
+   703→                        margin: newMargin
+   704→                    };
+   705→                }
+   706→                if (direction === 'Short' && !isRed) {
+   707→                    return {
+   708→                        passed: false,
+   709→                        reason: `کندل هم‌جهت (کندل ${ci} سبز)`,
+   710→                        margin: newMargin
+   711→                    };
+   712→                }
+   713→            }
+   714→        }
+   715→
+   716→        // 6. Signal Expiration (mirrors isSignalExpired; in backtest we use the
+   717→        //    signal's own timestamp as "now", so this won't reject in practice —
+   718→        //    but we include the control for parity with runCycle).
+   719→        const signalTime = signal.timestamp instanceof Date
+   720→            ? signal.timestamp.getTime()
+   721→            : new Date(signal.timestamp).getTime();
+   722→        // "now" = the signal's own timestamp (we process signals at their generation time)
+   723→        const now = signalTime;
+   724→        const expirationMs = (this.settings.signalExpirationHours || 6) * 60 * 60 * 1000;
+   725→        if ((now - signalTime) > expirationMs) {
+   726→            return {
+   727→                passed: false,
+   728→                reason: 'انقضای سیگنال',
+   729→                margin: newMargin
+   730→            };
+   731→        }
+   732→
+   733→        return { passed: true, margin: finalMargin };
+   734→    }
+   735→
+   736→    // ==================== Position Simulation ====================
+   737→
+   738→    /**
+   739→     * Run the full backtest.
+   740→     * @param {Object} config - BacktestConfig:
+   741→     *   { symbol, interval, limit, initialCapital, commission, slippage }
+   742→     * @returns {Promise<Object>} backtest report
+   743→     */
+   744→    async run(config) {
+   745→        const cfg = {
+   746→            symbol: config.symbol || 'DOT',
+   747→            interval: config.interval || this.settings.interval || '1h',
+   748→            limit: config.limit || this.settings.limit || 1000,
+   749→            initialCapital: parseFloat(config.initialCapital) || 1000,
+   750→            commission: parseFloat(config.commission) || 0.04, // %
+   751→            slippage: parseFloat(config.slippage) || 0.02       // %
+   752→        };
+   753→
+   754→        // 1. Fetch candle data
+   755→        const rawData = await this.fetchCandles(cfg.symbol, cfg.interval, cfg.limit);
+   756→
+   757→        // 2. Generate signals (exact same logic as analyzeMarketData)
+   758→        const { data, signals } = this.generateSignals(cfg.symbol, rawData);
+   759→
+   760→        // 3. Simulate positions
+   761→        const simulation = this.simulate(data, signals, cfg);
+   762→
+   763→        // 4. Build report
+   764→        const report = this.buildReport(simulation, cfg);
+   765→        report.config = cfg;
+   766→        report.candleCount = data.length;
+   767→        report.signalCount = signals.length;
+   768→        return report;
+   769→    }
+   770→
+   771→    /**
+   772→     * Core simulation loop — iterates candles chronologically, opens virtual
+   773→     * positions on signal candles (subject to risk controls), and closes them
+   774→     * when TP/SL is hit by subsequent candles (or at end of data).
+   775→     *
+   776→     * @param {Array}  data     - per-candle array (with signal/tp/sl fields)
+   777→     * @param {Array}  signals  - generated signals
+   778→     * @param {Object} cfg      - BacktestConfig
+   779→     * @returns {Object} simulation state for report building
+   780→     */
+   781→    simulate(data, signals, cfg) {
+   782→        const state = {
+   783→            cfg,
+   784→            currentCapital: cfg.initialCapital,
+   785→            lockedMargin: 0,
+   786→            lockedMarginByDirection: { Long: 0, Short: 0 },
+   787→            openPositions: [], // { signalId, direction, entryPrice, tp, sl, qty, margin, leverage, entryCandleIdx, entryCommission, entryTimestamp, signal }
+   788→            closedTrades: [],
+   789→            rejectedTrades: [],
+   790→            equityCurve: [],   // { timestamp, capital }
+   791→            drawdownCurve: [],  // { timestamp, drawdown }
+   792→            peakCapital: cfg.initialCapital,
+   793→            maxDrawdown: 0,
+   794→            // Track last entry price per direction (for Price Distance control)
+   795→            lastEntryPrice: { Long: null, Short: null }
+   796→        };
+   797→
+   798→        // Reset the engine-level lastEntryPrice (used by checkRiskControls)
+   799→        this.lastEntryPrice = state.lastEntryPrice;
+   800→
+   801→        // Build a quick lookup: candleIndex -> signal
+   802→        const signalsByCandleIdx = new Map();
+   803→        for (const s of signals) {
+   804→            signalsByCandleIdx.set(s.candleIndex, s);
+   805→        }
+   806→
+   807→        let signalIdCounter = 0;
+   808→
+   809→        // Helper: compute unrealized PnL of an open position at a given candle
+   810→        const unrealizedPnl = (pos, candle) => {
+   811→            const markPrice = candle.close;
+   812→            if (pos.direction === 'Long') {
+   813→                return (markPrice - pos.entryPrice) * pos.qty;
+   814→            }
+   815→            return (pos.entryPrice - markPrice) * pos.qty;
+   816→        };
+   817→
+   818→        // Helper: close a position at a given price/candle
+   819→        const closePosition = (pos, exitPrice, exitCandleIdx, exitReason) => {
+   820→            const pnl = pos.direction === 'Long'
+   821→                ? (exitPrice - pos.entryPrice) * pos.qty
+   822→                : (pos.entryPrice - exitPrice) * pos.qty;
+   823→            const exitCommission = pos.notional * (cfg.commission / 100);
+   824→            const capitalBefore = state.currentCapital;
+   825→            // Apply: PnL + return margin - exit commission
+   826→            // (entry commission was already deducted at open time; margin was deducted at open)
+   827→            state.currentCapital = state.currentCapital + pnl - exitCommission;
+   828→            // Unlock margin
+   829→            state.lockedMargin -= pos.margin;
+   830→            state.lockedMarginByDirection[pos.direction] -= pos.margin;
+   831→            const capitalAfter = state.currentCapital;
+   832→            const pnlPercent = pos.entryPrice > 0
+   833→                ? ((pnl - pos.entryCommission - exitCommission) / pos.margin) * 100
+   834→                : 0;
+   835→
+   836→            state.closedTrades.push({
+   837→                signalId: pos.signalId,
+   838→                timestamp: pos.entryTimestamp,
+   839→                exitTimestamp: data[exitCandleIdx].timestamp,
+   840→                symbol: pos.symbol,
+   841→                direction: pos.direction,
+   842→                entryPrice: pos.entryPrice,
+   843→                exitPrice: exitPrice,
+   844→                tp: pos.tp,
+   845→                sl: pos.sl,
+   846→                pnl: pnl - pos.entryCommission - exitCommission, // net PnL after commissions
+   847→                pnlPercent: pnlPercent,
+   848→                entryReason: pos.entryReason,
+   849→                exitReason: exitReason,
+   850→                capitalBefore: capitalBefore,
+   851→                capitalAfter: capitalAfter,
+   852→                leverage: pos.leverage,
+   853→                margin: pos.margin,
+   854→                candleCount: exitCandleIdx - pos.entryCandleIdx
+   855→            });
+   856→        };
+   857→
+   858→        // Helper: check open positions for TP/SL hits using candle's high/low.
+   859→        // Iterates in order (oldest first). Uses pessimistic assumption: if both
+   860→        // TP and SL could hit on the same candle, SL hits first.
+   861→        const checkOpenPositionsAtCandle = (candleIdx) => {
+   862→            const candle = data[candleIdx];
+   863→            // Iterate over a snapshot (closePosition mutates openPositions)
+   864→            const snapshot = state.openPositions.slice();
+   865→            for (const pos of snapshot) {
+   866→                if (state.openPositions.indexOf(pos) === -1) continue; // already closed
+   867→                let exitPrice = null;
+   868→                let exitReason = null;
+   869→                if (pos.direction === 'Long') {
+   870→                    if (candle.low <= pos.sl) {
+   871→                        exitPrice = pos.sl;
+   872→                        exitReason = 'SL رسید';
+   873→                    } else if (candle.high >= pos.tp) {
+   874→                        exitPrice = pos.tp;
+   875→                        exitReason = 'TP رسید';
+   876→                    }
+   877→                } else {
+   878→                    if (candle.high >= pos.sl) {
+   879→                        exitPrice = pos.sl;
+   880→                        exitReason = 'SL رسید';
+   881→                    } else if (candle.low <= pos.tp) {
+   882→                        exitPrice = pos.tp;
+   883→                        exitReason = 'TP رسید';
+   884→                    }
+   885→                }
+   886→                if (exitPrice !== null) {
+   887→                    // Remove from openPositions
+   888→                    const idx = state.openPositions.indexOf(pos);
+   889→                    if (idx >= 0) state.openPositions.splice(idx, 1);
+   890→                    closePosition(pos, exitPrice, candleIdx, exitReason);
+   891→                }
+   892→            }
+   893→        };
+   894→
+   895→        // Helper: open a new position from a signal
+   896→        const openPosition = (signal, candleIdx, margin, leverage, entryReason) => {
+   897→            const entryMarginPercent = this.getEntryMarginPercent(signal.type);
+   898→            const notional = margin * leverage; // leveraged position size in USDT
+   899→            // Apply slippage: Long pays higher, Short receives lower
+   900→            const slippageFactor = cfg.slippage / 100;
+   901→            const entryPrice = signal.type === 'Long'
+   902→                ? signal.price * (1 + slippageFactor)
+   903→                : signal.price * (1 - slippageFactor);
+   904→            const qty = notional / entryPrice;
+   905→            const entryCommission = notional * (cfg.commission / 100);
+   906→
+   907→            // Deduct margin + entry commission from capital
+   908→            const capitalBefore = state.currentCapital;
+   909→            state.currentCapital = state.currentCapital - margin - entryCommission;
+   910→            state.lockedMargin += margin;
+   911→            state.lockedMarginByDirection[signal.type] =
+   912→                (state.lockedMarginByDirection[signal.type] || 0) + margin;
+   913→
+   914→            const pos = {
+   915→                signalId: signalIdCounter++,
+   916→                direction: signal.type,
+   917→                entryPrice: entryPrice,
+   918→                tp: signal.tp,
+   919→                sl: signal.sl,
+   920→                qty: qty,
+   921→                notional: notional,
+   922→                margin: margin,
+   923→                leverage: leverage,
+   924→                entryCandleIdx: candleIdx,
+   925→                entryTimestamp: signal.timestamp,
+   926→                entryCommission: entryCommission,
+   927→                entryReason: entryReason,
+   928→                symbol: signal.symbol,
+   929→                signal: signal
+   930→            };
+   931→            state.openPositions.push(pos);
+   932→            // Update last entry price for direction (used by Price Distance control)
+   933→            state.lastEntryPrice[signal.type] = entryPrice;
+   934→            this.lastEntryPrice[signal.type] = entryPrice;
+   935→            return pos;
+   936→        };
+   937→
+   938→        // ===== Iterate candles chronologically =====
+   939→        for (let i = 0; i < data.length; i++) {
+   940→            const candle = data[i];
+   941→
+   942→            // 1. Check open positions for TP/SL hits using this candle's high/low
+   943→            checkOpenPositionsAtCandle(i);
+   944→
+   945→            // 2. Check if a signal fires at this candle — apply risk controls
+   946→            const signal = signalsByCandleIdx.get(i);
+   947→            if (signal) {
+   948→                const ctx = {
+   949→                    currentCapital: state.currentCapital,
+   950→                    lockedMargin: state.lockedMargin,
+   951→                    lockedMarginByDirection: state.lockedMarginByDirection
+   952→                };
+   953→                const rc = this.checkRiskControls(signal, data, ctx);
+   954→                if (rc.passed) {
+   955→                    const margin = rc.margin;
+   956→                    const leverage = this.getLeverage(signal.type);
+   957→                    const entryReason = `سیگنال ${signal.type === 'Long' ? 'لانگ' : 'شورت'} - Fake Breakout`;
+   958→                    openPosition(signal, i, margin, leverage, entryReason);
+   959→                } else {
+   960→                    // Rejected trade
+   961→                    state.rejectedTrades.push({
+   962→                        signalId: signalIdCounter++,
+   963→                        timestamp: signal.timestamp,
+   964→                        symbol: signal.symbol,
+   965→                        direction: signal.type,
+   966→                        rejectionReason: rc.reason,
+   967→                        capitalBefore: state.currentCapital,
+   968→                        math: rc.math || ''
+   969→                    });
+   970→                }
+   971→            }
+   972→
+   973→            // 3. Update equity & drawdown curves (mark-to-market)
+   974→            let equity = state.currentCapital;
+   975→            for (const pos of state.openPositions) {
+   976→                equity += unrealizedPnl(pos, candle);
+   977→            }
+   978→            // Also count locked margin as part of equity (margin is still ours, just locked)
+   979→            // equity already includes currentCapital which has margin deducted from it,
+   980→            // so we add back the locked margin to get the true equity.
+   981→            equity += state.lockedMargin;
+   982→            state.equityCurve.push({ timestamp: candle.timestamp, capital: equity });
+   983→
+   984→            if (equity > state.peakCapital) {
+   985→                state.peakCapital = equity;
+   986→            }
+   987→            const drawdown = state.peakCapital > 0
+   988→                ? ((state.peakCapital - equity) / state.peakCapital) * 100
+   989→                : 0;
+   990→            state.drawdownCurve.push({ timestamp: candle.timestamp, drawdown: drawdown });
+   991→            if (drawdown > state.maxDrawdown) {
+   992→                state.maxDrawdown = drawdown;
+   993→            }
+   994→        }
+   995→
+   996→        // 4. Close any remaining open positions at the last candle's close
+   997→        const lastCandleIdx = data.length - 1;
+   998→        const snapshot = state.openPositions.slice();
+   999→        for (const pos of snapshot) {
+  1000→            const idx = state.openPositions.indexOf(pos);
+  1001→            if (idx >= 0) state.openPositions.splice(idx, 1);
+  1002→            closePosition(pos, data[lastCandleIdx].close, lastCandleIdx, 'پایان داده');
+  1003→        }
+  1004→
+  1005→        return state;
+  1006→    }
+  1007→
+  1008→    // ==================== Reports ====================
+  1009→
+  1010→    /**
+  1011→     * Build the full backtest report from the simulation state.
+  1012→     */
+  1013→    buildReport(state, cfg) {
+  1014→        const trades = state.closedTrades;
+  1015→        const rejected = state.rejectedTrades;
+  1016→
+  1017→        // Overall stats
+  1018→        const finalCapital = state.currentCapital;
+  1019→        const netProfit = finalCapital - cfg.initialCapital;
+  1020→        const netProfitPercent = cfg.initialCapital > 0
+  1021→            ? (netProfit / cfg.initialCapital) * 100
+  1022→            : 0;
+  1023→
+  1024→        const winningTrades = trades.filter(t => t.pnl > 0);
+  1025→        const losingTrades = trades.filter(t => t.pnl < 0);
+  1026→        const grossProfit = winningTrades.reduce((s, t) => s + t.pnl, 0);
+  1027→        const grossLoss = Math.abs(losingTrades.reduce((s, t) => s + t.pnl, 0));
+  1028→        const winRate = trades.length > 0
+  1029→            ? (winningTrades.length / trades.length) * 100
+  1030→            : 0;
+  1031→        const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? Infinity : 0);
+  1032→
+  1033→        const overall = {
+  1034→            initialCapital: cfg.initialCapital,
+  1035→            finalCapital: finalCapital,
+  1036→            netProfit: netProfit,
+  1037→            netProfitPercent: netProfitPercent,
+  1038→            grossProfit: grossProfit,
+  1039→            grossLoss: grossLoss,
+  1040→            winRate: winRate,
+  1041→            profitFactor: profitFactor,
+  1042→            totalTrades: trades.length,
+  1043→            winningTrades: winningTrades.length,
+  1044→            losingTrades: losingTrades.length,
+  1045→            maxDrawdown: state.maxDrawdown
+  1046→        };
+  1047→
+  1048→        // Long stats
+  1049→        const longTrades = trades.filter(t => t.direction === 'Long');
+  1050→        const winningLong = longTrades.filter(t => t.pnl > 0);
+  1051→        const losingLong = longTrades.filter(t => t.pnl < 0);
+  1052→        const longProfit = winningLong.reduce((s, t) => s + t.pnl, 0);
+  1053→        const longLoss = Math.abs(losingLong.reduce((s, t) => s + t.pnl, 0));
+  1054→        const longStats = {
+  1055→            totalLongTrades: longTrades.length,
+  1056→            winningLong: winningLong.length,
+  1057→            losingLong: losingLong.length,
+  1058→            longWinRate: longTrades.length > 0
+  1059→                ? (winningLong.length / longTrades.length) * 100
+  1060→                : 0,
+  1061→            longProfit: longProfit,
+  1062→            longLoss: longLoss,
+  1063→            longProfitFactor: longLoss > 0 ? longProfit / longLoss : (longProfit > 0 ? Infinity : 0)
+  1064→        };
+  1065→
+  1066→        // Short stats
+  1067→        const shortTrades = trades.filter(t => t.direction === 'Short');
+  1068→        const winningShort = shortTrades.filter(t => t.pnl > 0);
+  1069→        const losingShort = shortTrades.filter(t => t.pnl < 0);
+  1070→        const shortProfit = winningShort.reduce((s, t) => s + t.pnl, 0);
+  1071→        const shortLoss = Math.abs(losingShort.reduce((s, t) => s + t.pnl, 0));
+  1072→        const shortStats = {
+  1073→            totalShortTrades: shortTrades.length,
+  1074→            winningShort: winningShort.length,
+  1075→            losingShort: losingShort.length,
+  1076→            shortWinRate: shortTrades.length > 0
+  1077→                ? (winningShort.length / shortTrades.length) * 100
+  1078→                : 0,
+  1079→            shortProfit: shortProfit,
+  1080→            shortLoss: shortLoss,
+  1081→            shortProfitFactor: shortLoss > 0 ? shortProfit / shortLoss : (shortProfit > 0 ? Infinity : 0)
+  1082→        };
+  1083→
+  1084→        return {
+  1085→            overall,
+  1086→            longStats,
+  1087→            shortStats,
+  1088→            equityCurve: state.equityCurve,
+  1089→            drawdownCurve: state.drawdownCurve,
+  1090→            trades,
+  1091→            rejectedTrades: rejected
+  1092→        };
+  1093→    }
+  1094→}
+  1095→
+  1096→// Make available globally
+  1097→window.BacktestEngine = BacktestEngine;
+  1098→window.getDefaultBacktestSettings = getDefaultSettings;
+  1099→window.loadBacktestSettings = loadBacktestSettings;
+  1100→console.log('✓ BacktestEngine loaded and available globally');
+  1101→

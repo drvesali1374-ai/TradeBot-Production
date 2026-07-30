@@ -1,24 +1,53 @@
 /**
- * Backtest Engine
- * ===============
+ * Backtest Engine — Event-Driven Timeline (Task 21 rewrite)
+ * =========================================================
  *
- * Phase 4 + 5 + 6 — Backtest system for the TradeBot project.
+ * ARCHITECTURE
+ * ------------
+ * Previous engine was "Signal-Driven" (looped over a pre-computed list of
+ * signals). This rewrite is "Event-Driven": it loops over CANDLES, processing
+ * each candle as a discrete time step.
  *
- * Copies the EXACT signal generation logic from automation-manager.js's
- * analyzeMarketData() function and the SAME risk controls from runCycle().
- * Instead of opening real positions, simulates them against historical
- * candle data to produce a backtest report (overall + Long/Short stats,
- * equity curve, drawdown curve, trade history).
+ * Per-candle processing order (matches task spec):
+ *   1. Receive new candle (timestamp, OHLCV)
+ *   2. Update market price for all open positions (mark-to-market)
+ *   3. Check TP/SL for all open positions using this candle's high/low
+ *   4. Close positions that hit TP or SL
+ *      - Calculate realized PnL, free up margin, update balance
+ *   5. Check signal expiration for pending signal (if any)
+ *   6. Try to consume pending signal (if any) via risk controls
+ *   7. Generate new signal based on this candle (using same analyzeMarketData
+ *      logic — pre-computed signals are looked up by candleIndex for parity)
+ *      - If new signal generated:
+ *        a. Check all risk controls (Safe Asset, Price Distance, Max Margin,
+ *           Positive Margin, Min Same Direction Candles, Signal Expiration)
+ *        b. If signal direction conflicts with an open position on the same
+ *           symbol → close the opposite position first
+ *        c. If all checks pass → open new position
+ *           - Deduct margin from free balance (mark as used)
+ *           - Apply entry commission
+ *   8. Record snapshot:
+ *      { timestamp, balance, equity, freeMargin, usedMargin,
+ *        unrealizedPnl, realizedPnl, openPositions }
+ *   9. Move to next candle
  *
- * Dependencies (must be loaded BEFORE this file):
+ * ACCOUNTING MODEL (MT4/MT5-style)
+ * --------------------------------
+ *   balance       = realized cash (includes margin that's "marked as used";
+ *                   only entryCommission is deducted at open)
+ *   At open       : balance -= entryCommission ; usedMargin += margin
+ *   At close      : balance += pnl - exitCommission ; usedMargin -= margin
+ *   unrealizedPnl = sum of unrealized PnL of open positions (mark-to-market)
+ *   realizedPnl   = cumulative net PnL of closed trades (after commissions)
+ *   equity        = balance + unrealizedPnl
+ *   freeMargin    = equity - usedMargin
+ *
+ * DEPENDENCIES (must be loaded BEFORE this file):
  *   - /js/shared/signal-utils.js  (window.SignalUtils)
  *
- * Settings:
+ * SETTINGS:
  *   - Read from localStorage.getItem('automation_settings') (same as automation page)
  *   - Falls back to defaults if missing
- *
- * API:
- *   - Fetches historical candles from /api/toobit-proxy (same as automation page)
  *
  * Browser-only — no server-side state changes.
  */
@@ -90,7 +119,7 @@ function loadBacktestSettings() {
     }
 }
 
-// ==================== Backtest Engine ====================
+// ==================== Backtest Engine (Event-Driven) ====================
 
 class BacktestEngine {
     /**
@@ -98,7 +127,7 @@ class BacktestEngine {
      */
     constructor(settings) {
         this.settings = settings || getDefaultSettings();
-        // Per-signal last-entry-price cache (used by Price Distance control)
+        // Per-direction last-entry-price cache (used by Price Distance control)
         this.lastEntryPrice = { Long: null, Short: null };
     }
 
@@ -129,13 +158,24 @@ class BacktestEngine {
         return rawData;
     }
 
+    // ==================== Signal Generation (verbatim copy of analyzeMarketData) ====================
+
     /**
-     * Generate signals from candle data.
+     * Pre-compute indicators AND signals from candle data.
      * COPIES the EXACT analyzeMarketData() logic from automation-manager.js.
+     *
+     * NOTE: Pre-computing signals is OK per the task spec ("the simplest approach:
+     * pre-compute indicators AND signals (like current engine does), but then
+     * loop over CANDLES (not signals)"). The signal generation logic only
+     * depends on candle data UP TO the signal's candle index, so pre-computing
+     * gives the same result as inline generation. The signal CONSUMPTION
+     * (risk controls, position opening) happens inline in the candle loop.
+     *
      * @param {string} symbol
      * @param {Array}  rawData  - raw klines array
      * @returns {Object} { data, signals } — data is the per-candle array with
-     *   signal/tp/sl/rsi/atr fields, signals is the array of generated signals.
+     *   signal/tp/sl/rsi/atr fields stamped per candle, signals is the array
+     *   of generated signals (each tagged with candleIndex).
      */
     generateSignals(symbol, rawData) {
         // Build the settings object exactly like analyzeMarketData does:
@@ -176,7 +216,7 @@ class BacktestEngine {
             amount: parseFloat(c[5])
         }));
 
-        // ---- Daily data (offset 3.5 hours) ----
+        // ---- Daily data (offset 3.5 hours for Tehran) ----
         const offset = 3.5 * 3600 * 1000;
         const dailyData = {};
         for (let i = 0; i < N; i++) {
@@ -277,7 +317,7 @@ class BacktestEngine {
             }
         }
 
-        // ---- Generate signals ----
+        // ---- Generate signals (pre-computed; consumed inline during candle loop) ----
         const signals = [];
         const htfSource = settings.htfConfirmationSource || 'signalCandleClose';
 
@@ -559,21 +599,25 @@ class BacktestEngine {
     }
 
     /**
-     * Run all risk controls for a candidate signal. Returns { passed, reason }.
+     * Run all risk controls for a candidate signal. Returns { passed, reason, math, margin }.
      * Mirrors runCycle's controls: Safe Asset, Price Distance, Max Margin,
      * Positive Margin, Min Same Direction Candles, Signal Expiration.
      *
-     * @param {Object} signal          - the generated signal
-     * @param {Object} data            - the per-candle data array
-     * @param {Object} ctx             - simulation context:
-     *   { currentCapital, lockedMargin, lockedMarginByDirection }
+     * @param {Object} signal              - the candidate signal
+     * @param {Array}  data                - per-candle data array (for Min Same Direction Candles)
+     * @param {Object} account             - account state snapshot:
+     *   { balance, equity, usedMargin, freeMargin, unrealizedPnl, realizedPnl }
+     * @param {Object} ctx                 - per-direction context:
+     *   { usedMarginByDirection, lastEntryPrice, currentCandleTimestamp }
      */
-    checkRiskControls(signal, data, ctx) {
+    checkRiskControls(signal, data, account, ctx) {
         const direction = signal.type; // 'Long' | 'Short'
-        const totalAssets = ctx.currentCapital;
-        const freeBalance = ctx.currentCapital - ctx.lockedMargin;
-        const newMargin =
-            totalAssets * (this.getEntryMarginPercent(direction) / 100);
+        const totalAssets = account.balance; // realized cash (MT4/MT5-style; includes locked margin)
+        // freeBalance (available cash for new margin) = balance - usedMargin (== freeMargin when unrealizedPnl=0)
+        // The spec uses "free balance" loosely; in MT4/MT5 free margin = equity - usedMargin.
+        // For Safe Asset check we use freeMargin (== equity - usedMargin).
+        const freeBalance = account.freeMargin;
+        const newMargin = totalAssets * (this.getEntryMarginPercent(direction) / 100);
 
         // 1. Safe Asset Check (always runs)
         const safeAmount = totalAssets * (this.settings.safeAssetPercent / 100);
@@ -595,7 +639,7 @@ class BacktestEngine {
         }
 
         // 2. Price Distance Check (only if same-direction position already open for this symbol)
-        const lastEntry = this.lastEntryPrice[direction];
+        const lastEntry = ctx.lastEntryPrice[direction];
         if (lastEntry !== null && lastEntry !== undefined) {
             const currentPrice = signal.price;
             let distancePercent;
@@ -622,8 +666,8 @@ class BacktestEngine {
         }
 
         // 3. Max Margin Per Symbol (only if same-direction position already open for this symbol)
-        // In backtest, we only run one symbol — use lockedMarginByDirection[direction]
-        const existingSymbolMargin = ctx.lockedMarginByDirection[direction] || 0;
+        // In single-symbol backtest we use usedMarginByDirection[direction].
+        const existingSymbolMargin = ctx.usedMarginByDirection[direction] || 0;
         const maxMarginPerSymbol = totalAssets * (this.settings.maxMarginPerSymbolPercent / 100);
         const totalSymbolMargin = existingSymbolMargin + newMargin;
         if (totalSymbolMargin > maxMarginPerSymbol) {
@@ -661,10 +705,8 @@ class BacktestEngine {
         // 5. Min Same Direction Candles (if minSameDirectionCandles > 0)
         const minSameDir = this.settings.minSameDirectionCandles || 0;
         if (minSameDir > 0) {
-            const sigIdx =
-                typeof signal.candleIndex === 'number' ? signal.candleIndex : -1;
+            const sigIdx = typeof signal.candleIndex === 'number' ? signal.candleIndex : -1;
             if (sigIdx < 0) {
-                // can't verify — treat as fail (matches runCycle's "skip" path; here we reject)
                 return {
                     passed: false,
                     reason: 'کندل هم‌جهت (شماره کندل نامشخص)',
@@ -713,27 +755,32 @@ class BacktestEngine {
             }
         }
 
-        // 6. Signal Expiration (mirrors isSignalExpired; in backtest we use the
-        //    signal's own timestamp as "now", so this won't reject in practice —
-        //    but we include the control for parity with runCycle).
+        // 6. Signal Expiration (uses CURRENT candle timestamp as "now", not signal's own timestamp)
         const signalTime = signal.timestamp instanceof Date
             ? signal.timestamp.getTime()
             : new Date(signal.timestamp).getTime();
-        // "now" = the signal's own timestamp (we process signals at their generation time)
-        const now = signalTime;
+        const now = ctx.currentCandleTimestamp instanceof Date
+            ? ctx.currentCandleTimestamp.getTime()
+            : new Date(ctx.currentCandleTimestamp).getTime();
         const expirationMs = (this.settings.signalExpirationHours || 6) * 60 * 60 * 1000;
         if ((now - signalTime) > expirationMs) {
             return {
                 passed: false,
                 reason: 'انقضای سیگنال',
-                margin: newMargin
+                margin: newMargin,
+                math:
+                    `زمان سیگنال = ${new Date(signalTime).toLocaleString('fa-IR')}\n` +
+                    `زمان فعلی = ${new Date(now).toLocaleString('fa-IR')}\n` +
+                    `اختلاف = ${((now - signalTime) / 3600000).toFixed(2)} ساعت\n` +
+                    `حداکثر عمر سیگنال = ${this.settings.signalExpirationHours} ساعت\n` +
+                    `${((now - signalTime) / 3600000).toFixed(2)} > ${this.settings.signalExpirationHours} ✗`
             };
         }
 
         return { passed: true, margin: finalMargin };
     }
 
-    // ==================== Position Simulation ====================
+    // ==================== Top-level orchestration ====================
 
     /**
      * Run the full backtest.
@@ -753,148 +800,124 @@ class BacktestEngine {
 
         // 1. Fetch candle data
         const rawData = await this.fetchCandles(cfg.symbol, cfg.interval, cfg.limit);
+        console.log('[Backtest] Fetched', rawData.length, 'candles');
 
-        // 2. Generate signals (exact same logic as analyzeMarketData)
+        // 2. Generate signals (pre-computed; consumed inline during candle loop)
         const { data, signals } = this.generateSignals(cfg.symbol, rawData);
+        console.log('[Backtest] Generated', signals.length, 'signals from', data.length, 'candles');
 
-        // 3. Simulate positions
+        // 3. Simulate (event-driven candle loop)
         const simulation = this.simulate(data, signals, cfg);
+        console.log('[Backtest] Simulation complete:', simulation.closedTrades.length, 'trades,', simulation.rejectedTrades.length, 'rejected');
 
         // 4. Build report
         const report = this.buildReport(simulation, cfg);
         report.config = cfg;
         report.candleCount = data.length;
         report.signalCount = signals.length;
+        report.interval = cfg.interval;
+        // Expose raw candles + signals for chart rendering
+        report.candles = data;
+        report.signals = signals;
         return report;
     }
 
+    // ==================== Event-Driven Simulation ====================
+
     /**
-     * Core simulation loop — iterates candles chronologically, opens virtual
-     * positions on signal candles (subject to risk controls), and closes them
-     * when TP/SL is hit by subsequent candles (or at end of data).
+     * EVENT-DRIVEN CANDLE LOOP.
      *
-     * @param {Array}  data     - per-candle array (with signal/tp/sl fields)
-     * @param {Array}  signals  - generated signals
+     * Iterates candles chronologically, processing each candle as a discrete
+     * time step. Per-candle order:
+     *   1. Mark-to-market update for open positions
+     *   2. TP/SL check (pessimistic — SL first if both hit on same candle)
+     *   3. Pending signal expiration check
+     *   4. Try to consume pending signal via risk controls
+     *   5. Generate new signal (lookup in pre-computed signalsByCandleIdx):
+     *      - Close opposite positions on same symbol
+     *      - Try to open via risk controls; on fail, set as pending
+     *   6. Update accountState + record snapshot
+     *
+     * @param {Array}  data     - per-candle array (with signal/tp/sl/rsi/atr fields)
+     * @param {Array}  signals  - pre-computed signals (each has candleIndex)
      * @param {Object} cfg      - BacktestConfig
      * @returns {Object} simulation state for report building
      */
     simulate(data, signals, cfg) {
         const state = {
             cfg,
-            currentCapital: cfg.initialCapital,
-            lockedMargin: 0,
-            lockedMarginByDirection: { Long: 0, Short: 0 },
-            openPositions: [], // { signalId, direction, entryPrice, tp, sl, qty, margin, leverage, entryCandleIdx, entryCommission, entryTimestamp, signal }
-            closedTrades: [],
-            rejectedTrades: [],
-            equityCurve: [],   // { timestamp, capital }
-            drawdownCurve: [],  // { timestamp, drawdown }
-            peakCapital: cfg.initialCapital,
-            maxDrawdown: 0,
-            // Track last entry price per direction (for Price Distance control)
-            lastEntryPrice: { Long: null, Short: null }
+            data,           // ✓ Store raw candle data for chart rendering
+            signals,        // ✓ Store signals for chart rendering
+            // ===== Account state (MT4/MT5-style) =====
+            // balance: realized cash (includes margin marked-as-used; only entryCommission
+            //         is deducted at open). At close: balance += pnl - exitCommission.
+            balance: cfg.initialCapital,
+            usedMargin: 0,
+            unrealizedPnl: 0,
+            realizedPnl: 0,
+            // derived (recomputed each candle): equity, freeMargin
+            equity: cfg.initialCapital,
+            freeMargin: cfg.initialCapital,
+
+            // ===== Positions =====
+            openPositions: [],       // array of openPosition objects (see openPosition())
+            closedTrades: [],        // array of closed-position records
+            rejectedTrades: [],      // array of rejection records
+
+            // ===== Per-direction context =====
+            usedMarginByDirection: { Long: 0, Short: 0 },
+            lastEntryPrice: { Long: null, Short: null },
+
+            // ===== Pending signal model (mirrors automation-manager.js selectedSignal) =====
+            pendingSignal: null,    // signal awaiting consumption (risk controls failed previously)
+            pendingRejection: null, // rejection record for pendingSignal (pushed when replaced/expired)
+
+            // ===== Snapshots =====
+            snapshots: [],           // { timestamp, balance, equity, freeMargin, usedMargin, unrealizedPnl, realizedPnl, openPositions }
+            equityCurve: [],         // { timestamp, equity }
+            drawdownCurve: [],       // { timestamp, drawdown }
+            peakEquity: cfg.initialCapital,
+            maxDrawdown: 0,          // percent
+
+            // ===== Per-candle returns (for Sharpe ratio) =====
+            returns: [],
         };
 
-        // Reset the engine-level lastEntryPrice (used by checkRiskControls)
+        // Sync engine-level lastEntryPrice (used by checkRiskControls)
         this.lastEntryPrice = state.lastEntryPrice;
 
-        // Build a quick lookup: candleIndex -> signal
+        // Quick lookup: candleIndex -> signal
         const signalsByCandleIdx = new Map();
         for (const s of signals) {
             signalsByCandleIdx.set(s.candleIndex, s);
         }
 
-        let signalIdCounter = 0;
+        let positionIdCounter = 1;
+        let rejectedIdCounter = 1;
 
-        // Helper: compute unrealized PnL of an open position at a given candle
-        const unrealizedPnl = (pos, candle) => {
-            const markPrice = candle.close;
+        // ---------- Helpers ----------
+
+        // Compute unrealized PnL of an open position at a given candle's close price.
+        const computeUnrealizedPnl = (pos, markPrice) => {
             if (pos.direction === 'Long') {
                 return (markPrice - pos.entryPrice) * pos.qty;
             }
             return (pos.entryPrice - markPrice) * pos.qty;
         };
 
-        // Helper: close a position at a given price/candle
-        const closePosition = (pos, exitPrice, exitCandleIdx, exitReason) => {
-            const pnl = pos.direction === 'Long'
-                ? (exitPrice - pos.entryPrice) * pos.qty
-                : (pos.entryPrice - exitPrice) * pos.qty;
-            const exitCommission = pos.notional * (cfg.commission / 100);
-            const capitalBefore = state.currentCapital;
-            // Apply: PnL + return margin - exit commission
-            // (entry commission was already deducted at open time; margin was deducted at open)
-            state.currentCapital = state.currentCapital + pnl - exitCommission;
-            // Unlock margin
-            state.lockedMargin -= pos.margin;
-            state.lockedMarginByDirection[pos.direction] -= pos.margin;
-            const capitalAfter = state.currentCapital;
-            const pnlPercent = pos.entryPrice > 0
-                ? ((pnl - pos.entryCommission - exitCommission) / pos.margin) * 100
-                : 0;
-
-            state.closedTrades.push({
-                signalId: pos.signalId,
-                timestamp: pos.entryTimestamp,
-                exitTimestamp: data[exitCandleIdx].timestamp,
-                symbol: pos.symbol,
-                direction: pos.direction,
-                entryPrice: pos.entryPrice,
-                exitPrice: exitPrice,
-                tp: pos.tp,
-                sl: pos.sl,
-                pnl: pnl - pos.entryCommission - exitCommission, // net PnL after commissions
-                pnlPercent: pnlPercent,
-                entryReason: pos.entryReason,
-                exitReason: exitReason,
-                capitalBefore: capitalBefore,
-                capitalAfter: capitalAfter,
-                leverage: pos.leverage,
-                margin: pos.margin,
-                candleCount: exitCandleIdx - pos.entryCandleIdx
-            });
-        };
-
-        // Helper: check open positions for TP/SL hits using candle's high/low.
-        // Iterates in order (oldest first). Uses pessimistic assumption: if both
-        // TP and SL could hit on the same candle, SL hits first.
-        const checkOpenPositionsAtCandle = (candleIdx) => {
-            const candle = data[candleIdx];
-            // Iterate over a snapshot (closePosition mutates openPositions)
-            const snapshot = state.openPositions.slice();
-            for (const pos of snapshot) {
-                if (state.openPositions.indexOf(pos) === -1) continue; // already closed
-                let exitPrice = null;
-                let exitReason = null;
-                if (pos.direction === 'Long') {
-                    if (candle.low <= pos.sl) {
-                        exitPrice = pos.sl;
-                        exitReason = 'SL رسید';
-                    } else if (candle.high >= pos.tp) {
-                        exitPrice = pos.tp;
-                        exitReason = 'TP رسید';
-                    }
-                } else {
-                    if (candle.high >= pos.sl) {
-                        exitPrice = pos.sl;
-                        exitReason = 'SL رسید';
-                    } else if (candle.low <= pos.tp) {
-                        exitPrice = pos.tp;
-                        exitReason = 'TP رسید';
-                    }
-                }
-                if (exitPrice !== null) {
-                    // Remove from openPositions
-                    const idx = state.openPositions.indexOf(pos);
-                    if (idx >= 0) state.openPositions.splice(idx, 1);
-                    closePosition(pos, exitPrice, candleIdx, exitReason);
-                }
+        // Recompute account-level unrealizedPnl + derived fields
+        const recomputeAccountState = (currentCandleClose) => {
+            let upnl = 0;
+            for (const p of state.openPositions) {
+                upnl += computeUnrealizedPnl(p, currentCandleClose);
             }
+            state.unrealizedPnl = upnl;
+            state.equity = state.balance + upnl;
+            state.freeMargin = state.equity - state.usedMargin;
         };
 
-        // Helper: open a new position from a signal
+        // Open a new position from a signal at candleIdx.
         const openPosition = (signal, candleIdx, margin, leverage, entryReason) => {
-            const entryMarginPercent = this.getEntryMarginPercent(signal.type);
             const notional = margin * leverage; // leveraged position size in USDT
             // Apply slippage: Long pays higher, Short receives lower
             const slippageFactor = cfg.slippage / 100;
@@ -904,17 +927,20 @@ class BacktestEngine {
             const qty = notional / entryPrice;
             const entryCommission = notional * (cfg.commission / 100);
 
-            // Deduct margin + entry commission from capital
-            const capitalBefore = state.currentCapital;
-            state.currentCapital = state.currentCapital - margin - entryCommission;
-            state.lockedMargin += margin;
-            state.lockedMarginByDirection[signal.type] =
-                (state.lockedMarginByDirection[signal.type] || 0) + margin;
+            const capitalBefore = state.balance;
+            // MT4/MT5-style: only entryCommission is deducted from balance at open;
+            // margin is "marked as used" (still part of balance).
+            state.balance = state.balance - entryCommission;
+            state.usedMargin += margin;
+            state.usedMarginByDirection[signal.type] =
+                (state.usedMarginByDirection[signal.type] || 0) + margin;
 
             const pos = {
-                signalId: signalIdCounter++,
-                direction: signal.type,
+                id: positionIdCounter++,
+                symbol: signal.symbol,
+                direction: signal.type,        // 'Long' | 'Short'
                 entryPrice: entryPrice,
+                exitPrice: null,
                 tp: signal.tp,
                 sl: signal.sl,
                 qty: qty,
@@ -924,68 +950,277 @@ class BacktestEngine {
                 entryCandleIdx: candleIdx,
                 entryTimestamp: signal.timestamp,
                 entryCommission: entryCommission,
+                exitCommission: null,
+                pnl: null,
+                pnlPercent: null,
+                status: 'open',
+                exitReason: null,
+                exitCandleIdx: null,
+                exitTimestamp: null,
+                capitalBefore: capitalBefore,
                 entryReason: entryReason,
-                symbol: signal.symbol,
                 signal: signal
             };
             state.openPositions.push(pos);
-            // Update last entry price for direction (used by Price Distance control)
             state.lastEntryPrice[signal.type] = entryPrice;
             this.lastEntryPrice[signal.type] = entryPrice;
             return pos;
         };
 
-        // ===== Iterate candles chronologically =====
+        // Close a position at exitPrice/candleIdx/exitReason. Updates balance,
+        // usedMargin, realizedPnl, and pushes a closed-trade record.
+        const closePosition = (pos, exitPrice, exitCandleIdx, exitReason) => {
+            const pnl = pos.direction === 'Long'
+                ? (exitPrice - pos.entryPrice) * pos.qty
+                : (pos.entryPrice - exitPrice) * pos.qty;
+            const exitCommission = pos.notional * (cfg.commission / 100);
+            const capitalBefore = state.balance;
+            // MT4/MT5-style: balance += pnl - exitCommission (margin was never deducted from balance)
+            state.balance = state.balance + pnl - exitCommission;
+            // Free up margin
+            state.usedMargin -= pos.margin;
+            state.usedMarginByDirection[pos.direction] -= pos.margin;
+            const capitalAfter = state.balance;
+
+            // Net PnL for this trade (after both commissions)
+            const netPnl = pnl - pos.entryCommission - exitCommission;
+            const pnlPercent = pos.margin > 0
+                ? (netPnl / pos.margin) * 100
+                : 0;
+
+            // Update position object (full lifecycle record)
+            pos.exitPrice = exitPrice;
+            pos.exitCommission = exitCommission;
+            pos.pnl = netPnl;
+            pos.pnlPercent = pnlPercent;
+            pos.status = 'closed';
+            pos.exitReason = exitReason;
+            pos.exitCandleIdx = exitCandleIdx;
+            pos.exitTimestamp = data[exitCandleIdx].timestamp;
+            pos.capitalAfter = capitalAfter;
+            pos.candleCount = exitCandleIdx - pos.entryCandleIdx;
+
+            // Add to realized PnL (net of commissions)
+            state.realizedPnl += netPnl;
+
+            state.closedTrades.push({
+                id: pos.id,
+                signalId: pos.id,
+                symbol: pos.symbol,
+                direction: pos.direction,
+                entryPrice: pos.entryPrice,
+                exitPrice: pos.exitPrice,
+                tp: pos.tp,
+                sl: pos.sl,
+                qty: pos.qty,
+                margin: pos.margin,
+                leverage: pos.leverage,
+                entryCandleIdx: pos.entryCandleIdx,
+                entryTimestamp: pos.entryTimestamp,
+                exitCandleIdx: pos.exitCandleIdx,
+                exitTimestamp: pos.exitTimestamp,
+                entryCommission: pos.entryCommission,
+                exitCommission: pos.exitCommission,
+                pnl: pos.pnl,
+                pnlPercent: pos.pnlPercent,
+                entryReason: pos.entryReason,
+                exitReason: pos.exitReason,
+                capitalBefore: pos.capitalBefore,
+                capitalAfter: pos.capitalAfter,
+                candleCount: pos.candleCount,
+                status: 'closed'
+            });
+        };
+
+        // Check open positions for TP/SL hits using candle's high/low.
+        // Pessimistic assumption: if both TP and SL could hit on the same candle,
+        // SL hits first (we assume the worst for the trader).
+        const checkTpSl = (candleIdx) => {
+            const candle = data[candleIdx];
+            const snapshot = state.openPositions.slice();
+            for (const pos of snapshot) {
+                if (state.openPositions.indexOf(pos) === -1) continue; // already closed
+                let exitPrice = null;
+                let exitReason = null;
+                if (pos.direction === 'Long') {
+                    // Long: SL if low <= SL, else TP if high >= TP
+                    if (candle.low <= pos.sl) {
+                        exitPrice = pos.sl;
+                        exitReason = 'SL';
+                    } else if (candle.high >= pos.tp) {
+                        exitPrice = pos.tp;
+                        exitReason = 'TP';
+                    }
+                } else {
+                    // Short: SL if high >= SL, else TP if low <= TP
+                    if (candle.high >= pos.sl) {
+                        exitPrice = pos.sl;
+                        exitReason = 'SL';
+                    } else if (candle.low <= pos.tp) {
+                        exitPrice = pos.tp;
+                        exitReason = 'TP';
+                    }
+                }
+                if (exitPrice !== null) {
+                    const idx = state.openPositions.indexOf(pos);
+                    if (idx >= 0) state.openPositions.splice(idx, 1);
+                    closePosition(pos, exitPrice, candleIdx, exitReason);
+                }
+            }
+        };
+
+        // Close all open positions of the OPPOSITE direction to newDirection on
+        // the same symbol. Mirrors runCycle's closeOppositePositions().
+        const closeOppositePositions = (newDirection, candleIdx) => {
+            const oppositeDir = newDirection === 'Long' ? 'Short' : 'Long';
+            const exitPrice = data[candleIdx].close;
+            const snapshot = state.openPositions.slice();
+            for (const pos of snapshot) {
+                if (pos.direction !== oppositeDir) continue;
+                if (pos.symbol !== state.cfg.symbol) continue; // single-symbol backtest; safety
+                const idx = state.openPositions.indexOf(pos);
+                if (idx >= 0) state.openPositions.splice(idx, 1);
+                closePosition(pos, exitPrice, candleIdx, 'بستن پوزیشن مخالف');
+            }
+        };
+
+        // Try to open a position from a signal via risk controls.
+        // Returns { opened: bool, rejectionReason: string|null, math: string|null }.
+        const tryOpen = (signal, candleIdx) => {
+            const ctx = {
+                usedMarginByDirection: state.usedMarginByDirection,
+                lastEntryPrice: state.lastEntryPrice,
+                currentCandleTimestamp: data[candleIdx].timestamp
+            };
+            const rc = this.checkRiskControls(signal, data, state, ctx);
+            if (rc.passed) {
+                const leverage = this.getLeverage(signal.type);
+                const entryReason = `سیگنال ${signal.type === 'Long' ? 'لانگ' : 'شورت'} - Fake Breakout`;
+                openPosition(signal, candleIdx, rc.margin, leverage, entryReason);
+                return { opened: true, rejectionReason: null, math: null };
+            }
+            return { opened: false, rejectionReason: rc.reason, math: rc.math || '' };
+        };
+
+        // Make a rejection record (not yet pushed to rejectedTrades — caller decides)
+        const makeRejectionRecord = (signal, reason, math) => ({
+            id: rejectedIdCounter++,
+            signalId: rejectedIdCounter - 1,
+            timestamp: signal.timestamp,
+            symbol: signal.symbol,
+            direction: signal.type,
+            rejectionReason: reason,
+            capitalBefore: state.balance,
+            math: math || ''
+        });
+
+        // ---------- Main event-driven loop ----------
+        const expirationMs = (this.settings.signalExpirationHours || 6) * 60 * 60 * 1000;
+
         for (let i = 0; i < data.length; i++) {
             const candle = data[i];
 
-            // 1. Check open positions for TP/SL hits using this candle's high/low
-            checkOpenPositionsAtCandle(i);
+            // ===== Step 1+2: Mark-to-market update + TP/SL check =====
+            // (TP/SL must run BEFORE signal generation so a position that hits TP
+            //  on candle X doesn't count as open when checking risk for a new
+            //  signal on the same candle.)
+            checkTpSl(i);
 
-            // 2. Check if a signal fires at this candle — apply risk controls
-            const signal = signalsByCandleIdx.get(i);
-            if (signal) {
-                const ctx = {
-                    currentCapital: state.currentCapital,
-                    lockedMargin: state.lockedMargin,
-                    lockedMarginByDirection: state.lockedMarginByDirection
-                };
-                const rc = this.checkRiskControls(signal, data, ctx);
-                if (rc.passed) {
-                    const margin = rc.margin;
-                    const leverage = this.getLeverage(signal.type);
-                    const entryReason = `سیگنال ${signal.type === 'Long' ? 'لانگ' : 'شورت'} - Fake Breakout`;
-                    openPosition(signal, i, margin, leverage, entryReason);
+            // ===== Step 3+4: Pending signal expiration + retry =====
+            if (state.pendingSignal) {
+                const sigTime = state.pendingSignal.timestamp instanceof Date
+                    ? state.pendingSignal.timestamp.getTime()
+                    : new Date(state.pendingSignal.timestamp).getTime();
+                const nowTime = candle.timestamp.getTime();
+                const expired = (nowTime - sigTime) > expirationMs;
+                if (expired) {
+                    // Push rejection with expiration reason (override any earlier reason)
+                    const rec = state.pendingRejection || makeRejectionRecord(state.pendingSignal, '', '');
+                    rec.rejectionReason = 'انقضای سیگنال';
+                    rec.math = (rec.math || '') +
+                        (rec.math ? '\n' : '') +
+                        `زمان سیگنال = ${new Date(sigTime).toLocaleString('fa-IR')}\n` +
+                        `زمان انقضا = ${new Date(nowTime).toLocaleString('fa-IR')}\n` +
+                        `اختلاف = ${((nowTime - sigTime) / 3600000).toFixed(2)} ساعت\n` +
+                        `حداکثر عمر سیگنال = ${this.settings.signalExpirationHours} ساعت`;
+                    state.rejectedTrades.push(rec);
+                    state.pendingSignal = null;
+                    state.pendingRejection = null;
                 } else {
-                    // Rejected trade
-                    state.rejectedTrades.push({
-                        signalId: signalIdCounter++,
-                        timestamp: signal.timestamp,
-                        symbol: signal.symbol,
-                        direction: signal.type,
-                        rejectionReason: rc.reason,
-                        capitalBefore: state.currentCapital,
-                        math: rc.math || ''
-                    });
+                    // Retry opening pending signal at this candle
+                    const result = tryOpen(state.pendingSignal, i);
+                    if (result.opened) {
+                        state.pendingSignal = null;
+                        state.pendingRejection = null;
+                    } else {
+                        // Update rejection record with latest reason (don't push yet)
+                        if (!state.pendingRejection) {
+                            state.pendingRejection = makeRejectionRecord(
+                                state.pendingSignal, result.rejectionReason, result.math
+                            );
+                        } else {
+                            state.pendingRejection.rejectionReason = result.rejectionReason;
+                            state.pendingRejection.math = result.math;
+                            state.pendingRejection.capitalBefore = state.balance;
+                        }
+                    }
                 }
             }
 
-            // 3. Update equity & drawdown curves (mark-to-market)
-            let equity = state.currentCapital;
-            for (const pos of state.openPositions) {
-                equity += unrealizedPnl(pos, candle);
-            }
-            // Also count locked margin as part of equity (margin is still ours, just locked)
-            // equity already includes currentCapital which has margin deducted from it,
-            // so we add back the locked margin to get the true equity.
-            equity += state.lockedMargin;
-            state.equityCurve.push({ timestamp: candle.timestamp, capital: equity });
+            // ===== Step 5: Generate new signal (lookup pre-computed) =====
+            const newSignal = signalsByCandleIdx.get(i);
+            if (newSignal) {
+                // Discard old pending signal (push its rejection if any)
+                if (state.pendingSignal && state.pendingRejection) {
+                    state.rejectedTrades.push(state.pendingRejection);
+                }
+                state.pendingSignal = null;
+                state.pendingRejection = null;
 
-            if (equity > state.peakCapital) {
-                state.peakCapital = equity;
+                // Close opposite positions on same symbol (mirrors runCycle step 8)
+                closeOppositePositions(newSignal.type, i);
+
+                // Try to open the new signal
+                const result = tryOpen(newSignal, i);
+                if (result.opened) {
+                    // Opened successfully — no rejection to record
+                } else {
+                    // Failed — set as pending for retry on subsequent candles
+                    state.pendingSignal = newSignal;
+                    state.pendingRejection = makeRejectionRecord(
+                        newSignal, result.rejectionReason, result.math
+                    );
+                }
             }
-            const drawdown = state.peakCapital > 0
-                ? ((state.peakCapital - equity) / state.peakCapital) * 100
+
+            // ===== Step 6: Update account state + record snapshot =====
+            recomputeAccountState(candle.close);
+
+            // Track per-candle return for Sharpe ratio
+            if (state.equityCurve.length > 0) {
+                const prevEquity = state.equityCurve[state.equityCurve.length - 1].equity;
+                if (prevEquity > 0) {
+                    state.returns.push((state.equity - prevEquity) / prevEquity);
+                }
+            }
+
+            state.snapshots.push({
+                timestamp: candle.timestamp,
+                balance: state.balance,
+                equity: state.equity,
+                freeMargin: state.freeMargin,
+                usedMargin: state.usedMargin,
+                unrealizedPnl: state.unrealizedPnl,
+                realizedPnl: state.realizedPnl,
+                openPositions: state.openPositions.length
+            });
+            state.equityCurve.push({ timestamp: candle.timestamp, equity: state.equity });
+
+            if (state.equity > state.peakEquity) {
+                state.peakEquity = state.equity;
+            }
+            const drawdown = state.peakEquity > 0
+                ? ((state.peakEquity - state.equity) / state.peakEquity) * 100
                 : 0;
             state.drawdownCurve.push({ timestamp: candle.timestamp, drawdown: drawdown });
             if (drawdown > state.maxDrawdown) {
@@ -993,29 +1228,72 @@ class BacktestEngine {
             }
         }
 
-        // 4. Close any remaining open positions at the last candle's close
+        // ---------- End of data: close remaining open positions ----------
         const lastCandleIdx = data.length - 1;
+        const lastClose = data[lastCandleIdx].close;
         const snapshot = state.openPositions.slice();
         for (const pos of snapshot) {
             const idx = state.openPositions.indexOf(pos);
             if (idx >= 0) state.openPositions.splice(idx, 1);
-            closePosition(pos, data[lastCandleIdx].close, lastCandleIdx, 'پایان داده');
+            closePosition(pos, lastClose, lastCandleIdx, 'پایان داده');
         }
 
+        // Push any pending rejection with "پایان داده" reason
+        if (state.pendingSignal) {
+            const rec = state.pendingRejection || makeRejectionRecord(state.pendingSignal, '', '');
+            rec.rejectionReason = 'پایان داده';
+            state.rejectedTrades.push(rec);
+            state.pendingSignal = null;
+            state.pendingRejection = null;
+        }
+
+        // Final account state recompute
+        recomputeAccountState(lastClose);
+
         return state;
+    }
+
+    // ==================== Sharpe Ratio ====================
+
+    /**
+     * Calculate annualized Sharpe ratio from per-candle returns.
+     * Uses risk-free rate = 0.
+     * @param {Array<number>} returns   - per-candle returns
+     * @param {string}        interval  - candle interval (1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w)
+     * @returns {number} annualized Sharpe ratio (0 if undefined)
+     */
+    calculateSharpeRatio(returns, interval) {
+        if (!returns || returns.length < 2) return 0;
+        const n = returns.length;
+        const mean = returns.reduce((s, r) => s + r, 0) / n;
+        const variance = returns.reduce((s, r) => s + (r - mean) * (r - mean), 0) / n;
+        const std = Math.sqrt(variance);
+        if (std === 0) return 0;
+        const perCandleSharpe = mean / std;
+
+        // Candles per year (annualization factor)
+        const candlesPerYear = {
+            '1m': 525600, '3m': 175200, '5m': 105120, '15m': 35040,
+            '30m': 17520, '60m': 8760, '1h': 8760, '2h': 4380, '4h': 2190,
+            '6h': 1460, '8h': 1095, '12h': 730, '1d': 365, '1w': 52, '1M': 12
+        };
+        const cpy = candlesPerYear[interval] || 8760; // default to 1h
+        return perCandleSharpe * Math.sqrt(cpy);
     }
 
     // ==================== Reports ====================
 
     /**
      * Build the full backtest report from the simulation state.
+     * Includes: Overall stats, Long stats, Short stats, Equity Curve,
+     * Drawdown Curve, Trade History, Rejected Trades, Sharpe Ratio.
      */
     buildReport(state, cfg) {
         const trades = state.closedTrades;
         const rejected = state.rejectedTrades;
 
-        // Overall stats
-        const finalCapital = state.currentCapital;
+        // ===== Overall stats =====
+        const finalCapital = state.balance;
         const netProfit = finalCapital - cfg.initialCapital;
         const netProfitPercent = cfg.initialCapital > 0
             ? (netProfit / cfg.initialCapital) * 100
@@ -1028,7 +1306,11 @@ class BacktestEngine {
         const winRate = trades.length > 0
             ? (winningTrades.length / trades.length) * 100
             : 0;
-        const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? Infinity : 0);
+        const profitFactor = grossLoss > 0
+            ? grossProfit / grossLoss
+            : (grossProfit > 0 ? Infinity : 0);
+
+        const sharpeRatio = this.calculateSharpeRatio(state.returns, cfg.interval);
 
         const overall = {
             initialCapital: cfg.initialCapital,
@@ -1042,15 +1324,18 @@ class BacktestEngine {
             totalTrades: trades.length,
             winningTrades: winningTrades.length,
             losingTrades: losingTrades.length,
-            maxDrawdown: state.maxDrawdown
+            maxDrawdown: state.maxDrawdown,
+            maxDrawdownPercent: state.maxDrawdown,
+            sharpeRatio: sharpeRatio
         };
 
-        // Long stats
+        // ===== Long stats =====
         const longTrades = trades.filter(t => t.direction === 'Long');
         const winningLong = longTrades.filter(t => t.pnl > 0);
         const losingLong = longTrades.filter(t => t.pnl < 0);
-        const longProfit = winningLong.reduce((s, t) => s + t.pnl, 0);
-        const longLoss = Math.abs(losingLong.reduce((s, t) => s + t.pnl, 0));
+        const longGrossProfit = winningLong.reduce((s, t) => s + t.pnl, 0);
+        const longGrossLoss = Math.abs(losingLong.reduce((s, t) => s + t.pnl, 0));
+        const longNetProfit = longTrades.reduce((s, t) => s + t.pnl, 0);
         const longStats = {
             totalLongTrades: longTrades.length,
             winningLong: winningLong.length,
@@ -1058,17 +1343,21 @@ class BacktestEngine {
             longWinRate: longTrades.length > 0
                 ? (winningLong.length / longTrades.length) * 100
                 : 0,
-            longProfit: longProfit,
-            longLoss: longLoss,
-            longProfitFactor: longLoss > 0 ? longProfit / longLoss : (longProfit > 0 ? Infinity : 0)
+            longGrossProfit: longGrossProfit,
+            longGrossLoss: longGrossLoss,
+            longProfitFactor: longGrossLoss > 0
+                ? longGrossProfit / longGrossLoss
+                : (longGrossProfit > 0 ? Infinity : 0),
+            longNetProfit: longNetProfit
         };
 
-        // Short stats
+        // ===== Short stats =====
         const shortTrades = trades.filter(t => t.direction === 'Short');
         const winningShort = shortTrades.filter(t => t.pnl > 0);
         const losingShort = shortTrades.filter(t => t.pnl < 0);
-        const shortProfit = winningShort.reduce((s, t) => s + t.pnl, 0);
-        const shortLoss = Math.abs(losingShort.reduce((s, t) => s + t.pnl, 0));
+        const shortGrossProfit = winningShort.reduce((s, t) => s + t.pnl, 0);
+        const shortGrossLoss = Math.abs(losingShort.reduce((s, t) => s + t.pnl, 0));
+        const shortNetProfit = shortTrades.reduce((s, t) => s + t.pnl, 0);
         const shortStats = {
             totalShortTrades: shortTrades.length,
             winningShort: winningShort.length,
@@ -1076,9 +1365,12 @@ class BacktestEngine {
             shortWinRate: shortTrades.length > 0
                 ? (winningShort.length / shortTrades.length) * 100
                 : 0,
-            shortProfit: shortProfit,
-            shortLoss: shortLoss,
-            shortProfitFactor: shortLoss > 0 ? shortProfit / shortLoss : (shortProfit > 0 ? Infinity : 0)
+            shortGrossProfit: shortGrossProfit,
+            shortGrossLoss: shortGrossLoss,
+            shortProfitFactor: shortGrossLoss > 0
+                ? shortGrossProfit / shortGrossLoss
+                : (shortGrossProfit > 0 ? Infinity : 0),
+            shortNetProfit: shortNetProfit
         };
 
         return {
@@ -1088,7 +1380,13 @@ class BacktestEngine {
             equityCurve: state.equityCurve,
             drawdownCurve: state.drawdownCurve,
             trades,
-            rejectedTrades: rejected
+            rejectedTrades: rejected,
+            // Expose raw data + signals + snapshots for chart rendering
+            candles: (state.data || []).map(c => ({ timestamp: c.timestamp instanceof Date ? c.timestamp : new Date(c.timestamp), open: c.open, high: c.high, low: c.low, close: c.close, amount: c.amount })),
+            signals: state.signals || [],
+            snapshots: state.snapshots,
+            config: { symbol: cfg.symbol, initialCapital: cfg.initialCapital, commission: cfg.commission, slippage: cfg.slippage },
+            interval: cfg.interval
         };
     }
 }
@@ -1097,4 +1395,4 @@ class BacktestEngine {
 window.BacktestEngine = BacktestEngine;
 window.getDefaultBacktestSettings = getDefaultSettings;
 window.loadBacktestSettings = loadBacktestSettings;
-console.log('✓ BacktestEngine loaded and available globally');
+console.log('✓ BacktestEngine (Event-Driven) loaded and available globally');

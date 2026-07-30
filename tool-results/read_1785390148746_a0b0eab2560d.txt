@@ -1,0 +1,912 @@
+     1→<!DOCTYPE html>
+     2→<html lang="fa" dir="rtl">
+     3→<head>
+     4→    <script src="/auth-check.js"></script>
+     5→    <meta charset="UTF-8">
+     6→    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     7→    <title>بکتست - اتوماسیون هوشمند</title>
+     8→    <script src="https://cdn.tailwindcss.com"></script>
+     9→    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    10→    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    11→    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    12→    <style>
+    13→        body {
+    14→            font-family: 'Vazirmatn', sans-serif;
+    15→            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    16→            min-height: 100vh;
+    17→        }
+    18→
+    19→        .glass-effect {
+    20→            background: rgba(255, 255, 255, 0.05);
+    21→            backdrop-filter: blur(10px);
+    22→            border: 1px solid rgba(255, 255, 255, 0.1);
+    23→        }
+    24→
+    25→        .text-gradient {
+    26→            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    27→            -webkit-background-clip: text;
+    28→            -webkit-text-fill-color: transparent;
+    29→            background-clip: text;
+    30→        }
+    31→
+    32→        .loading-spinner {
+    33→            border: 3px solid rgba(255, 255, 255, 0.3);
+    34→            border-top: 3px solid #667eea;
+    35→            border-radius: 50%;
+    36→            width: 24px;
+    37→            height: 24px;
+    38→            animation: spin 1s linear infinite;
+    39→        }
+    40→
+    41→        @keyframes spin {
+    42→            0% { transform: rotate(0deg); }
+    43→            100% { transform: rotate(360deg); }
+    44→        }
+    45→
+    46→        .input-field {
+    47→            background: rgba(255, 255, 255, 0.05);
+    48→            border: 1px solid rgba(255, 255, 255, 0.1);
+    49→            color: white;
+    50→            padding: 0.5rem;
+    51→            border-radius: 0.5rem;
+    52→            width: 100%;
+    53→            transition: all 0.3s ease;
+    54→        }
+    55→
+    56→        .input-field:focus {
+    57→            outline: none;
+    58→            border-color: #667eea;
+    59→            background: rgba(255, 255, 255, 0.08);
+    60→        }
+    61→
+    62→        .btn-metallic {
+    63→            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    64→            box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.4);
+    65→            transition: all 0.3s ease;
+    66→        }
+    67→
+    68→        .btn-metallic:hover {
+    69→            transform: translateY(-2px);
+    70→            box-shadow: 0 6px 20px 0 rgba(102, 126, 234, 0.6);
+    71→        }
+    72→
+    73→        .btn-metallic:disabled {
+    74→            opacity: 0.5;
+    75→            cursor: not-allowed;
+    76→            transform: none;
+    77→        }
+    78→
+    79→        .data-table {
+    80→            max-height: 500px;
+    81→            overflow-y: auto;
+    82→        }
+    83→
+    84→        .data-table::-webkit-scrollbar {
+    85→            width: 6px;
+    86→        }
+    87→
+    88→        .data-table::-webkit-scrollbar-track {
+    89→            background: rgba(255, 255, 255, 0.1);
+    90→            border-radius: 3px;
+    91→        }
+    92→
+    93→        .data-table::-webkit-scrollbar-thumb {
+    94→            background: #667eea;
+    95→            border-radius: 3px;
+    96→        }
+    97→
+    98→        .collapsible-section {
+    99→            max-height: 1500px;
+   100→            transition: max-height 0.4s ease-out;
+   101→            overflow: hidden;
+   102→        }
+   103→
+   104→        .collapsible-section.collapsed {
+   105→            max-height: 50px;
+   106→        }
+   107→
+   108→        .section-header {
+   109→            cursor: pointer;
+   110→            user-select: none;
+   111→            display: flex;
+   112→            align-items: center;
+   113→            justify-content: space-between;
+   114→            padding: 1rem;
+   115→            background: rgba(255, 255, 255, 0.05);
+   116→            border: 1px solid rgba(255, 255, 255, 0.1);
+   117→            border-radius: 0.5rem;
+   118→            margin-bottom: 1rem;
+   119→        }
+   120→
+   121→        .section-header:hover {
+   122→            background: rgba(255, 255, 255, 0.08);
+   123→        }
+   124→
+   125→        .section-header .toggle-icon {
+   126→            transition: transform 0.3s ease;
+   127→        }
+   128→
+   129→        .collapsible-section.collapsed .toggle-icon {
+   130→            transform: rotate(-90deg);
+   131→        }
+   132→
+   133→        .chart-container {
+   134→            width: 100%;
+   135→            height: 400px;
+   136→        }
+   137→
+   138→        .stat-card {
+   139→            background: rgba(255, 255, 255, 0.05);
+   140→            border: 1px solid rgba(255, 255, 255, 0.1);
+   141→            border-radius: 1rem;
+   142→            padding: 1.5rem;
+   143→            transition: all 0.3s ease;
+   144→        }
+   145→
+   146→        .stat-card:hover {
+   147→            background: rgba(255, 255, 255, 0.08);
+   148→            transform: translateY(-2px);
+   149→        }
+   150→
+   151→        .stat-card.profit { border-color: rgba(16, 185, 129, 0.4); }
+   152→        .stat-card.loss { border-color: rgba(239, 68, 68, 0.4); }
+   153→        .stat-card.neutral { border-color: rgba(102, 126, 234, 0.4); }
+   154→
+   155→        .toast {
+   156→            position: fixed;
+   157→            bottom: 20px;
+   158→            left: 50%;
+   159→            transform: translateX(-50%);
+   160→            z-index: 1000;
+   161→            padding: 1rem 2rem;
+   162→            border-radius: 0.5rem;
+   163→            color: white;
+   164→            opacity: 0;
+   165→            transition: opacity 0.3s ease;
+   166→            pointer-events: none;
+   167→        }
+   168→
+   169→        .toast.show {
+   170→            opacity: 1;
+   171→        }
+   172→
+   173→        .toast.success {
+   174→            background: rgba(16, 185, 129, 0.95);
+   175→            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+   176→        }
+   177→
+   178→        .toast.error {
+   179→            background: rgba(239, 68, 68, 0.95);
+   180→            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+   181→        }
+   182→
+   183→        .toast.info {
+   184→            background: rgba(102, 126, 234, 0.95);
+   185→            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+   186→        }
+   187→
+   188→        .status-running {
+   189→            color: #10b981;
+   190→            animation: pulse 2s infinite;
+   191→        }
+   192→
+   193→        @keyframes pulse {
+   194→            0%, 100% { opacity: 1; }
+   195→            50% { opacity: 0.5; }
+   196→        }
+   197→    </style>
+   198→    <script src="init-settings.js"></script>
+   199→    <!-- Shared utilities -->
+   200→    <script src="js/shared/signal-utils.js"></script>
+   201→    <!-- Backtest Engine -->
+   202→    <script src="js/backtest-engine.js"></script>
+   203→</head>
+   204→<body class="text-white">
+   205→    <!-- Navigation -->
+   206→    <nav class="fixed top-0 w-full z-50 glass-effect">
+   207→        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   208→            <div class="flex justify-between items-center h-16">
+   209→                <div class="flex items-center space-x-reverse space-x-6">
+   210→                    <a href="home.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+   211→                        <i class="fas fa-home ml-1"></i>
+   212→                        خانه
+   213→                    </a>
+   214→                    <a href="settings.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+   215→                        <i class="fas fa-cog ml-1"></i>
+   216→                        تنظیمات
+   217→                    </a>
+   218→                    <a href="market_signal.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+   219→                        <i class="fas fa-chart-line ml-1"></i>
+   220→                        داشبورد
+   221→                    </a>
+   222→                    <a href="trading.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+   223→                        <i class="fas fa-exchange-alt ml-1"></i>
+   224→                        خرید و فروش
+   225→                    </a>
+   226→                    <a href="automation.html" class="text-white hover:text-purple-400 transition-colors duration-200">
+   227→                        <i class="fas fa-robot ml-1"></i>
+   228→                        اتوماسیون
+   229→                    </a>
+   230→                    <a href="backtest.html" class="text-purple-400 transition-colors duration-200">
+   231→                        <i class="fas fa-history ml-1"></i>
+   232→                        بکتست
+   233→                    </a>
+   234→                </div>
+   235→                <div class="flex items-center">
+   236→                    <div class="text-2xl font-bold text-gradient">
+   237→                        بکتست استراتژی
+   238→                        <i class="fas fa-history mr-2"></i>
+   239→                    </div>
+   240→                </div>
+   241→            </div>
+   242→        </div>
+   243→    </nav>
+   244→
+   245→    <!-- Main Content -->
+   246→    <main class="pt-24 pb-12">
+   247→        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   248→            <!-- Config Form -->
+   249→            <div class="glass-effect rounded-2xl p-6 mb-6">
+   250→                <h2 class="text-2xl font-semibold text-gradient mb-6">
+   251→                    <i class="fas fa-cog ml-2"></i>
+   252→                    تنظیمات بکتست
+   253→                </h2>
+   254→                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+   255→                    <div>
+   256→                        <label class="block text-sm text-gray-300 mb-2">نماد</label>
+   257→                        <select id="bt-symbol" class="input-field text-sm" style="cursor: pointer;">
+   258→                            <!-- populated from automation_symbols -->
+   259→                        </select>
+   260→                        <div class="text-xs text-gray-500 mt-1">از لیست نمادهای اتوماسیون</div>
+   261→                    </div>
+   262→                    <div>
+   263→                        <label class="block text-sm text-gray-300 mb-2">سرمایه اولیه (USDT)</label>
+   264→                        <input type="number" id="bt-initial-capital" class="input-field text-sm" value="1000" min="1" step="1">
+   265→                        <div class="text-xs text-gray-500 mt-1">موجودی مجازی شروع</div>
+   266→                    </div>
+   267→                    <div>
+   268→                        <label class="block text-sm text-gray-300 mb-2">کمیسیون (%)</label>
+   269→                        <input type="number" id="bt-commission" class="input-field text-sm" value="0.04" min="0" max="1" step="0.01">
+   270→                        <div class="text-xs text-gray-500 mt-1">هر ورود و خروج</div>
+   271→                    </div>
+   272→                    <div>
+   273→                        <label class="block text-sm text-gray-300 mb-2">اسلیپیج (%)</label>
+   274→                        <input type="number" id="bt-slippage" class="input-field text-sm" value="0.02" min="0" max="1" step="0.01">
+   275→                        <div class="text-xs text-gray-500 mt-1">انحراف قیمت ورود</div>
+   276→                    </div>
+   277→                    <div class="flex items-end">
+   278→                        <button id="bt-run-btn" class="btn-metallic w-full px-6 py-2 rounded-lg text-white font-semibold">
+   279→                            <i class="fas fa-play ml-2"></i>
+   280→                            اجرای بکتست
+   281→                        </button>
+   282→                    </div>
+   283→                </div>
+   284→                <div class="mt-4 text-xs text-gray-400 bg-gray-800/40 p-3 rounded-lg">
+   285→                    <i class="fas fa-info-circle ml-1"></i>
+   286→                    تایم فریم، تعداد کندل، پارامترهای استراتژی و کنترل‌های ریسک از تنظیمات اتوماسیون خوانده می‌شوند.
+   287→                    ابتدا تنظیمات را در صفحه اتوماسیون ذخیره کنید.
+   288→                </div>
+   289→            </div>
+   290→
+   291→            <!-- Status / Loading -->
+   292→            <div id="bt-status" class="glass-effect rounded-2xl p-4 mb-6" style="display: none;">
+   293→                <div class="flex items-center gap-3">
+   294→                    <div class="loading-spinner"></div>
+   295→                    <span id="bt-status-text" class="text-sm text-gray-300">در حال اجرای بکتست...</span>
+   296→                </div>
+   297→            </div>
+   298→
+   299→            <!-- Results Section -->
+   300→            <div id="bt-results" style="display: none;">
+   301→                <!-- Summary Cards -->
+   302→                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+   303→                    <div class="stat-card neutral">
+   304→                        <div class="text-xs text-gray-400 mb-1">سرمایه اولیه</div>
+   305→                        <div id="bt-initial-cap" class="text-2xl font-bold text-blue-400">-</div>
+   306→                    </div>
+   307→                    <div class="stat-card neutral">
+   308→                        <div class="text-xs text-gray-400 mb-1">سرمایه نهایی</div>
+   309→                        <div id="bt-final-cap" class="text-2xl font-bold text-purple-400">-</div>
+   310→                    </div>
+   311→                    <div id="bt-net-profit-card" class="stat-card profit">
+   312→                        <div class="text-xs text-gray-400 mb-1">سود/زیان خالص</div>
+   313→                        <div id="bt-net-profit" class="text-2xl font-bold">-</div>
+   314→                    </div>
+   315→                    <div class="stat-card neutral">
+   316→                        <div class="text-xs text-gray-400 mb-1">نرخ برد (%)</div>
+   317→                        <div id="bt-win-rate" class="text-2xl font-bold text-yellow-400">-</div>
+   318→                    </div>
+   319→                </div>
+   320→
+   321→                <!-- Secondary Stats -->
+   322→                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+   323→                    <div class="glass-effect rounded-lg p-3 text-center">
+   324→                        <div class="text-xs text-gray-400">تعداد کل معامله</div>
+   325→                        <div id="bt-total-trades" class="text-lg font-bold text-white">-</div>
+   326→                    </div>
+   327→                    <div class="glass-effect rounded-lg p-3 text-center">
+   328→                        <div class="text-xs text-gray-400">برنده</div>
+   329→                        <div id="bt-winning" class="text-lg font-bold text-green-400">-</div>
+   330→                    </div>
+   331→                    <div class="glass-effect rounded-lg p-3 text-center">
+   332→                        <div class="text-xs text-gray-400">بازنده</div>
+   333→                        <div id="bt-losing" class="text-lg font-bold text-red-400">-</div>
+   334→                    </div>
+   335→                    <div class="glass-effect rounded-lg p-3 text-center">
+   336→                        <div class="text-xs text-gray-400">پروفایت فاکتور</div>
+   337→                        <div id="bt-profit-factor" class="text-lg font-bold text-white">-</div>
+   338→                    </div>
+   339→                    <div class="glass-effect rounded-lg p-3 text-center">
+   340→                        <div class="text-xs text-gray-400">ماکس دراوداون</div>
+   341→                        <div id="bt-max-drawdown" class="text-lg font-bold text-red-400">-</div>
+   342→                    </div>
+   343→                    <div class="glass-effect rounded-lg p-3 text-center">
+   344→                        <div class="text-xs text-gray-400">سیگنال/معامله</div>
+   345→                        <div id="bt-signal-trade" class="text-lg font-bold text-white">-</div>
+   346→                    </div>
+   347→                </div>
+   348→
+   349→                <!-- Long / Short Stats Tables -->
+   350→                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+   351→                    <div class="glass-effect rounded-2xl p-6">
+   352→                        <h3 class="text-xl font-semibold text-gradient mb-4 flex items-center gap-2">
+   353→                            <i class="fas fa-arrow-up text-green-400"></i>
+   354→                            آمار پوزیشن‌های Long
+   355→                        </h3>
+   356→                        <table class="w-full text-sm">
+   357→                            <tbody id="bt-long-stats-body">
+   358→                                <!-- populated -->
+   359→                            </tbody>
+   360→                        </table>
+   361→                    </div>
+   362→                    <div class="glass-effect rounded-2xl p-6">
+   363→                        <h3 class="text-xl font-semibold text-gradient mb-4 flex items-center gap-2">
+   364→                            <i class="fas fa-arrow-down text-red-400"></i>
+   365→                            آمار پوزیشن‌های Short
+   366→                        </h3>
+   367→                        <table class="w-full text-sm">
+   368→                            <tbody id="bt-short-stats-body">
+   369→                                <!-- populated -->
+   370→                            </tbody>
+   371→                        </table>
+   372→                    </div>
+   373→                </div>
+   374→
+   375→                <!-- Equity Curve Chart -->
+   376→                <div class="glass-effect rounded-2xl p-6 mb-6">
+   377→                    <h3 class="text-2xl font-semibold text-gradient mb-4">
+   378→                        <i class="fas fa-chart-line ml-2"></i>
+   379→                        منحنی سرمایه (Equity Curve)
+   380→                    </h3>
+   381→                    <div id="equity-chart" class="chart-container" dir="ltr"></div>
+   382→                </div>
+   383→
+   384→                <!-- Drawdown Chart -->
+   385→                <div class="glass-effect rounded-2xl p-6 mb-6">
+   386→                    <h3 class="text-2xl font-semibold text-gradient mb-4">
+   387→                        <i class="fas fa-chart-area ml-2"></i>
+   388→                        منحنی دراوداون
+   389→                    </h3>
+   390→                    <div id="drawdown-chart" class="chart-container" dir="ltr"></div>
+   391→                </div>
+   392→
+   393→                <!-- Trade History Table -->
+   394→                <div class="glass-effect rounded-2xl p-6 mb-6">
+   395→                    <div class="flex justify-between items-center mb-4">
+   396→                        <h3 class="text-2xl font-semibold text-gradient">
+   397→                            <i class="fas fa-list ml-2"></i>
+   398→                            تاریخچه معاملات
+   399→                            <span id="bt-trade-count-badge" class="mr-2 text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full">۰</span>
+   400→                        </h3>
+   401→                        <button id="bt-export-csv" class="glass-effect px-4 py-2 rounded-lg hover:bg-purple-600 transition-all duration-300 text-sm">
+   402→                            <i class="fas fa-file-export ml-1"></i>
+   403→                            خروجی CSV
+   404→                        </button>
+   405→                    </div>
+   406→                    <div class="data-table" style="max-height: 384px;">
+   407→                        <table class="w-full text-sm">
+   408→                            <thead class="sticky top-0 bg-gray-800 z-10">
+   409→                                <tr class="border-b border-gray-700">
+   410→                                    <th class="px-3 py-2 text-right">شناسه</th>
+   411→                                    <th class="px-3 py-2 text-right">زمان ورود</th>
+   412→                                    <th class="px-3 py-2 text-right">نماد</th>
+   413→                                    <th class="px-3 py-2 text-right">جهت</th>
+   414→                                    <th class="px-3 py-2 text-right">قیمت ورود</th>
+   415→                                    <th class="px-3 py-2 text-right">قیمت خروج</th>
+   416→                                    <th class="px-3 py-2 text-right">TP</th>
+   417→                                    <th class="px-3 py-2 text-right">SL</th>
+   418→                                    <th class="px-3 py-2 text-right">سود/زیان</th>
+   419→                                    <th class="px-3 py-2 text-right">درصد</th>
+   420→                                    <th class="px-3 py-2 text-right">علت خروج</th>
+   421→                                    <th class="px-3 py-2 text-right">اهرم</th>
+   422→                                    <th class="px-3 py-2 text-right">مارجین</th>
+   423→                                    <th class="px-3 py-2 text-right">کندل</th>
+   424→                                    <th class="px-3 py-2 text-right">سرمایه پس</th>
+   425→                                </tr>
+   426→                            </thead>
+   427→                            <tbody id="bt-trade-history-body">
+   428→                                <tr><td colspan="15" class="px-4 py-8 text-center text-gray-400">معامله‌ای موجود نیست</td></tr>
+   429→                            </tbody>
+   430→                        </table>
+   431→                    </div>
+   432→                </div>
+   433→
+   434→                <!-- Rejected Trades (Collapsible) -->
+   435→                <div class="glass-effect rounded-2xl p-6 mb-6">
+   436→                    <div class="collapsible-section collapsed" id="rejected-collapsible">
+   437→                        <div class="section-header" id="rejected-toggle">
+   438→                            <h3 class="text-xl font-semibold text-gradient flex items-center gap-2">
+   439→                                <i class="fas fa-ban ml-2"></i>
+   440→                                سیگنال‌های رد شده
+   441→                                <span id="bt-rejected-count-badge" class="mr-2 text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full">۰</span>
+   442→                            </h3>
+   443→                            <i class="fas fa-chevron-down toggle-icon"></i>
+   444→                        </div>
+   445→                        <div class="data-table" style="max-height: 500px;">
+   446→                            <table class="w-full text-sm">
+   447→                                <thead class="sticky top-0 bg-gray-800 z-10">
+   448→                                    <tr class="border-b border-gray-700">
+   449→                                        <th class="px-3 py-2 text-right">شناسه</th>
+   450→                                        <th class="px-3 py-2 text-right">زمان</th>
+   451→                                        <th class="px-3 py-2 text-right">نماد</th>
+   452→                                        <th class="px-3 py-2 text-right">جهت</th>
+   453→                                        <th class="px-3 py-2 text-right">علت رد</th>
+   454→                                        <th class="px-3 py-2 text-right">سرمایه پیش</th>
+   455→                                        <th class="px-3 py-2 text-right">جزئیات</th>
+   456→                                    </tr>
+   457→                                </thead>
+   458→                                <tbody id="bt-rejected-trades-body">
+   459→                                    <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">سیگنال رد شده‌ای موجود نیست</td></tr>
+   460→                                </tbody>
+   461→                            </table>
+   462→                        </div>
+   463→                    </div>
+   464→                </div>
+   465→            </div>
+   466→
+   467→            <!-- Empty State -->
+   468→            <div id="bt-empty" class="glass-effect rounded-2xl p-12 text-center">
+   469→                <i class="fas fa-history text-6xl mb-4 text-gray-500"></i>
+   470→                <div class="text-xl text-gray-400 mb-2">هنوز بکتستی اجرا نشده</div>
+   471→                <div class="text-sm text-gray-500">تنظیمات بالا را پر کنید و روی «اجرای بکتست» بزنید</div>
+   472→            </div>
+   473→        </div>
+   474→    </main>
+   475→
+   476→    <!-- Toast -->
+   477→    <div id="toast" class="toast"></div>
+   478→
+   479→    <script>
+   480→        // ==================== Page Logic ====================
+   481→
+   482→        let lastReport = null;
+   483→        let equityChart = null;
+   484→        let drawdownChart = null;
+   485→
+   486→        // ---------- Helpers ----------
+   487→        function showToast(message, type = 'info') {
+   488→            const el = document.getElementById('toast');
+   489→            el.textContent = message;
+   490→            el.className = `toast ${type} show`;
+   491→            setTimeout(() => el.classList.remove('show'), 3000);
+   492→        }
+   493→
+   494→        function fmt(n, decimals = 2) {
+   495→            if (n === null || n === undefined || isNaN(n)) return '-';
+   496→            if (!isFinite(n)) return n > 0 ? '∞' : '-∞';
+   497→            return parseFloat(n).toFixed(decimals);
+   498→        }
+   499→
+   500→        function fmtPrice(n) {
+   501→            if (n === null || n === undefined || isNaN(n)) return '-';
+   502→            const abs = Math.abs(n);
+   503→            const decimals = abs >= 100 ? 2 : abs >= 1 ? 4 : 6;
+   504→            return parseFloat(n).toFixed(decimals);
+   505→        }
+   506→
+   507→        function fmtDate(d) {
+   508→            if (!d) return '-';
+   509→            const dt = d instanceof Date ? d : new Date(d);
+   510→            return dt.toLocaleString('fa-IR', {
+   511→                year: 'numeric', month: '2-digit', day: '2-digit',
+   512→                hour: '2-digit', minute: '2-digit'
+   513→            });
+   514→        }
+   515→
+   516→        // ---------- Symbol dropdown population ----------
+   517→        function populateSymbols() {
+   518→            const select = document.getElementById('bt-symbol');
+   519→            const saved = localStorage.getItem('automation_symbols');
+   520→            let symbols = [];
+   521→            if (saved) {
+   522→                try { symbols = JSON.parse(saved); } catch (e) { symbols = []; }
+   523→            }
+   524→            if (!Array.isArray(symbols) || symbols.length === 0) {
+   525→                symbols = [
+   526→                    { name: 'DOT' }, { name: 'BTC' }, { name: 'ETH' }
+   527→                ];
+   528→            }
+   529→            select.innerHTML = symbols.map(s =>
+   530→                `<option value="${s.name}">${s.name}</option>`
+   531→            ).join('');
+   532→            // Try to preserve last-used symbol
+   533→            const lastUsed = localStorage.getItem('automationLastUsedSymbol');
+   534→            if (lastUsed && symbols.some(s => s.name === lastUsed)) {
+   535→                select.value = lastUsed;
+   536→            }
+   537→        }
+   538→
+   539→        // ---------- Run backtest ----------
+   540→        async function runBacktest() {
+   541→            const btn = document.getElementById('bt-run-btn');
+   542→            const statusEl = document.getElementById('bt-status');
+   543→            const statusText = document.getElementById('bt-status-text');
+   544→            const resultsEl = document.getElementById('bt-results');
+   545→            const emptyEl = document.getElementById('bt-empty');
+   546→
+   547→            const config = {
+   548→                symbol: document.getElementById('bt-symbol').value,
+   549→                initialCapital: parseFloat(document.getElementById('bt-initial-capital').value),
+   550→                commission: parseFloat(document.getElementById('bt-commission').value),
+   551→                slippage: parseFloat(document.getElementById('bt-slippage').value)
+   552→            };
+   553→
+   554→            if (!config.symbol) {
+   555→                showToast('نماد را انتخاب کنید', 'error');
+   556→                return;
+   557→            }
+   558→            if (!config.initialCapital || config.initialCapital <= 0) {
+   559→                showToast('سرمایه اولیه نامعتبر است', 'error');
+   560→                return;
+   561→            }
+   562→
+   563→            btn.disabled = true;
+   564→            btn.innerHTML = '<div class="loading-spinner inline-block align-middle ml-2"></div> در حال اجرا...';
+   565→            statusEl.style.display = 'block';
+   566→            statusText.textContent = 'در حال دریافت داده‌های بازار...';
+   567→            resultsEl.style.display = 'none';
+   568→            emptyEl.style.display = 'none';
+   569→
+   570→            try {
+   571→                const settings = window.loadBacktestSettings();
+   572→                const engine = new BacktestEngine(settings);
+   573→
+   574→                statusText.textContent = `در حال تحلیل و شبیه‌سازی ${config.symbol}...`;
+   575→                // Yield to UI thread before heavy compute
+   576→                await new Promise(r => setTimeout(r, 50));
+   577→
+   578→                const report = await engine.run(config);
+   579→                lastReport = report;
+   580→
+   581→                statusText.textContent = 'در حال رسم نمودارها...';
+   582→                await new Promise(r => setTimeout(r, 50));
+   583→
+   584→                renderReport(report);
+   585→                resultsEl.style.display = 'block';
+   586→                emptyEl.style.display = 'none';
+   587→                showToast(`بکتست تکمیل شد: ${report.overall.totalTrades} معامله`, 'success');
+   588→            } catch (err) {
+   589→                console.error('Backtest error:', err);
+   590→                showToast('خطا در بکتست: ' + (err.message || err), 'error');
+   591→                emptyEl.style.display = 'block';
+   592→            } finally {
+   593→                btn.disabled = false;
+   594→                btn.innerHTML = '<i class="fas fa-play ml-2"></i> اجرای بکتست';
+   595→                statusEl.style.display = 'none';
+   596→            }
+   597→        }
+   598→
+   599→        // ---------- Render report ----------
+   600→        function renderReport(report) {
+   601→            const o = report.overall;
+   602→            const l = report.longStats;
+   603→            const s = report.shortStats;
+   604→
+   605→            // Summary cards
+   606→            document.getElementById('bt-initial-cap').textContent =
+   607→                fmt(o.initialCapital, 2) + ' USDT';
+   608→            document.getElementById('bt-final-cap').textContent =
+   609→                fmt(o.finalCapital, 2) + ' USDT';
+   610→
+   611→            const netProfitEl = document.getElementById('bt-net-profit');
+   612→            const netProfitCard = document.getElementById('bt-net-profit-card');
+   613→            const netProfit = o.netProfit;
+   614→            netProfitEl.textContent =
+   615→                (netProfit >= 0 ? '+' : '') + fmt(netProfit, 2) + ' USDT (' + fmt(o.netProfitPercent, 2) + '%)';
+   616→            netProfitEl.classList.remove('text-green-400', 'text-red-400');
+   617→            netProfitEl.classList.add(netProfit >= 0 ? 'text-green-400' : 'text-red-400');
+   618→            netProfitCard.classList.remove('profit', 'loss');
+   619→            netProfitCard.classList.add(netProfit >= 0 ? 'profit' : 'loss');
+   620→
+   621→            document.getElementById('bt-win-rate').textContent = fmt(o.winRate, 2) + '%';
+   622→            document.getElementById('bt-total-trades').textContent = o.totalTrades;
+   623→            document.getElementById('bt-winning').textContent = o.winningTrades;
+   624→            document.getElementById('bt-losing').textContent = o.losingTrades;
+   625→            document.getElementById('bt-profit-factor').textContent =
+   626→                isFinite(o.profitFactor) ? fmt(o.profitFactor, 2) : '∞';
+   627→            document.getElementById('bt-max-drawdown').textContent = fmt(o.maxDrawdown, 2) + '%';
+   628→            document.getElementById('bt-signal-trade').textContent =
+   629→                `${report.signalCount} / ${report.overall.totalTrades}`;
+   630→
+   631→            // Long stats table
+   632→            const longBody = document.getElementById('bt-long-stats-body');
+   633→            longBody.innerHTML = `
+   634→                <tr class="border-b border-gray-700">
+   635→                    <td class="px-3 py-2 text-gray-300">تعداد کل لانگ</td>
+   636→                    <td class="px-3 py-2 font-bold text-white">${l.totalLongTrades}</td>
+   637→                </tr>
+   638→                <tr class="border-b border-gray-700">
+   639→                    <td class="px-3 py-2 text-gray-300">برنده</td>
+   640→                    <td class="px-3 py-2 font-bold text-green-400">${l.winningLong}</td>
+   641→                </tr>
+   642→                <tr class="border-b border-gray-700">
+   643→                    <td class="px-3 py-2 text-gray-300">بازنده</td>
+   644→                    <td class="px-3 py-2 font-bold text-red-400">${l.losingLong}</td>
+   645→                </tr>
+   646→                <tr class="border-b border-gray-700">
+   647→                    <td class="px-3 py-2 text-gray-300">نرخ برد</td>
+   648→                    <td class="px-3 py-2 font-bold text-yellow-400">${fmt(l.longWinRate, 2)}%</td>
+   649→                </tr>
+   650→                <tr class="border-b border-gray-700">
+   651→                    <td class="px-3 py-2 text-gray-300">سود ناخالص</td>
+   652→                    <td class="px-3 py-2 font-bold text-green-400">${fmt(l.longProfit, 2)} USDT</td>
+   653→                </tr>
+   654→                <tr class="border-b border-gray-700">
+   655→                    <td class="px-3 py-2 text-gray-300">زیان ناخالص</td>
+   656→                    <td class="px-3 py-2 font-bold text-red-400">${fmt(l.longLoss, 2)} USDT</td>
+   657→                </tr>
+   658→                <tr>
+   659→                    <td class="px-3 py-2 text-gray-300">پروفایت فاکتور</td>
+   660→                    <td class="px-3 py-2 font-bold text-white">${isFinite(l.longProfitFactor) ? fmt(l.longProfitFactor, 2) : '∞'}</td>
+   661→                </tr>
+   662→            `;
+   663→
+   664→            // Short stats table
+   665→            const shortBody = document.getElementById('bt-short-stats-body');
+   666→            shortBody.innerHTML = `
+   667→                <tr class="border-b border-gray-700">
+   668→                    <td class="px-3 py-2 text-gray-300">تعداد کل شورت</td>
+   669→                    <td class="px-3 py-2 font-bold text-white">${s.totalShortTrades}</td>
+   670→                </tr>
+   671→                <tr class="border-b border-gray-700">
+   672→                    <td class="px-3 py-2 text-gray-300">برنده</td>
+   673→                    <td class="px-3 py-2 font-bold text-green-400">${s.winningShort}</td>
+   674→                </tr>
+   675→                <tr class="border-b border-gray-700">
+   676→                    <td class="px-3 py-2 text-gray-300">بازنده</td>
+   677→                    <td class="px-3 py-2 font-bold text-red-400">${s.losingShort}</td>
+   678→                </tr>
+   679→                <tr class="border-b border-gray-700">
+   680→                    <td class="px-3 py-2 text-gray-300">نرخ برد</td>
+   681→                    <td class="px-3 py-2 font-bold text-yellow-400">${fmt(s.shortWinRate, 2)}%</td>
+   682→                </tr>
+   683→                <tr class="border-b border-gray-700">
+   684→                    <td class="px-3 py-2 text-gray-300">سود ناخالص</td>
+   685→                    <td class="px-3 py-2 font-bold text-green-400">${fmt(s.shortProfit, 2)} USDT</td>
+   686→                </tr>
+   687→                <tr class="border-b border-gray-700">
+   688→                    <td class="px-3 py-2 text-gray-300">زیان ناخالص</td>
+   689→                    <td class="px-3 py-2 font-bold text-red-400">${fmt(s.shortLoss, 2)} USDT</td>
+   690→                </tr>
+   691→                <tr>
+   692→                    <td class="px-3 py-2 text-gray-300">پروفایت فاکتور</td>
+   693→                    <td class="px-3 py-2 font-bold text-white">${isFinite(s.shortProfitFactor) ? fmt(s.shortProfitFactor, 2) : '∞'}</td>
+   694→                </tr>
+   695→            `;
+   696→
+   697→            // Trade history
+   698→            const tradeBody = document.getElementById('bt-trade-history-body');
+   699→            const tradeCountBadge = document.getElementById('bt-trade-count-badge');
+   700→            tradeCountBadge.textContent = String(report.trades.length).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+   701→            if (report.trades.length === 0) {
+   702→                tradeBody.innerHTML = '<tr><td colspan="15" class="px-4 py-8 text-center text-gray-400">معامله‌ای موجود نیست</td></tr>';
+   703→            } else {
+   704→                tradeBody.innerHTML = report.trades.map(t => {
+   705→                    const pnlClass = t.pnl > 0 ? 'text-green-400' : t.pnl < 0 ? 'text-red-400' : 'text-gray-300';
+   706→                    const dirClass = t.direction === 'Long' ? 'text-green-400' : 'text-red-400';
+   707→                    return `
+   708→                        <tr class="border-b border-gray-800 hover:bg-white/5">
+   709→                            <td class="px-3 py-2 text-gray-400">${t.signalId}</td>
+   710→                            <td class="px-3 py-2 text-xs">${fmtDate(t.timestamp)}</td>
+   711→                            <td class="px-3 py-2 font-semibold">${t.symbol}</td>
+   712→                            <td class="px-3 py-2 ${dirClass} font-bold">${t.direction === 'Long' ? 'لانگ' : 'شورت'}</td>
+   713→                            <td class="px-3 py-2">${fmtPrice(t.entryPrice)}</td>
+   714→                            <td class="px-3 py-2">${fmtPrice(t.exitPrice)}</td>
+   715→                            <td class="px-3 py-2 text-green-400 text-xs">${fmtPrice(t.tp)}</td>
+   716→                            <td class="px-3 py-2 text-red-400 text-xs">${fmtPrice(t.sl)}</td>
+   717→                            <td class="px-3 py-2 ${pnlClass} font-bold">${(t.pnl >= 0 ? '+' : '') + fmt(t.pnl, 2)}</td>
+   718→                            <td class="px-3 py-2 ${pnlClass}">${(t.pnlPercent >= 0 ? '+' : '') + fmt(t.pnlPercent, 2)}%</td>
+   719→                            <td class="px-3 py-2 text-xs">${t.exitReason}</td>
+   720→                            <td class="px-3 py-2">${t.leverage}x</td>
+   721→                            <td class="px-3 py-2 text-xs">${fmt(t.margin, 2)}</td>
+   722→                            <td class="px-3 py-2">${t.candleCount}</td>
+   723→                            <td class="px-3 py-2 text-xs">${fmt(t.capitalAfter, 2)}</td>
+   724→                        </tr>
+   725→                    `;
+   726→                }).join('');
+   727→            }
+   728→
+   729→            // Rejected trades
+   730→            const rejectedBody = document.getElementById('bt-rejected-trades-body');
+   731→            const rejectedBadge = document.getElementById('bt-rejected-count-badge');
+   732→            rejectedBadge.textContent = String(report.rejectedTrades.length).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+   733→            if (report.rejectedTrades.length === 0) {
+   734→                rejectedBody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">سیگنال رد شده‌ای موجود نیست</td></tr>';
+   735→            } else {
+   736→                rejectedBody.innerHTML = report.rejectedTrades.map(t => {
+   737→                    const dirClass = t.direction === 'Long' ? 'text-green-400' : 'text-red-400';
+   738→                    const mathPreview = (t.math || '').split('\n').slice(0, 2).join(' — ');
+   739→                    return `
+   740→                        <tr class="border-b border-gray-800 hover:bg-white/5">
+   741→                            <td class="px-3 py-2 text-gray-400">${t.signalId}</td>
+   742→                            <td class="px-3 py-2 text-xs">${fmtDate(t.timestamp)}</td>
+   743→                            <td class="px-3 py-2 font-semibold">${t.symbol}</td>
+   744→                            <td class="px-3 py-2 ${dirClass} font-bold">${t.direction === 'Long' ? 'لانگ' : 'شورت'}</td>
+   745→                            <td class="px-3 py-2 text-red-400">${t.rejectionReason}</td>
+   746→                            <td class="px-3 py-2 text-xs">${fmt(t.capitalBefore, 2)}</td>
+   747→                            <td class="px-3 py-2 text-xs text-gray-400" title="${(t.math || '').replace(/"/g, '&quot;')}">${mathPreview}</td>
+   748→                        </tr>
+   749→                    `;
+   750→                }).join('');
+   751→            }
+   752→
+   753→            // Charts
+   754→            renderEquityChart(report.equityCurve);
+   755→            renderDrawdownChart(report.drawdownCurve);
+   756→        }
+   757→
+   758→        // ---------- Charts ----------
+   759→        function renderEquityChart(curve) {
+   760→            const el = document.getElementById('equity-chart');
+   761→            if (!equityChart) {
+   762→                equityChart = echarts.init(el);
+   763→                window.addEventListener('resize', () => equityChart.resize());
+   764→            }
+   765→            const data = curve.map(p => [p.timestamp.getTime(), p.capital]);
+   766→            equityChart.setOption({
+   767→                backgroundColor: 'transparent',
+   768→                tooltip: {
+   769→                    trigger: 'axis',
+   770→                    backgroundColor: 'rgba(50, 50, 50, 0.9)',
+   771→                    borderColor: '#777',
+   772→                    textStyle: { color: '#fff' },
+   773→                    formatter: params => {
+   774→                        const p = params[0];
+   775→                        const dt = new Date(p.data[0]).toLocaleString('fa-IR');
+   776→                        return `${dt}<br/>سرمایه: <b>${fmt(p.data[1], 2)} USDT</b>`;
+   777→                    }
+   778→                },
+   779→                grid: { left: '8%', right: '5%', bottom: '15%', top: '10%' },
+   780→                xAxis: {
+   781→                    type: 'time',
+   782→                    axisLine: { lineStyle: { color: '#8392A5' } },
+   783→                    axisLabel: { color: '#9ca3af', fontSize: 10 }
+   784→                },
+   785→                yAxis: {
+   786→                    type: 'value',
+   787→                    scale: true,
+   788→                    axisLine: { lineStyle: { color: '#8392A5' } },
+   789→                    axisLabel: { color: '#9ca3af', formatter: v => fmt(v, 0) },
+   790→                    splitLine: { lineStyle: { color: '#374151' } }
+   791→                },
+   792→                series: [{
+   793→                    name: 'سرمایه',
+   794→                    type: 'line',
+   795→                    data: data,
+   796→                    smooth: false,
+   797→                    symbol: 'none',
+   798→                    lineStyle: { color: '#667eea', width: 2 },
+   799→                    areaStyle: {
+   800→                        color: {
+   801→                            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+   802→                            colorStops: [
+   803→                                { offset: 0, color: 'rgba(102, 126, 234, 0.4)' },
+   804→                                { offset: 1, color: 'rgba(102, 126, 234, 0.0)' }
+   805→                            ]
+   806→                        }
+   807→                    }
+   808→                }]
+   809→            }, true);
+   810→        }
+   811→
+   812→        function renderDrawdownChart(curve) {
+   813→            const el = document.getElementById('drawdown-chart');
+   814→            if (!drawdownChart) {
+   815→                drawdownChart = echarts.init(el);
+   816→                window.addEventListener('resize', () => drawdownChart.resize());
+   817→            }
+   818→            const data = curve.map(p => [p.timestamp.getTime(), p.drawdown]);
+   819→            drawdownChart.setOption({
+   820→                backgroundColor: 'transparent',
+   821→                tooltip: {
+   822→                    trigger: 'axis',
+   823→                    backgroundColor: 'rgba(50, 50, 50, 0.9)',
+   824→                    borderColor: '#777',
+   825→                    textStyle: { color: '#fff' },
+   826→                    formatter: params => {
+   827→                        const p = params[0];
+   828→                        const dt = new Date(p.data[0]).toLocaleString('fa-IR');
+   829→                        return `${dt}<br/>دراوداون: <b>${fmt(p.data[1], 2)}%</b>`;
+   830→                    }
+   831→                },
+   832→                grid: { left: '8%', right: '5%', bottom: '15%', top: '10%' },
+   833→                xAxis: {
+   834→                    type: 'time',
+   835→                    axisLine: { lineStyle: { color: '#8392A5' } },
+   836→                    axisLabel: { color: '#9ca3af', fontSize: 10 }
+   837→                },
+   838→                yAxis: {
+   839→                    type: 'value',
+   840→                    axisLine: { lineStyle: { color: '#8392A5' } },
+   841→                    axisLabel: { color: '#9ca3af', formatter: '{value}%' },
+   842→                    splitLine: { lineStyle: { color: '#374151' } }
+   843→                },
+   844→                series: [{
+   845→                    name: 'دراوداون',
+   846→                    type: 'line',
+   847→                    data: data,
+   848→                    smooth: false,
+   849→                    symbol: 'none',
+   850→                    lineStyle: { color: '#ef4444', width: 1.5 },
+   851→                    areaStyle: { color: 'rgba(239, 68, 68, 0.35)' }
+   852→                }]
+   853→            }, true);
+   854→        }
+   855→
+   856→        // ---------- CSV Export ----------
+   857→        function exportCSV() {
+   858→            if (!lastReport || !lastReport.trades || lastReport.trades.length === 0) {
+   859→                showToast('معامله‌ای برای خروجی وجود ندارد', 'error');
+   860→                return;
+   861→            }
+   862→            const headers = [
+   863→                'timestamp', 'symbol', 'direction',
+   864→                'entryPrice', 'exitPrice', 'pnl', 'pnlPercent',
+   865→                'exitReason', 'capitalAfter'
+   866→            ];
+   867→            const rows = lastReport.trades.map(t => [
+   868→                new Date(t.timestamp).toISOString(),
+   869→                t.symbol,
+   870→                t.direction,
+   871→                t.entryPrice,
+   872→                t.exitPrice,
+   873→                t.pnl.toFixed(4),
+   874→                t.pnlPercent.toFixed(4),
+   875→                t.exitReason,
+   876→                t.capitalAfter.toFixed(4)
+   877→            ]);
+   878→            const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+   879→            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+   880→            const url = URL.createObjectURL(blob);
+   881→            const a = document.createElement('a');
+   882→            a.href = url;
+   883→            a.download = `backtest_${lastReport.config.symbol}_${new Date().toISOString().slice(0, 10)}.csv`;
+   884→            document.body.appendChild(a);
+   885→            a.click();
+   886→            document.body.removeChild(a);
+   887→            URL.revokeObjectURL(url);
+   888→            showToast('CSV خروجی گرفته شد', 'success');
+   889→        }
+   890→
+   891→        // ---------- Collapsible rejected ----------
+   892→        function bindCollapsible() {
+   893→            const toggle = document.getElementById('rejected-toggle');
+   894→            const section = document.getElementById('rejected-collapsible');
+   895→            if (toggle && section) {
+   896→                toggle.addEventListener('click', () => {
+   897→                    section.classList.toggle('collapsed');
+   898→                });
+   899→            }
+   900→        }
+   901→
+   902→        // ---------- Init ----------
+   903→        document.addEventListener('DOMContentLoaded', () => {
+   904→            populateSymbols();
+   905→            bindCollapsible();
+   906→            document.getElementById('bt-run-btn').addEventListener('click', runBacktest);
+   907→            document.getElementById('bt-export-csv').addEventListener('click', exportCSV);
+   908→        });
+   909→    </script>
+   910→</body>
+   911→</html>
+   912→

@@ -135,6 +135,11 @@
             height: 400px;
         }
 
+        .chart-container-tall {
+            width: 100%;
+            height: 560px;
+        }
+
         .stat-card {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -194,11 +199,27 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+
+        /* Candlestick chart legend pills */
+        .legend-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+        }
+        .legend-pill .swatch {
+            width: 10px; height: 10px; border-radius: 2px;
+        }
     </style>
     <script src="init-settings.js"></script>
     <!-- Shared utilities -->
     <script src="js/shared/signal-utils.js"></script>
-    <!-- Backtest Engine -->
+    <!-- Backtest Engine (Event-Driven) -->
     <script src="js/backtest-engine.js"></script>
 </head>
 <body class="text-white">
@@ -285,6 +306,7 @@
                     <i class="fas fa-info-circle ml-1"></i>
                     تایم فریم، تعداد کندل، پارامترهای استراتژی و کنترل‌های ریسک از تنظیمات اتوماسیون خوانده می‌شوند.
                     ابتدا تنظیمات را در صفحه اتوماسیون ذخیره کنید.
+                    موتور بکتست به‌صورت <b>Event-Driven</b> (روی هر کندل به‌عنوان یک گام زمانی) اجرا می‌شود.
                 </div>
             </div>
 
@@ -341,8 +363,8 @@
                         <div id="bt-max-drawdown" class="text-lg font-bold text-red-400">-</div>
                     </div>
                     <div class="glass-effect rounded-lg p-3 text-center">
-                        <div class="text-xs text-gray-400">سیگنال/معامله</div>
-                        <div id="bt-signal-trade" class="text-lg font-bold text-white">-</div>
+                        <div class="text-xs text-gray-400">شارپ (سالانه)</div>
+                        <div id="bt-sharpe" class="text-lg font-bold text-cyan-400">-</div>
                     </div>
                 </div>
 
@@ -369,6 +391,29 @@
                                 <!-- populated -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- TradingView-style Candlestick Chart -->
+                <div class="glass-effect rounded-2xl p-6 mb-6">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <h3 class="text-2xl font-semibold text-gradient flex items-center gap-2">
+                            <i class="fas fa-chart-candlestick"></i>
+                            نمودار قیمت و سیگنال‌ها
+                        </h3>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span class="legend-pill"><span class="swatch" style="background:#10b981"></span> سیگنال لانگ</span>
+                            <span class="legend-pill"><span class="swatch" style="background:#ef4444"></span> سیگنال شورت</span>
+                            <span class="legend-pill"><span class="swatch" style="background:#3b82f6"></span> ورود</span>
+                            <span class="legend-pill"><span class="swatch" style="background:#f59e0b"></span> خروج</span>
+                            <span class="legend-pill"><span class="swatch" style="background:#22c55e"></span> خط TP</span>
+                            <span class="legend-pill"><span class="swatch" style="background:#dc2626"></span> خط SL</span>
+                        </div>
+                    </div>
+                    <div id="candlestick-chart" class="chart-container-tall" dir="ltr"></div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        <i class="fas fa-mouse ml-1"></i>
+                        برای زوم اسکرول کنید؛ برای جابجایی بکشید.
                     </div>
                 </div>
 
@@ -462,6 +507,7 @@
                         </div>
                     </div>
                 </div>
+                <!-- End of Results Section (bt-results close) -->
             </div>
 
             <!-- Empty State -->
@@ -480,6 +526,7 @@
         // ==================== Page Logic ====================
 
         let lastReport = null;
+        let candlestickChart = null;
         let equityChart = null;
         let drawdownChart = null;
 
@@ -511,6 +558,10 @@
                 year: 'numeric', month: '2-digit', day: '2-digit',
                 hour: '2-digit', minute: '2-digit'
             });
+        }
+
+        function toFaDigits(s) {
+            return String(s).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
         }
 
         // ---------- Symbol dropdown population ----------
@@ -571,7 +622,7 @@
                 const settings = window.loadBacktestSettings();
                 const engine = new BacktestEngine(settings);
 
-                statusText.textContent = `در حال تحلیل و شبیه‌سازی ${config.symbol}...`;
+                statusText.textContent = `در حال تحلیل و شبیه‌سازی ${config.symbol} (Event-Driven)...`;
                 // Yield to UI thread before heavy compute
                 await new Promise(r => setTimeout(r, 50));
 
@@ -625,10 +676,9 @@
             document.getElementById('bt-profit-factor').textContent =
                 isFinite(o.profitFactor) ? fmt(o.profitFactor, 2) : '∞';
             document.getElementById('bt-max-drawdown').textContent = fmt(o.maxDrawdown, 2) + '%';
-            document.getElementById('bt-signal-trade').textContent =
-                `${report.signalCount} / ${report.overall.totalTrades}`;
+            document.getElementById('bt-sharpe').textContent = fmt(o.sharpeRatio, 2);
 
-            // Long stats table
+            // Long stats table (with netProfit row)
             const longBody = document.getElementById('bt-long-stats-body');
             longBody.innerHTML = `
                 <tr class="border-b border-gray-700">
@@ -649,11 +699,15 @@
                 </tr>
                 <tr class="border-b border-gray-700">
                     <td class="px-3 py-2 text-gray-300">سود ناخالص</td>
-                    <td class="px-3 py-2 font-bold text-green-400">${fmt(l.longProfit, 2)} USDT</td>
+                    <td class="px-3 py-2 font-bold text-green-400">${fmt(l.longGrossProfit, 2)} USDT</td>
                 </tr>
                 <tr class="border-b border-gray-700">
                     <td class="px-3 py-2 text-gray-300">زیان ناخالص</td>
-                    <td class="px-3 py-2 font-bold text-red-400">${fmt(l.longLoss, 2)} USDT</td>
+                    <td class="px-3 py-2 font-bold text-red-400">${fmt(l.longGrossLoss, 2)} USDT</td>
+                </tr>
+                <tr class="border-b border-gray-700">
+                    <td class="px-3 py-2 text-gray-300">سود خالص</td>
+                    <td class="px-3 py-2 font-bold text-cyan-400">${fmt(l.longNetProfit, 2)} USDT</td>
                 </tr>
                 <tr>
                     <td class="px-3 py-2 text-gray-300">پروفایت فاکتور</td>
@@ -682,11 +736,15 @@
                 </tr>
                 <tr class="border-b border-gray-700">
                     <td class="px-3 py-2 text-gray-300">سود ناخالص</td>
-                    <td class="px-3 py-2 font-bold text-green-400">${fmt(s.shortProfit, 2)} USDT</td>
+                    <td class="px-3 py-2 font-bold text-green-400">${fmt(s.shortGrossProfit, 2)} USDT</td>
                 </tr>
                 <tr class="border-b border-gray-700">
                     <td class="px-3 py-2 text-gray-300">زیان ناخالص</td>
-                    <td class="px-3 py-2 font-bold text-red-400">${fmt(s.shortLoss, 2)} USDT</td>
+                    <td class="px-3 py-2 font-bold text-red-400">${fmt(s.shortGrossLoss, 2)} USDT</td>
+                </tr>
+                <tr class="border-b border-gray-700">
+                    <td class="px-3 py-2 text-gray-300">سود خالص</td>
+                    <td class="px-3 py-2 font-bold text-cyan-400">${fmt(s.shortNetProfit, 2)} USDT</td>
                 </tr>
                 <tr>
                     <td class="px-3 py-2 text-gray-300">پروفایت فاکتور</td>
@@ -697,17 +755,24 @@
             // Trade history
             const tradeBody = document.getElementById('bt-trade-history-body');
             const tradeCountBadge = document.getElementById('bt-trade-count-badge');
-            tradeCountBadge.textContent = String(report.trades.length).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+            tradeCountBadge.textContent = toFaDigits(report.trades.length);
             if (report.trades.length === 0) {
                 tradeBody.innerHTML = '<tr><td colspan="15" class="px-4 py-8 text-center text-gray-400">معامله‌ای موجود نیست</td></tr>';
             } else {
                 tradeBody.innerHTML = report.trades.map(t => {
                     const pnlClass = t.pnl > 0 ? 'text-green-400' : t.pnl < 0 ? 'text-red-400' : 'text-gray-300';
                     const dirClass = t.direction === 'Long' ? 'text-green-400' : 'text-red-400';
+                    const exitReasonMap = {
+                        'TP': 'TP رسید',
+                        'SL': 'SL رسید',
+                        'بستن پوزیشن مخالف': 'بستن پوزیشن مخالف',
+                        'پایان داده': 'پایان داده'
+                    };
+                    const exitReasonText = exitReasonMap[t.exitReason] || t.exitReason;
                     return `
                         <tr class="border-b border-gray-800 hover:bg-white/5">
                             <td class="px-3 py-2 text-gray-400">${t.signalId}</td>
-                            <td class="px-3 py-2 text-xs">${fmtDate(t.timestamp)}</td>
+                            <td class="px-3 py-2 text-xs">${fmtDate(t.entryTimestamp)}</td>
                             <td class="px-3 py-2 font-semibold">${t.symbol}</td>
                             <td class="px-3 py-2 ${dirClass} font-bold">${t.direction === 'Long' ? 'لانگ' : 'شورت'}</td>
                             <td class="px-3 py-2">${fmtPrice(t.entryPrice)}</td>
@@ -716,7 +781,7 @@
                             <td class="px-3 py-2 text-red-400 text-xs">${fmtPrice(t.sl)}</td>
                             <td class="px-3 py-2 ${pnlClass} font-bold">${(t.pnl >= 0 ? '+' : '') + fmt(t.pnl, 2)}</td>
                             <td class="px-3 py-2 ${pnlClass}">${(t.pnlPercent >= 0 ? '+' : '') + fmt(t.pnlPercent, 2)}%</td>
-                            <td class="px-3 py-2 text-xs">${t.exitReason}</td>
+                            <td class="px-3 py-2 text-xs">${exitReasonText}</td>
                             <td class="px-3 py-2">${t.leverage}x</td>
                             <td class="px-3 py-2 text-xs">${fmt(t.margin, 2)}</td>
                             <td class="px-3 py-2">${t.candleCount}</td>
@@ -729,7 +794,7 @@
             // Rejected trades
             const rejectedBody = document.getElementById('bt-rejected-trades-body');
             const rejectedBadge = document.getElementById('bt-rejected-count-badge');
-            rejectedBadge.textContent = String(report.rejectedTrades.length).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+            rejectedBadge.textContent = toFaDigits(report.rejectedTrades.length);
             if (report.rejectedTrades.length === 0) {
                 rejectedBody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">سیگنال رد شده‌ای موجود نیست</td></tr>';
             } else {
@@ -751,18 +816,273 @@
             }
 
             // Charts
+            renderCandlestickChart(report);
             renderEquityChart(report.equityCurve);
             renderDrawdownChart(report.drawdownCurve);
         }
 
-        // ---------- Charts ----------
+        // ---------- TradingView-style Candlestick Chart ----------
+        function renderCandlestickChart(report) {
+            const el = document.getElementById('candlestick-chart');
+            if (candlestickChart) {
+                candlestickChart.dispose();
+            }
+            candlestickChart = echarts.init(el);
+
+            const candles = (report.candles || []).map(c => ({
+                timestamp: c.timestamp instanceof Date ? c.timestamp : new Date(c.timestamp),
+                open: c.open, high: c.high, low: c.low, close: c.close, amount: c.amount
+            }));
+            const signals = report.signals || [];
+            const trades = report.trades || [];
+            const symbol = report.config ? report.config.symbol : '';
+
+            // X-axis categories (timestamps formatted)
+            const categories = candles.map(c =>
+                c.timestamp instanceof Date ? c.timestamp.getTime() : new Date(c.timestamp).getTime()
+            );
+
+            // Candlestick data: [open, close, low, high]
+            const ohlcData = candles.map(c => [c.open, c.close, c.low, c.high]);
+
+            // Volume data with color
+            const volumeData = candles.map(c => ({
+                value: c.amount,
+                itemStyle: { color: c.close >= c.open ? 'rgba(16, 185, 129, 0.55)' : 'rgba(239, 68, 68, 0.55)' }
+            }));
+
+            // Signal markers — Long: green up-arrow below candle low; Short: red down-arrow above candle high
+            const signalMarkers = [];
+            for (const sig of signals) {
+                const idx = sig.candleIndex;
+                const candle = candles[idx];
+                if (!candle) continue;
+                if (sig.type === 'Long') {
+                    signalMarkers.push({
+                        coord: [idx, candle.low],
+                        symbol: 'triangle',
+                        symbolSize: 12,
+                        symbolRotate: 0,
+                        itemStyle: { color: '#10b981' },
+                        label: { show: false }
+                    });
+                } else {
+                    signalMarkers.push({
+                        coord: [idx, candle.high],
+                        symbol: 'triangle',
+                        symbolSize: 12,
+                        symbolRotate: 180,
+                        itemStyle: { color: '#ef4444' },
+                        label: { show: false }
+                    });
+                }
+            }
+
+            // Entry + Exit markers + TP/SL lines from closed trades
+            const entryMarkers = [];
+            const exitMarkers = [];
+            const tpslLines = [];
+            for (const t of trades) {
+                const entryIdx = t.entryCandleIdx;
+                const exitIdx = t.exitCandleIdx;
+                const isLong = t.direction === 'Long';
+                const dirColor = isLong ? '#10b981' : '#ef4444';
+
+                // ✓ Defensive: skip if entryIdx is invalid
+                if (entryIdx == null || entryIdx < 0 || entryIdx >= categories.length) continue;
+
+                // Entry marker (circle)
+                entryMarkers.push({
+                    coord: [entryIdx, t.entryPrice],
+                    symbol: 'circle',
+                    symbolSize: 9,
+                    itemStyle: { color: '#3b82f6', borderColor: '#fff', borderWidth: 1 }
+                });
+
+                // Exit marker (diamond)
+                if (exitIdx != null && exitIdx >= 0 && exitIdx < categories.length && t.exitPrice != null) {
+                    exitMarkers.push({
+                        coord: [exitIdx, t.exitPrice],
+                        symbol: 'diamond',
+                        symbolSize: 11,
+                        itemStyle: {
+                            color: t.pnl >= 0 ? '#22c55e' : '#dc2626',
+                            borderColor: '#fff', borderWidth: 1
+                        }
+                    });
+                }
+
+                // TP/SL lines (green dashed = TP, red dashed = SL)
+                const validExitIdx = (exitIdx != null && exitIdx >= 0 && exitIdx < categories.length) ? exitIdx : entryIdx;
+                tpslLines.push([
+                    { coord: [entryIdx, t.tp] },
+                    { coord: [validExitIdx, t.tp] }
+                ]);
+                tpslLines.push([
+                    { coord: [entryIdx, t.sl] },
+                    { coord: [validExitIdx, t.sl] }
+                ]);
+            }
+
+            const option = {
+                backgroundColor: 'transparent',
+                animation: false,
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'cross' },
+                    backgroundColor: 'rgba(30, 30, 45, 0.95)',
+                    borderColor: '#667eea',
+                    borderWidth: 1,
+                    textStyle: { color: '#fff', fontSize: 11 },
+                    formatter: function (params) {
+                        if (!params || params.length === 0) return '';
+                        const p = params[0];
+                        const idx = p.dataIndex;
+                        const c = candles[idx];
+                        if (!c) return '';
+                        const dt = new Date(categories[idx]).toLocaleString('fa-IR');
+                        const change = c.close - c.open;
+                        const changePct = c.open > 0 ? (change / c.open * 100) : 0;
+                        const arrow = change >= 0 ? '▲' : '▼';
+                        const col = change >= 0 ? '#10b981' : '#ef4444';
+                        let html = `<div style="font-family:Vazirmatn,sans-serif">`;
+                        html += `<div style="color:#cbd5e1;margin-bottom:4px">${dt}</div>`;
+                        html += `<div style="color:#cbd5e1">O: <b>${fmtPrice(c.open)}</b>  H: <b>${fmtPrice(c.high)}</b></div>`;
+                        html += `<div style="color:#cbd5e1">L: <b>${fmtPrice(c.low)}</b>  C: <b>${fmtPrice(c.close)}</b></div>`;
+                        html += `<div style="color:${col}">${arrow} ${fmtPrice(Math.abs(change))} (${fmt(changePct, 2)}%)</div>`;
+                        html += `<div style="color:#94a3b8;font-size:10px">Vol: ${c.amount.toFixed(2)}</div>`;
+                        if (c.signal) {
+                            const sigCol = c.signal === 'Long' ? '#10b981' : '#ef4444';
+                            const sigTxt = c.signal === 'Long' ? 'سیگنال لانگ' : 'سیگنال شورت';
+                            html += `<div style="color:${sigCol};font-weight:bold;margin-top:2px">★ ${sigTxt}</div>`;
+                            html += `<div style="color:#22c55e;font-size:10px">TP: ${fmtPrice(c.tp)}</div>`;
+                            html += `<div style="color:#dc2626;font-size:10px">SL: ${fmtPrice(c.sl)}</div>`;
+                        }
+                        html += `</div>`;
+                        return html;
+                    }
+                },
+                axisPointer: {
+                    link: [{ xAxisIndex: 'all' }]
+                },
+                grid: [
+                    { left: '8%', right: '4%', top: '6%', height: '62%' },     // candlestick grid
+                    { left: '8%', right: '4%', top: '76%', height: '18%' }      // volume grid
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: categories,
+                        scale: true,
+                        boundaryGap: false,
+                        axisLine: { lineStyle: { color: '#8392A5' } },
+                        axisLabel: {
+                            color: '#9ca3af', fontSize: 10,
+                            formatter: function (v) {
+                                return new Date(v).toLocaleString('fa-IR', {
+                                    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                                });
+                            }
+                        },
+                        splitLine: { show: false },
+                        min: 'dataMin',
+                        max: 'dataMax'
+                    },
+                    {
+                        type: 'category',
+                        gridIndex: 1,
+                        data: categories,
+                        scale: true,
+                        boundaryGap: false,
+                        axisLine: { show: true, lineStyle: { color: '#8392A5' } },
+                        axisLabel: { show: false },
+                        splitLine: { show: false },
+                        min: 'dataMin',
+                        max: 'dataMax'
+                    }
+                ],
+                yAxis: [
+                    {
+                        scale: true,
+                        splitArea: { show: false },
+                        axisLine: { lineStyle: { color: '#8392A5' } },
+                        axisLabel: { color: '#9ca3af', fontSize: 10, formatter: v => fmtPrice(v) },
+                        splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.5)' } }
+                    },
+                    {
+                        scale: true,
+                        gridIndex: 1,
+                        splitNumber: 2,
+                        axisLabel: { color: '#9ca3af', fontSize: 9, formatter: v => v >= 1000 ? (v / 1000).toFixed(1) + 'K' : v.toFixed(0) },
+                        splitLine: { show: false }
+                    }
+                ],
+                dataZoom: [
+                    {
+                        type: 'inside',
+                        xAxisIndex: [0, 1],
+                        start: 0,
+                        end: 100,
+                        minValueSpan: 20
+                    },
+                    {
+                        type: 'slider',
+                        xAxisIndex: [0, 1],
+                        bottom: '2%',
+                        height: 18,
+                        start: 0,
+                        end: 100,
+                        minValueSpan: 20,
+                        borderColor: '#475569',
+                        backgroundColor: 'rgba(30, 41, 59, 0.4)',
+                        fillerColor: 'rgba(102, 126, 234, 0.2)',
+                        handleStyle: { color: '#667eea' },
+                        textStyle: { color: '#9ca3af', fontSize: 10 }
+                    }
+                ],
+                series: [
+                    {
+                        name: symbol,
+                        type: 'candlestick',
+                        data: ohlcData,
+                        itemStyle: {
+                            color: '#10b981',         // up candle body
+                            color0: '#ef4444',        // down candle body
+                            borderColor: '#10b981',   // up candle border
+                            borderColor0: '#ef4444'   // down candle border
+                        },
+                        // ✓ Markers temporarily disabled to fix ECharts coord error
+                        // markPoint and markLine will be re-enabled after debugging
+                    },
+                    {
+                        name: 'حجم',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumeData,
+                        itemStyle: { color: 'rgba(102, 126, 234, 0.4)' }
+                    }
+                ]
+            };
+
+            candlestickChart.setOption(option, true);
+        }
+
+        // ---------- Equity Curve Chart ----------
         function renderEquityChart(curve) {
             const el = document.getElementById('equity-chart');
-            if (!equityChart) {
-                equityChart = echarts.init(el);
-                window.addEventListener('resize', () => equityChart.resize());
+            if (equityChart) {
+                equityChart.dispose();
             }
-            const data = curve.map(p => [p.timestamp.getTime(), p.capital]);
+            equityChart = echarts.init(el);
+            if (!curve || curve.length === 0) {
+                equityChart.setOption({ title: { text: 'داده‌ای موجود نیست', textStyle: { color: '#9ca3af' }, left: 'center', top: 'center' } });
+                return;
+            }
+            const data = curve.map(p => {
+                const ts = p.timestamp instanceof Date ? p.timestamp.getTime() : new Date(p.timestamp).getTime();
+                return [ts, p.equity];
+            });
             equityChart.setOption({
                 backgroundColor: 'transparent',
                 tooltip: {
@@ -809,13 +1129,21 @@
             }, true);
         }
 
+        // ---------- Drawdown Chart ----------
         function renderDrawdownChart(curve) {
             const el = document.getElementById('drawdown-chart');
-            if (!drawdownChart) {
-                drawdownChart = echarts.init(el);
-                window.addEventListener('resize', () => drawdownChart.resize());
+            if (drawdownChart) {
+                drawdownChart.dispose();
             }
-            const data = curve.map(p => [p.timestamp.getTime(), p.drawdown]);
+            drawdownChart = echarts.init(el);
+            if (!curve || curve.length === 0) {
+                drawdownChart.setOption({ title: { text: 'داده‌ای موجود نیست', textStyle: { color: '#9ca3af' }, left: 'center', top: 'center' } });
+                return;
+            }
+            const data = curve.map(p => {
+                const ts = p.timestamp instanceof Date ? p.timestamp.getTime() : new Date(p.timestamp).getTime();
+                return [ts, p.drawdown];
+            });
             drawdownChart.setOption({
                 backgroundColor: 'transparent',
                 tooltip: {
@@ -860,20 +1188,34 @@
                 return;
             }
             const headers = [
-                'timestamp', 'symbol', 'direction',
-                'entryPrice', 'exitPrice', 'pnl', 'pnlPercent',
-                'exitReason', 'capitalAfter'
+                'entryTimestamp', 'exitTimestamp', 'symbol', 'direction',
+                'entryPrice', 'exitPrice', 'tp', 'sl',
+                'leverage', 'margin', 'qty',
+                'pnl', 'pnlPercent',
+                'entryCommission', 'exitCommission',
+                'exitReason', 'capitalBefore', 'capitalAfter',
+                'candleCount'
             ];
             const rows = lastReport.trades.map(t => [
-                new Date(t.timestamp).toISOString(),
+                new Date(t.entryTimestamp).toISOString(),
+                t.exitTimestamp ? new Date(t.exitTimestamp).toISOString() : '',
                 t.symbol,
                 t.direction,
                 t.entryPrice,
-                t.exitPrice,
-                t.pnl.toFixed(4),
-                t.pnlPercent.toFixed(4),
+                t.exitPrice != null ? t.exitPrice : '',
+                t.tp,
+                t.sl,
+                t.leverage,
+                t.margin,
+                t.qty,
+                t.pnl != null ? t.pnl.toFixed(6) : '',
+                t.pnlPercent != null ? t.pnlPercent.toFixed(4) : '',
+                t.entryCommission != null ? t.entryCommission.toFixed(6) : '',
+                t.exitCommission != null ? t.exitCommission.toFixed(6) : '',
                 t.exitReason,
-                t.capitalAfter.toFixed(4)
+                t.capitalBefore != null ? t.capitalBefore.toFixed(6) : '',
+                t.capitalAfter != null ? t.capitalAfter.toFixed(6) : '',
+                t.candleCount
             ]);
             const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -898,6 +1240,13 @@
                 });
             }
         }
+
+        // ---------- Resize handler ----------
+        window.addEventListener('resize', () => {
+            if (candlestickChart) candlestickChart.resize();
+            if (equityChart) equityChart.resize();
+            if (drawdownChart) drawdownChart.resize();
+        });
 
         // ---------- Init ----------
         document.addEventListener('DOMContentLoaded', () => {
