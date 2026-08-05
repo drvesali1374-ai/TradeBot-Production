@@ -130,57 +130,46 @@ async function handleRunCycle(request: NextRequest) {
       }
     }
 
-    // ✓ Write Debounce (پیشنهاد ۳): Write lastCycleLogs only if enough time has passed
-    //   If tradeWaitTime is 30 minutes and cron runs every 5 minutes,
-    //   we only write logs every 30 minutes (6x reduction in writes)
+    // ✓ Write lastCycleLogs EVERY cycle (no debounce — Transaction Buffer already reduced writes enough)
+    //   With Transaction Buffer: only ~3 KV writes per /api/run-cycle call:
+    //   1. automation_symbols (Transaction Buffer)
+    //   2. lastCycleLogs (this write)
+    //   3. shared logs array (batch write below)
+    //   Total: 3 × 288 cron calls/day = 864 writes/day (under 1,000 limit)
     let logsWritten = false
     try {
-      const dbSettings = await AutomationState.get('automation_settings')
-      const settings = typeof dbSettings === 'string' ? JSON.parse(dbSettings) : dbSettings || {}
-      const tradeWaitTime = settings.tradeWaitTime || 30
-      const debounceMs = tradeWaitTime * 60 * 1000
-
-      const lastWriteRaw = await AutomationState.get('lastCycleLogsWriteTime')
-      const lastWriteTime = lastWriteRaw ? parseInt(String(lastWriteRaw)) : 0
-      const now = Date.now()
-
-      if (now - lastWriteTime >= debounceMs) {
-        const lastCycleResult = results[results.length - 1]
-        if (lastCycleResult && lastCycleResult.logs && lastCycleResult.logs.length > 0) {
-          const cycleLogEntry = {
-            timestamp: new Date().toISOString(),
-            source: isCron ? 'cron' : 'manual',
-            logCount: lastCycleResult.logs.length,
-            logs: lastCycleResult.logs.map((l, i) => ({
-              id: i + 1,
-              symbol: l.symbol || '',
-              action: 'automation_cycle',
-              status: l.type === 'error' ? 'ERROR' : l.type === 'warning' ? 'WARNING' : 'SUCCESS',
-              message: l.message,
-              error_code: l.type === 'error' ? 'SIGNAL_ERROR' : null,
-              details: JSON.stringify({ timestamp: l.timestamp, type: l.type, source: isCron ? 'cron' : 'manual' }),
-              created_at: l.timestamp
-            }))
-          }
-          try {
-            const { getRequestContext } = await import('@cloudflare/next-on-pages')
-            const ctx = getRequestContext()
-            if (ctx.env && ctx.env.TRADING_DATA) {
-              await ctx.env.TRADING_DATA.put('lastCycleLogs', JSON.stringify(cycleLogEntry))
-              await AutomationState.set('lastCycleLogsWriteTime', now)
-              logsWritten = true
-              console.log(`[/api/run-cycle] Wrote lastCycleLogs (debounced: ${Math.round((now - lastWriteTime) / 60000)}min since last)`)
-            }
-          } catch { /* Not on Cloudflare */ }
+      const lastCycleResult = results[results.length - 1]
+      if (lastCycleResult && lastCycleResult.logs && lastCycleResult.logs.length > 0) {
+        const cycleLogEntry = {
+          timestamp: new Date().toISOString(),
+          source: isCron ? 'cron' : 'manual',
+          logCount: lastCycleResult.logs.length,
+          logs: lastCycleResult.logs.map((l, i) => ({
+            id: i + 1,
+            symbol: l.symbol || '',
+            action: 'automation_cycle',
+            status: l.type === 'error' ? 'ERROR' : l.type === 'warning' ? 'WARNING' : 'SUCCESS',
+            message: l.message,
+            error_code: l.type === 'error' ? 'SIGNAL_ERROR' : null,
+            details: JSON.stringify({ timestamp: l.timestamp, type: l.type, source: isCron ? 'cron' : 'manual' }),
+            created_at: l.timestamp
+          }))
         }
-      } else {
-        console.log(`[/api/run-cycle] Skipping lastCycleLogs (debounced: ${Math.round((now - lastWriteTime) / 60000)}min < ${tradeWaitTime}min)`)
+        try {
+          const { getRequestContext } = await import('@cloudflare/next-on-pages')
+          const ctx = getRequestContext()
+          if (ctx.env && ctx.env.TRADING_DATA) {
+            await ctx.env.TRADING_DATA.put('lastCycleLogs', JSON.stringify(cycleLogEntry))
+            logsWritten = true
+            console.log('[/api/run-cycle] Wrote lastCycleLogs (every cycle, no debounce)')
+          }
+        } catch { /* Not on Cloudflare */ }
       }
     } catch (e) {
       console.warn('[/api/run-cycle] lastCycleLogs write error:', e)
     }
 
-    // ✓ Batch-write ALL cycle logs to shared `logs` array (only if lastCycleLogs was written)
+    // ✓ Batch-write ALL cycle logs to shared `logs` array (every cycle)
     if (logsWritten) {
       try {
         const triggerSource = isCron ? 'cron' : 'manual'
