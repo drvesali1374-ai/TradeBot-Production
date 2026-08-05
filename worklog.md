@@ -1917,3 +1917,54 @@ Stage Summary:
 - ✅ Equity Curve + Drawdown charts
 - ✅ Trade history + rejected trades
 - ⏳ markPoint/markLine (signal markers, entry/exit markers, TP/SL lines) — temporarily disabled, will re-enable
+
+---
+Task ID: 22
+Agent: Main Orchestrator
+Task: Remove backtest + deploy to Cloudflare + fix Cron issue
+
+Work Log:
+- [1] Removed backtest completely:
+  - Deleted: public/backtest.html, public/js/backtest-engine.js
+  - Removed nav links from: home.html, automation.html, settings.html, market_signal.html, trading.html
+  - Verified: no backtest references remain, all 5 pages load HTTP 200, backtest.html returns 404
+
+- [2] Diagnosed Cron issue:
+  - Root cause: RUN_CYCLE_SECRET was lost (file /tmp/run_cycle_secret.txt deleted between sessions)
+  - The secret on Cron Worker and Pages app were no longer synced
+  - Fix: Generated new secret, set on both Cron Worker and Pages app via Cloudflare API
+  - Redeployed Pages app to pick up new secret
+  - Verified: Manual cron trigger works (1 cycle ran, DOT → no_signal)
+  - Verified: Automatic cron fire works (XRP lastCycleTime updated 3min after manual trigger)
+  - KV writes working: lastCycleLogs and automation_symbols both updated
+
+- [3] Deployed to Cloudflare with all latest local changes:
+  - Phase 1: Long/Short independent parameters (rsiLongThreshold=30, rsiShortThreshold=70, etc.)
+  - Phase 2: Settings split (settings.html = API+Bale, automation.html = all strategy params)
+  - Phase 3: UI redesign (6 grouped sections with Long/Short tables)
+  - Backtest removed
+  - All Fake Breakout improvements
+  - All KV write optimizations (Transaction Buffer + Write Debounce)
+
+- [4] Comprehensive testing on Cloudflare:
+  - All 6 pages load HTTP 200 ✓
+  - backtest.html returns 404 (removed) ✓
+  - /api returns OK ✓
+  - /api/db/automation-state returns 3 symbols ✓
+  - /api/settings returns success ✓
+  - Login works (admin/admin) ✓
+  - Nav links: only 5 (no backtest) ✓
+  - Automation page: all symbols "در انتظار" ✓
+  - Settings modal: all 19 strategy fields with correct values ✓
+  - Settings page: Bale section present, strategy params removed ✓
+  - "یک چرخه" button: 3 signals for XRP, 5 for DOT ✓
+  - No console errors ✓
+  - Cron trigger: works manually and automatically ✓
+  - KV writes: lastCycleLogs and automation_symbols updated ✓
+
+Stage Summary:
+- ✅ Backtest completely removed — no impact on other features
+- ✅ Deployed to Cloudflare with all latest changes
+- ✅ Cron issue fixed (secret resynced)
+- ✅ Cron running automatically every 5 minutes
+- ✅ All pages and features tested and working
