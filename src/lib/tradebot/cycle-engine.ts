@@ -528,9 +528,23 @@ export async function runCycle(
       }
     }
 
-    // ✓ FIX (مشکل ۱): Set lastCycleTime IMMEDIATELY in-memory after symbol selection
-    //   KV write deferred to end of /api/run-cycle (Transaction Buffer)
-    updateSymbolStateInMemory({ lastCycleTime: Date.now() })
+    // ✓ FIX: Set lastCycleTime IMMEDIATELY and persist to KV right away
+    //   This is CRITICAL: if we only update in-memory, the NEXT cron call (5 min later)
+    //   will re-read the OLD lastCycleTime from KV and select the same symbol again.
+    //   The 1 extra KV write per cycle is worth it to ensure proper symbol rotation.
+    try {
+      const idx = symbols.findIndex((s) => s.id === symbol!.id)
+      if (idx >= 0) {
+        symbols[idx] = { ...symbols[idx], lastCycleTime: Date.now() }
+        await AutomationState.set('automation_symbols', symbols)
+      }
+    } catch (e) {
+      // KV write failed — update in-memory only (fallback)
+      const idx = symbols.findIndex((s) => s.id === symbol!.id)
+      if (idx >= 0) {
+        symbols[idx] = { ...symbols[idx], lastCycleTime: Date.now() }
+      }
+    }
 
     // -------------------------------------------------------------------
     // Step 2-3: fetchMarketData()
