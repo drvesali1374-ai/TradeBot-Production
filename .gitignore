@@ -1,54 +1,33 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Build artifacts
+node_modules/
+.next/
+.vercel/
+.open-next/
 
-# dependencies
-node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Database
+db/custom.db
+db/custom.db-journal
 
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-local-*
-.claude
-.z-ai-config
-*.log
+# Logs
 dev.log
-dev.out.log
-test
-prompt
-
 server.log
-# Skills directory
-/skills/
+agent-ctx/
+*.log
+
+# Non-project directories  
+download/
+tradebot-source/
+tool-results/
+skills/
+.zscripts/
+mini-services/
+examples/
+
+# Secrets (don't push to public repo)
+.run_cycle_secret
+.env
+
+# Temp files
+*.tmp
+*.tmp.*
+screenshot*.png
