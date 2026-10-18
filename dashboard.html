@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ترید هوشمند | داشبورد حرفه‌ای</title>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<style>
+/* ============================================================
+   1. DESIGN TOKENS — Premium Fintech Palette
+   ============================================================ */
+:root {
+    --bg-body: #f4f6fb;
+    --bg-sidebar: #ffffff;
+    --bg-card: #ffffff;
+    --bg-glass: rgba(255, 255, 255, 0.78);
+    --bg-hover: #f1f5f9;
+    --bg-input: #ffffff;
+    --bg-elevated: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --border-color: #e2e8f0;
+    --border-soft: #f1f5f9;
+    --accent: #6366f1;
+    --accent-2: #8b5cf6;
+    --accent-3: #a855f7;
+    --accent-soft: #eef2ff;
+    --accent-glow: rgba(99, 102, 241, 0.18);
+    --success: #10b981;
+    --success-soft: #d1fae5;
+    --danger: #ef4444;
+    --danger-soft: #fee2e2;
+    --warning: #f59e0b;
+    --warning-soft: #fef3c7;
+    --info: #06b6d4;
+    --info-soft: #cffafe;
+    --radius: 16px;
+    --radius-sm: 12px;
+    --radius-xs: 8px;
+    --transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 8px 24px -6px rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 20px 48px -12px rgba(15, 23, 42, 0.14);
+    --shadow-xl: 0 28px 64px -16px rgba(15, 23, 42, 0.18);
+    --glow: 0 0 0 4px var(--accent-glow);
+    --sidebar-width: 272px;
+}
+
+[data-theme="dark"] {
+    --bg-body: #060a12;
+    --bg-sidebar: #0c1220;
+    --bg-card: #0f1629;
+    --bg-glass: rgba(15, 22, 41, 0.82);
+    --bg-hover: #1a2336;
+    --bg-input: #0a101c;
+    --bg-elevated: #121a2e;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border-color: #1e293b;
+    --border-soft: #162033;
+    --accent-soft: #1e1b4b;
+    --accent-glow: rgba(99, 102, 241, 0.28);
+    --success-soft: #064e3b;
+    --danger-soft: #450a0a;
+    --warning-soft: #451a03;
+    --info-soft: #083344;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 8px 24px -6px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 20px 48px -12px rgba(0, 0, 0, 0.55);
+    --shadow-xl: 0 28px 64px -16px rgba(0, 0, 0, 0.65);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+html, body { height: 100%; }
+
+body {
+    font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+    background: var(--bg-body);
+    color: var(--text-primary);
+    display: flex;
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+    transition: background 0.35s, color 0.35s;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, select, textarea { font-family: inherit; }
+a { color: inherit; text-decoration: none; }
+
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--bg-sidebar);
+    border-left: 1px solid var(--border-color);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    right: 0; top: 0; bottom: 0;
+    z-index: 100;
+    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 10px 22px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 18px;
+}
+.logo-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 50%, var(--accent-3) 100%);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+    box-shadow: 0 8px 20px -4px rgba(99, 102, 241, 0.55);
+    position: relative;
+    overflow: hidden;
+}
+.logo-icon::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.25), transparent 60%);
+}
+.logo-text {
+    font-size: 17px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.3px;
+}
+.logo-badge {
+    font-size: 9px;
+    font-weight: 700;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-right: auto;
+}
+
+.nav-menu {
+    list-style: none;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-left: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.nav-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 14px 12px 6px;
+}
+
+.nav-item { margin-bottom: 1px; }
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%;
+    text-align: right;
+    font-size: 13.5px;
+    position: relative;
+}
+.nav-link:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+.nav-link i { font-size: 20px; flex-shrink: 0; transition: var(--transition); }
+
+.nav-link.active {
+    background: linear-gradient(90deg, var(--accent-soft), transparent);
+    color: var(--accent);
+    font-weight: 700;
+}
+.nav-link.active::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 22px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    border-radius: 4px 0 0 4px;
+}
+.nav-link.active i { color: var(--accent); }
+
+.nav-link-left {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    flex: 1;
+    min-width: 0;
+}
+
+.nav-badge {
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--danger);
+    color: white;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+}
+
+.nav-trigger { justify-content: space-between; }
+
+.chevron {
+    font-size: 15px !important;
+    color: var(--text-muted);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nav-item.open > .nav-trigger .chevron {
+    transform: rotate(-90deg);
+    color: var(--accent);
+}
+
+.submenu {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    padding-right: 26px;
+}
+.nav-item.open > .submenu { grid-template-rows: 1fr; }
+.submenu-inner { overflow: hidden; padding-bottom: 4px; }
+
+.sub-link {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+    border-radius: var(--radius-xs);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: var(--transition);
+    margin-top: 1px;
+}
+.sub-link i { font-size: 15px; }
+.sub-link:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+    padding-right: 16px;
+}
+.sub-link.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+}
+
+.sidebar-footer {
+    border-top: 1px solid var(--border-color);
+    padding-top: 14px;
+    margin-top: 10px;
+}
+.user-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+}
+.user-card:hover { background: var(--bg-hover); }
+.user-avatar {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px -2px rgba(99, 102, 241, 0.4);
+}
+.user-info { flex: 1; min-width: 0; }
+.user-name {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.user-plan {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.user-plan .dot {
+    width: 6px; height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+    display: inline-block;
+}
+.user-card > i { color: var(--text-muted); font-size: 16px; }
+
+.main-content {
+    flex: 1;
+    margin-right: var(--sidebar-width);
+    padding: 22px 28px 48px;
+    min-width: 0;
+    transition: margin 0.3s ease;
+}
+
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 26px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.header-right { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.header-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.page-title {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    white-space: nowrap;
+}
+.page-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-top: 2px;
+}
+
+.search-box { position: relative; }
+.search-box input {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 9px 40px 9px 58px;
+    width: 240px;
+    color: var(--text-primary);
+    outline: none;
+    transition: var(--transition);
+    font-size: 13px;
+}
+.search-box input::placeholder { color: var(--text-muted); }
+.search-box input:focus {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+    width: 280px;
+}
+.search-box > i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 16px;
+    pointer-events: none;
+}
+.kbd {
+    position: absolute;
+    left: 36px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-hover);
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-size: 10px;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    font-family: monospace;
+    pointer-events: none;
+}
+
+.icon-btn {
+    width: 38px;
+    height: 38px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    flex-shrink: 0;
+}
+.icon-btn:hover {
+    background: var(--bg-hover);
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+.icon-btn i { font-size: 18px; }
+
+.badge-dot {
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    width: 8px;
+    height: 8px;
+    background: var(--danger);
+    border-radius: 50%;
+    border: 2px solid var(--bg-card);
+    animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+    50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+}
+
+.mobile-toggle { display: none; }
+
+.btn {
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition);
+    font-family: inherit;
+    white-space: nowrap;
+}
+.btn i { font-size: 16px; }
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    box-shadow: 0 6px 18px -4px rgba(99, 102, 241, 0.5);
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -6px rgba(99, 102, 241, 0.6);
+}
+.btn-primary:active { transform: translateY(0); }
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: transparent;
+}
+.btn-ghost:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+.btn-outline:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+.btn-sm i { font-size: 14px; }
+
+.segmented-control {
+    display: inline-flex;
+    background: var(--bg-hover);
+    padding: 4px;
+    border-radius: 12px;
+    position: relative;
+    gap: 2px;
+}
+.seg-tab {
+    padding: 7px 16px;
+    border-radius: 9px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.22s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    z-index: 2;
+    white-space: nowrap;
+}
+.seg-tab i { font-size: 15px; }
+.seg-tab.active { color: var(--accent); }
+.seg-tab:hover:not(.active) { color: var(--text-primary); }
+
+.seg-indicator {
+    position: absolute;
+    top: 4px;
+    height: calc(100% - 8px);
+    background: var(--bg-card);
+    border-radius: 9px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+    border: 1px solid var(--border-soft);
+}
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    padding: 18px;
+}
+.stat-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 50%),
+        var(--accent-glow), transparent 55%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+.stat-card:hover::after { opacity: 1; }
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border-color));
+}
+
+.stat-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.stat-card:hover .stat-icon {
+    transform: scale(1.1) rotate(-5deg);
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.6px;
+    line-height: 1.15;
+}
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.stat-trend {
+    font-size: 11.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 20px;
+}
+.trend-up { color: var(--success); background: var(--success-soft); }
+.trend-down { color: var(--danger); background: var(--danger-soft); }
+.trend-neutral { color: var(--text-muted); background: var(--bg-hover); }
+
+.sparkline {
+    height: 28px;
+    width: 100%;
+    margin-top: 4px;
+    opacity: 0.85;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.table-card { padding: 0; overflow: hidden; }
+.table-header {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border-color);
+}
+.table-container { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; min-width: 620px; }
+th {
+    text-align: right;
+    padding: 11px 18px;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-body);
+}
+td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 13.5px;
+}
+tr:last-child td { border-bottom: none; }
+tbody tr {
+    transition: var(--transition);
+    cursor: pointer;
+}
+tbody tr:hover td { background: var(--bg-hover); }
+
+.asset-info { display: flex; align-items: center; gap: 12px; }
+.asset-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 15px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.asset-name { font-weight: 600; font-size: 13.5px; }
+.asset-pair { font-size: 11.5px; color: var(--text-muted); font-family: monospace; }
+
+.mono { font-family: 'Vazirmatn', ui-monospace, monospace; font-weight: 600; }
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+.badge-dot-sm {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.badge-success { background: var(--success-soft); color: var(--success); }
+.badge-danger { background: var(--danger-soft); color: var(--danger); }
+.badge-warning { background: var(--warning-soft); color: var(--warning); }
+.badge-info { background: var(--info-soft); color: var(--info); }
+
+.action-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: var(--transition);
+}
+.action-btn:hover {
+    background: var(--bg-hover);
+    color: var(--accent);
+}
+
+.side-panel { display: flex; flex-direction: column; gap: 16px; }
+
+.panel-card {
+    padding: 18px;
+}
+.panel-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.panel-title i { color: var(--accent); font-size: 18px; }
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-soft);
+}
+.activity-item:last-child { border-bottom: none; padding-bottom: 0; }
+.activity-icon {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.activity-content { flex: 1; min-width: 0; }
+.activity-text { font-size: 13px; font-weight: 500; }
+.activity-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+.progress-bar {
+    height: 6px;
+    background: var(--bg-hover);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+.progress-fill {
+    height: 100%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 12, 24, 0.58);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.28s ease;
+    padding: 20px;
+}
+.modal-overlay.active { opacity: 1; visibility: visible; }
+
+.modal-content {
+    background: var(--bg-glass);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid var(--border-color);
+    border-radius: 22px;
+    width: 100%;
+    max-width: 520px;
+    padding: 28px;
+    box-shadow: var(--shadow-xl);
+    transform: translateY(28px) scale(0.96);
+    transition: all 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.modal-overlay.active .modal-content {
+    transform: translateY(0) scale(1);
+}
+.modal-content.wide { max-width: 640px; }
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    gap: 12px;
+}
+.modal-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.modal-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    flex-shrink: 0;
+    box-shadow: 0 8px 22px -6px rgba(99, 102, 241, 0.5);
+}
+.modal-title {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.3;
+}
+.modal-subtitle {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+.close-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+.close-btn:hover {
+    background: var(--bg-hover);
+    color: var(--danger);
+    transform: rotate(90deg);
+}
+.close-btn i { font-size: 18px; }
+
+.form-group { margin-bottom: 16px; }
+.form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 7px;
+    color: var(--text-secondary);
+}
+.form-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    transition: var(--transition);
+}
+.form-input:focus {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+}
+.form-input::placeholder { color: var(--text-muted); }
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: var(--bg-hover);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+    transition: var(--transition);
+}
+.toggle-row:hover { background: var(--accent-soft); }
+.toggle-row-left { display: flex; align-items: center; gap: 12px; }
+.toggle-row-left i { font-size: 20px; color: var(--accent); }
+.toggle-label { font-weight: 600; font-size: 13.5px; }
+.toggle-desc { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--border-color);
+    transition: 0.3s;
+    border-radius: 24px;
+}
+.switch-slider::before {
+    content: '';
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    right: 3px;
+    bottom: 3px;
+    background: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.switch input:checked + .switch-slider {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+.switch input:checked + .switch-slider::before {
+    transform: translateX(-20px);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+}
+.modal-actions .btn { flex: 1; justify-content: center; }
+
+.notif-item {
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+    cursor: pointer;
+    margin-bottom: 6px;
+}
+.notif-item:hover { background: var(--bg-hover); }
+.notif-item.unread { background: var(--accent-soft); }
+.notif-icon {
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.notif-body { flex: 1; }
+.notif-title { font-weight: 600; font-size: 13.5px; }
+.notif-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.notif-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.toast {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 14px 18px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 280px;
+    max-width: 360px;
+    animation: toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.toast.hiding { animation: toastOut 0.3s ease forwards; }
+@keyframes toastIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toastOut {
+    to { opacity: 0; transform: translateY(12px) scale(0.95); }
+}
+.toast-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.toast-body { flex: 1; }
+.toast-title { font-weight: 700; font-size: 13.5px; }
+.toast-msg { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.stats-grid .card,
+.content-grid > * {
+    animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.stats-grid .card:nth-child(1) { animation-delay: 0.04s; }
+.stats-grid .card:nth-child(2) { animation-delay: 0.09s; }
+.stats-grid .card:nth-child(3) { animation-delay: 0.14s; }
+.stats-grid .card:nth-child(4) { animation-delay: 0.19s; }
+.content-grid > *:nth-child(1) { animation-delay: 0.24s; }
+.content-grid > *:nth-child(2) { animation-delay: 0.30s; }
+
+@media (max-width: 1280px) {
+    .content-grid { grid-template-columns: 1fr; }
+    .side-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+}
+
+@media (max-width: 1100px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 1024px) {
+    .sidebar {
+        transform: translateX(100%);
+        box-shadow: var(--shadow-xl);
+    }
+    .sidebar.mobile-open { transform: translateX(0); }
+    .main-content { margin-right: 0; padding: 18px 18px 40px; }
+    .mobile-toggle { display: flex; }
+    .search-box input { width: 180px; }
+    .search-box input:focus { width: 210px; }
+    .kbd { display: none; }
+}
+
+@media (max-width: 640px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .side-panel { grid-template-columns: 1fr; }
+    .main-content { padding: 14px 12px 40px; }
+    .page-title { font-size: 18px; }
+    .search-box { display: none; }
+    .form-row { grid-template-columns: 1fr; }
+    .seg-tab { padding: 6px 11px; font-size: 12px; }
+    .btn span { display: none; }
+    .btn { padding: 9px 12px; }
+    .modal-content { padding: 22px; border-radius: 18px; }
+    .toast-container { left: 12px; right: 12px; bottom: 16px; }
+    .toast { max-width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 12, 24, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 99;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+}
+.sidebar-backdrop.active { opacity: 1; visibility: visible; }
+
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    background: var(--text-primary);
+    color: var(--bg-body);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 7px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s;
+    z-index: 50;
+}
+[data-tooltip]:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+    <div class="logo">
+        <div class="logo-icon"><i class="ph-fill ph-robot"></i></div>
+        <div>
+            <div class="logo-text">ترید هوشمند</div>
+        </div>
+        <span class="logo-badge">Pro</span>
+    </div>
+
+    <nav class="nav-menu">
+        <div class="nav-section-label">اصلی</div>
+
+        <div class="nav-item">
+            <a href="#" class="nav-link active" data-nav="dashboard">
+                <i class="ph-fill ph-squares-four"></i>
+                <span>داشبورد</span>
+            </a>
+        </div>
+
+        <div class="nav-item has-submenu" data-group="bots">
+            <button class="nav-link nav-trigger" onclick="toggleAccordion(this)">
+                <span class="nav-link-left">
+                    <i class="ph ph-cpu"></i>
+                    <span>ربات‌های تریدر</span>
+                </span>
+                <i class="ph ph-caret-left chevron"></i>
+            </button>
+            <div class="submenu">
+                <div class="submenu-inner">
+                    <a href="#" class="sub-link active"><i class="ph ph-activity"></i> ربات‌های فعال</a>
+                    <a href="#" class="sub-link" onclick="openModal('newBotModal')"><i class="ph ph-plus-circle"></i> ساخت ربات جدید</a>
+                    <a href="#" class="sub-link"><i class="ph ph-flask"></i> استراتژی‌های آماده</a>
+                    <a href="#" class="sub-link"><i class="ph ph-chart-bar"></i> بک‌تست استراتژی</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-item has-submenu" data-group="market">
+            <button class="nav-link nav-trigger" onclick="toggleAccordion(this)">
+                <span class="nav-link-left">
+                    <i class="ph ph-chart-line"></i>
+                    <span>بازار و تحلیل</span>
+                </span>
+                <i class="ph ph-caret-left chevron"></i>
+            </button>
+            <div class="submenu">
+                <div class="submenu-inner">
+                    <a href="#" class="sub-link"><i class="ph ph-trend-up"></i> نمای کلی بازار</a>
+                    <a href="#" class="sub-link"><i class="ph ph-candlestick-chart"></i> نمودار زنده</a>
+                    <a href="#" class="sub-link"><i class="ph ph-radar"></i> اسکنر فرصت</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section-label">مالی</div>
+
+        <div class="nav-item has-submenu" data-group="wallet">
+            <button class="nav-link nav-trigger" onclick="toggleAccordion(this)">
+                <span class="nav-link-left">
+                    <i class="ph ph-wallet"></i>
+                    <span>کیف پول و صرافی</span>
+                </span>
+                <i class="ph ph-caret-left chevron"></i>
+            </button>
+            <div class="submenu">
+                <div class="submenu-inner">
+                    <a href="#" class="sub-link"><i class="ph ph-bank"></i> موجودی صرافی‌ها</a>
+                    <a href="#" class="sub-link"><i class="ph ph-arrows-down-up"></i> واریز و برداشت</a>
+                    <a href="#" class="sub-link"><i class="ph ph-receipt"></i> تاریخچه تراکنش‌ها</a>
+                    <a href="#" class="sub-link"><i class="ph ph-key"></i> کلیدهای API</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-item has-submenu" data-group="analytics">
+            <button class="nav-link nav-trigger" onclick="toggleAccordion(this)">
+                <span class="nav-link-left">
+                    <i class="ph ph-chart-pie-slice"></i>
+                    <span>گزارش و تحلیل</span>
+                </span>
+                <i class="ph ph-caret-left chevron"></i>
+            </button>
+            <div class="submenu">
+                <div class="submenu-inner">
+                    <a href="#" class="sub-link"><i class="ph ph-graph"></i> نمودار سود/ضرر</a>
+                    <a href="#" class="sub-link"><i class="ph ph-file-text"></i> گزارش‌های PDF</a>
+                    <a href="#" class="sub-link"><i class="ph ph-calendar-check"></i> گزارش ماهانه</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section-label">سیستم</div>
+
+        <div class="nav-item">
+            <a href="#" class="nav-link" data-nav="notifications" onclick="openModal('notifModal')">
+                <i class="ph ph-bell"></i>
+                <span>اعلان‌ها</span>
+                <span class="nav-badge">3</span>
+            </a>
+        </div>
+
+        <div class="nav-item">
+            <a href="#" class="nav-link" data-nav="settings" onclick="openModal('settingsModal')">
+                <i class="ph ph-gear-six"></i>
+                <span>تنظیمات سیستم</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="user-card" onclick="openModal('profileModal')">
+            <div class="user-avatar">م</div>
+            <div class="user-info">
+                <div class="user-name">مهدی رضایی</div>
+                <div class="user-plan"><span class="dot"></span> پلن حرفه‌ای</div>
+            </div>
+            <i class="ph ph-caret-up-down"></i>
+        </div>
+    </div>
+</aside>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+
+<main class="main-content">
+    <header class="top-header">
+        <div class="header-right">
+            <button class="icon-btn mobile-toggle" onclick="toggleMobileSidebar()" data-tooltip="منو">
+                <i class="ph ph-list"></i>
+            </button>
+            <div>
+                <h1 class="page-title">داشبورد اصلی</h1>
+                <p class="page-subtitle">خلاصه عملکرد ربات‌ها و پورتفوی</p>
+            </div>
+        </div>
+        <div class="header-left">
+            <div class="search-box">
+                <input type="text" placeholder="جستجو در داشبورد..." id="searchInput">
+                <i class="ph ph-magnifying-glass"></i>
+                <span class="kbd">Ctrl+K</span>
+            </div>
+            <button class="icon-btn" onclick="toggleTheme()" data-tooltip="تغییر تم">
+                <i class="ph ph-sun" id="themeIcon"></i>
+            </button>
+            <button class="icon-btn" onclick="openModal('notifModal')" data-tooltip="اعلان‌ها">
+                <i class="ph ph-bell"></i>
+                <span class="badge-dot"></span>
+            </button>
+            <button class="btn btn-primary" onclick="openModal('newBotModal')">
+                <i class="ph ph-plus"></i> <span>ربات جدید</span>
+            </button>
+        </div>
+    </header>
+
+    <section class="stats-grid">
+        <div class="card stat-card">
+            <div class="stat-top">
+                <div class="stat-icon" style="background: var(--accent-soft); color: var(--accent);">
+                    <i class="ph-fill ph-wallet"></i>
+                </div>
+                <div class="stat-trend trend-up">
+                    <i class="ph ph-trend-up"></i> ۱۲.۴٪
+                </div>
+            </div>
+            <div>
+                <div class="stat-value">$۴۵,۲۳۱</div>
+                <div class="stat-label">ارزش پورتفوی</div>
+            </div>
+            <svg class="sparkline" viewBox="0 0 100 28" preserveAspectRatio="none">
+                <path d="M0,22 L12,18 L24,20 L36,12 L48,15 L60,8 L72,11 L84,5 L100,3" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+
+        <div class="card stat-card">
+            <div class="stat-top">
+                <div class="stat-icon" style="background: var(--success-soft); color: var(--success);">
+                    <i class="ph-fill ph-piggy-bank"></i>
+                </div>
+                <div class="stat-trend trend-up">
+                    <i class="ph ph-trend-up"></i> ۵.۲٪
+                </div>
+            </div>
+            <div>
+                <div class="stat-value" style="color: var(--success);">+$۱,۲۴۰</div>
+                <div class="stat-label">سود خالص امروز</div>
+            </div>
+            <svg class="sparkline" viewBox="0 0 100 28" preserveAspectRatio="none">
+                <path d="M0,20 L14,18 L28,22 L42,14 L56,16 L70,9 L84,12 L100,4" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+
+        <div class="card stat-card">
+            <div class="stat-top">
+                <div class="stat-icon" style="background: var(--warning-soft); color: var(--warning);">
+                    <i class="ph-fill ph-cpu"></i>
+                </div>
+                <div class="stat-trend trend-neutral">۱ متوقف</div>
+            </div>
+            <div>
+                <div class="stat-value">۴ / ۵</div>
+                <div class="stat-label">ربات‌های فعال</div>
+            </div>
+            <div class="progress-bar" style="margin-top: 10px;">
+                <div class="progress-fill" style="width: 80%;"></div>
+            </div>
+        </div>
+
+        <div class="card stat-card">
+            <div class="stat-top">
+                <div class="stat-icon" style="background: #fce7f3; color: #ec4899;">
+                    <i class="ph-fill ph-trophy"></i>
+                </div>
+                <div class="stat-trend trend-down">
+                    <i class="ph ph-trend-down"></i> ۲.۱٪
+                </div>
+            </div>
+            <div>
+                <div class="stat-value">۶۸.۵٪</div>
+                <div class="stat-label">نرخ پیروزی</div>
+            </div>
+            <svg class="sparkline" viewBox="0 0 100 28" preserveAspectRatio="none">
+                <path d="M0,10 L16,14 L32,8 L48,16 L64,12 L80,18 L100,15" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+    </section>
+
+    <div class="content-grid">
+        <section class="card table-card">
+            <div class="table-header">
+                <div class="segmented-control" id="botTabs">
+                    <div class="seg-indicator" id="segIndicator"></div>
+                    <button class="seg-tab active" onclick="switchTab(this)">
+                        <i class="ph ph-list-checks"></i> همه
+                    </button>
+                    <button class="seg-tab" onclick="switchTab(this)">
+                        <i class="ph ph-play-circle"></i> فعال
+                    </button>
+                    <button class="seg-tab" onclick="switchTab(this)">
+                        <i class="ph ph-pause-circle"></i> متوقف
+                    </button>
+                    <button class="seg-tab" onclick="switchTab(this)">
+                        <i class="ph ph-clock-counter-clockwise"></i> تاریخچه
+                    </button>
+                </div>
+                <button class="btn btn-ghost btn-sm">
+                    <i class="ph ph-funnel"></i> <span>فیلتر</span>
+                </button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>نام ربات / جفت ارز</th>
+                            <th>استراتژی</th>
+                            <th>سرمایه</th>
+                            <th>سود/ضرر</th>
+                            <th>وضعیت</th>
+                            <th style="text-align: left;">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr onclick="showToast('جزئیات ربات', 'Grid Bot Alpha — در حال اجرا', 'success')">
+                            <td>
+                                <div class="asset-info">
+                                    <div class="asset-logo" style="background: #f7931a22; color: #f7931a;">₿</div>
+                                    <div>
+                                        <div class="asset-name">Grid Bot Alpha</div>
+                                        <div class="asset-pair">BTC/USDT</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Grid Trading</td>
+                            <td class="mono">$۱۰,۰۰۰</td>
+                            <td class="mono" style="color: var(--success);">+$۴۵۰.۲۰</td>
+                            <td><span class="badge badge-success"><span class="badge-dot-sm"></span> فعال</span></td>
+                            <td style="text-align: left;">
+                                <button class="action-btn" onclick="event.stopPropagation(); openModal('botDetailModal')" data-tooltip="جزئیات">
+                                    <i class="ph ph-dots-three"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr onclick="showToast('جزئیات ربات', 'DCA Master — در حال اجرا', 'success')">
+                            <td>
+                                <div class="asset-info">
+                                    <div class="asset-logo" style="background: #627eea22; color: #627eea;">Ξ</div>
+                                    <div>
+                                        <div class="asset-name">DCA Master</div>
+                                        <div class="asset-pair">ETH/USDT</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Dollar Cost Avg</td>
+                            <td class="mono">$۵,۰۰۰</td>
+                            <td class="mono" style="color: var(--success);">+$۱۲۰.۵۰</td>
+                            <td><span class="badge badge-success"><span class="badge-dot-sm"></span> فعال</span></td>
+                            <td style="text-align: left;">
+                                <button class="action-btn" onclick="event.stopPropagation(); openModal('botDetailModal')" data-tooltip="جزئیات">
+                                    <i class="ph ph-dots-three"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr onclick="showToast('ربات متوقف', 'Scalper Pro — نیاز به بررسی', 'warning')">
+                            <td>
+                                <div class="asset-info">
+                                    <div class="asset-logo" style="background: #14b8a622; color: #14b8a6;">S</div>
+                                    <div>
+                                        <div class="asset-name">Scalper Pro</div>
+                                        <div class="asset-pair">SOL/USDT</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Scalping</td>
+                            <td class="mono">$۳,۲۰۰</td>
+                            <td class="mono" style="color: var(--danger);">-$۴۵.۸۰</td>
+                            <td><span class="badge badge-danger"><span class="badge-dot-sm"></span> متوقف</span></td>
+                            <td style="text-align: left;">
+                                <button class="action-btn" onclick="event.stopPropagation(); openModal('botDetailModal')" data-tooltip="جزئیات">
+                                    <i class="ph ph-dots-three"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="asset-info">
+                                    <div class="asset-logo" style="background: #f0b90b22; color: #f0b90b;">B</div>
+                                    <div>
+                                        <div class="asset-name">BNB Grid X</div>
+                                        <div class="asset-pair">BNB/USDT</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Grid Trading</td>
+                            <td class="mono">$۴,۵۰۰</td>
+                            <td class="mono" style="color: var(--success);">+$۸۹.۳۰</td>
+                            <td><span class="badge badge-success"><span class="badge-dot-sm"></span> فعال</span></td>
+                            <td style="text-align: left;">
+                                <button class="action-btn" onclick="event.stopPropagation(); openModal('botDetailModal')">
+                                    <i class="ph ph-dots-three"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="asset-info">
+                                    <div class="asset-logo" style="background: #26a17b22; color: #26a17b;">₮</div>
+                                    <div>
+                                        <div class="asset-name">Stable DCA</div>
+                                        <div class="asset-pair">USDT/IRR</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>DCA</td>
+                            <td class="mono">$۲,۰۰۰</td>
+                            <td class="mono" style="color: var(--success);">+$۳۲.۱۰</td>
+                            <td><span class="badge badge-info"><span class="badge-dot-sm"></span> در انتظار</span></td>
+                            <td style="text-align: left;">
+                                <button class="action-btn" onclick="event.stopPropagation(); openModal('botDetailModal')">
+                                    <i class="ph ph-dots-three"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <div class="card panel-card">
+                <div class="panel-title">
+                    <span>فعالیت‌های اخیر</span>
+                    <i class="ph-fill ph-pulse"></i>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: var(--success-soft); color: var(--success);">
+                        <i class="ph ph-check-circle"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Grid Bot Alpha — خرید ۰.۰۱۲ BTC</div>
+                        <div class="activity-time">۲ دقیقه پیش</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: var(--accent-soft); color: var(--accent);">
+                        <i class="ph ph-robot"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">ربات جدید «BNB Grid X» ایجاد شد</div>
+                        <div class="activity-time">۱۵ دقیقه پیش</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: var(--danger-soft); color: var(--danger);">
+                        <i class="ph ph-pause-circle"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Scalper Pro متوقف شد (حد ضرر)</div>
+                        <div class="activity-time">۱ ساعت پیش</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: var(--warning-soft); color: var(--warning);">
+                        <i class="ph ph-warning"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">اتصال API بایننس نیاز به تمدید دارد</div>
+                        <div class="activity-time">۳ ساعت پیش</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card panel-card">
+                <div class="panel-title">
+                    <span>عملکرد هفتگی</span>
+                    <i class="ph-fill ph-chart-line-up"></i>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                    <span style="font-size: 22px; font-weight: 800; color: var(--success);">+$۲,۸۴۰</span>
+                    <span class="stat-trend trend-up" style="font-size: 11px;"><i class="ph ph-trend-up"></i> ۱۸.۶٪</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 72%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11.5px; color: var(--text-muted);">
+                    <span>هدف: $۴,۰۰۰</span>
+                    <span>۷۲٪</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="width: 100%; margin-top: 14px; justify-content: center;" onclick="openModal('settingsModal')">
+                    <i class="ph ph-gear"></i> تنظیم اهداف
+                </button>
+            </div>
+        </aside>
+    </div>
+</main>
+
+<div class="modal-overlay" id="newBotModal" onclick="closeModalOutside(event, 'newBotModal')">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title-wrap">
+                <div class="modal-icon"><i class="ph-fill ph-robot"></i></div>
+                <div>
+                    <h2 class="modal-title">ساخت ربات جدید</h2>
+                    <p class="modal-subtitle">تنظیمات ربات تریدر خود را وارد کنید</p>
+                </div>
+            </div>
+            <button class="close-btn" onclick="closeModal('newBotModal')">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">نام ربات</label>
+            <input type="text" class="form-input" placeholder="مثلاً: Grid Bot BTC">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">جفت ارز</label>
+                <select class="form-input">
+                    <option>BTC/USDT</option>
+                    <option>ETH/USDT</option>
+                    <option>SOL/USDT</option>
+                    <option>BNB/USDT</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">استراتژی</label>
+                <select class="form-input">
+                    <option>Grid Trading</option>
+                    <option>DCA</option>
+                    <option>Scalping</option>
+                    <option>Trend Following</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">میزان سرمایه (USDT)</label>
+            <input type="number" class="form-input" placeholder="۱۰۰۰">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">حد سود (٪)</label>
+                <input type="number" class="form-input" placeholder="۵">
+            </div>
+            <div class="form-group">
+                <label class="form-label">حد ضرر (٪)</label>
+                <input type="number" class="form-input" placeholder="۳">
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="createBot()">
+                <i class="ph ph-rocket-launch"></i> ایجاد و شروع
+            </button>
+            <button class="btn btn-ghost" onclick="closeModal('newBotModal')">انصراف</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal" onclick="closeModalOutside(event, 'settingsModal')">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title-wrap">
+                <div class="modal-icon" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
+                    <i class="ph-fill ph-gear-six"></i>
+                </div>
+                <div>
+                    <h2 class="modal-title">تنظیمات سریع</h2>
+                    <p class="modal-subtitle">پیکربندی اعلان‌ها، امنیت و ظاهر</p>
+                </div>
+            </div>
+            <button class="close-btn" onclick="closeModal('settingsModal')">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+
+        <div class="toggle-row">
+            <div class="toggle-row-left">
+                <i class="ph ph-telegram-logo"></i>
+                <div>
+                    <div class="toggle-label">اعلان‌های تلگرام</div>
+                    <div class="toggle-desc">ارسال هشدارها به ربات تلگرام</div>
+                </div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" checked>
+                <span class="switch-slider"></span>
+            </label>
+        </div>
+
+        <div class="toggle-row">
+            <div class="toggle-row-left">
+                <i class="ph ph-shield-warning"></i>
+                <div>
+                    <div class="toggle-label">حالت توقف اضطراری</div>
+                    <div class="toggle-desc">Kill Switch خودکار در شرایط بحرانی</div>
+                </div>
+            </div>
+            <label class="switch">
+                <input type="checkbox">
+                <span class="switch-slider"></span>
+            </label>
+        </div>
+
+        <div class="toggle-row">
+            <div class="toggle-row-left">
+                <i class="ph ph-moon-stars"></i>
+                <div>
+                    <div class="toggle-label">حالت شب خودکار</div>
+                    <div class="toggle-desc">تغییر تم بر اساس ساعت سیستم</div>
+                </div>
+            </div>
+            <label class="switch">
+                <input type="checkbox">
+                <span class="switch-slider"></span>
+            </label>
+        </div>
+
+        <div class="toggle-row">
+            <div class="toggle-row-left">
+                <i class="ph ph-bell-ringing"></i>
+                <div>
+                    <div class="toggle-label">صدا برای اعلان‌ها</div>
+                    <div class="toggle-desc">پخش صدای کوتاه هنگام هشدار</div>
+                </div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" checked>
+                <span class="switch-slider"></span>
+            </label>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="saveSettings()">
+                <i class="ph ph-check"></i> ذخیره تنظیمات
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="notifModal" onclick="closeModalOutside(event, 'notifModal')">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title-wrap">
+                <div class="modal-icon" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">
+                    <i class="ph-fill ph-bell-ringing"></i>
+                </div>
+                <div>
+                    <h2 class="modal-title">اعلان‌ها</h2>
+                    <p class="modal-subtitle">۳ اعلان خوانده‌نشده</p>
+                </div>
+            </div>
+            <button class="close-btn" onclick="closeModal('notifModal')">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+
+        <div class="notif-item unread">
+            <div class="notif-icon" style="background: var(--success-soft); color: var(--success);">
+                <i class="ph-fill ph-check-circle"></i>
+            </div>
+            <div class="notif-body">
+                <div class="notif-title">معامله موفق — Grid Bot Alpha</div>
+                <div class="notif-desc">خرید ۰.۰۱۲ BTC با قیمت ۶۲,۴۵۰ USDT انجام شد.</div>
+                <div class="notif-time">۲ دقیقه پیش</div>
+            </div>
+        </div>
+        <div class="notif-item unread">
+            <div class="notif-icon" style="background: var(--danger-soft); color: var(--danger);">
+                <i class="ph-fill ph-warning-circle"></i>
+            </div>
+            <div class="notif-body">
+                <div class="notif-title">حد ضرر فعال شد</div>
+                <div class="notif-desc">Scalper Pro به‌خاطر رسیدن به حد ضرر متوقف شد.</div>
+                <div class="notif-time">۱ ساعت پیش</div>
+            </div>
+        </div>
+        <div class="notif-item unread">
+            <div class="notif-icon" style="background: var(--warning-soft); color: var(--warning);">
+                <i class="ph-fill ph-key"></i>
+            </div>
+            <div class="notif-body">
+                <div class="notif-title">تمدید کلید API</div>
+                <div class="notif-desc">کلید API بایننس تا ۴۸ ساعت دیگر منقضی می‌شود.</div>
+                <div class="notif-time">۳ ساعت پیش</div>
+            </div>
+        </div>
+        <div class="notif-item">
+            <div class="notif-icon" style="background: var(--accent-soft); color: var(--accent);">
+                <i class="ph-fill ph-robot"></i>
+            </div>
+            <div class="notif-body">
+                <div class="notif-title">ربات جدید ایجاد شد</div>
+                <div class="notif-desc">BNB Grid X با موفقیت راه‌اندازی شد.</div>
+                <div class="notif-time">دیروز</div>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModal('notifModal')" style="flex:1;">بستن</button>
+            <button class="btn btn-outline" style="flex:1;" onclick="showToast('اعلان‌ها', 'همه اعلان‌ها خوانده شدند', 'success'); closeModal('notifModal');">علامت‌گذاری همه</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="botDetailModal" onclick="closeModalOutside(event, 'botDetailModal')">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title-wrap">
+                <div class="modal-icon" style="background: linear-gradient(135deg, #f7931a, #f59e0b);">
+                    <i class="ph-fill ph-cpu"></i>
+                </div>
+                <div>
+                    <h2 class="modal-title">Grid Bot Alpha</h2>
+                    <p class="modal-subtitle">BTC/USDT · Grid Trading</p>
+                </div>
+            </div>
+            <button class="close-btn" onclick="closeModal('botDetailModal')">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+            <div style="background: var(--bg-hover); border-radius: 12px; padding: 14px; text-align: center;">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">سرمایه</div>
+                <div style="font-size: 18px; font-weight: 800;">$۱۰,۰۰۰</div>
+            </div>
+            <div style="background: var(--bg-hover); border-radius: 12px; padding: 14px; text-align: center;">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">PnL</div>
+                <div style="font-size: 18px; font-weight: 800; color: var(--success);">+$۴۵۰.۲۰</div>
+            </div>
+            <div style="background: var(--bg-hover); border-radius: 12px; padding: 14px; text-align: center;">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">معاملات</div>
+                <div style="font-size: 18px; font-weight: 800;">۱۲۸</div>
+            </div>
+            <div style="background: var(--bg-hover); border-radius: 12px; padding: 14px; text-align: center;">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">نرخ برد</div>
+                <div style="font-size: 18px; font-weight: 800;">۷۲٪</div>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="showToast('ربات', 'ربات متوقف شد', 'warning'); closeModal('botDetailModal');">
+                <i class="ph ph-pause"></i> توقف
+            </button>
+            <button class="btn btn-primary" onclick="showToast('ربات', 'تنظیمات ذخیره شد', 'success'); closeModal('botDetailModal');">
+                <i class="ph ph-gear"></i> ویرایش
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="profileModal" onclick="closeModalOutside(event, 'profileModal')">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title-wrap">
+                <div class="user-avatar" style="width: 48px; height: 48px; font-size: 18px;">م</div>
+                <div>
+                    <h2 class="modal-title">مهدی رضایی</h2>
+                    <p class="modal-subtitle">mehdi@example.com · پلن حرفه‌ای</p>
+                </div>
+            </div>
+            <button class="close-btn" onclick="closeModal('profileModal')">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+
+        <div class="toggle-row" style="cursor: pointer;" onclick="showToast('پروفایل', 'صفحه پروفایل باز شد', 'info')">
+            <div class="toggle-row-left">
+                <i class="ph ph-user"></i>
+                <div>
+                    <div class="toggle-label">ویرایش پروفایل</div>
+                    <div class="toggle-desc">نام، ایمیل و تصویر</div>
+                </div>
+            </div>
+            <i class="ph ph-caret-left" style="color: var(--text-muted);"></i>
+        </div>
+        <div class="toggle-row" style="cursor: pointer;">
+            <div class="toggle-row-left">
+                <i class="ph ph-credit-card"></i>
+                <div>
+                    <div class="toggle-label">مدیریت اشتراک</div>
+                    <div class="toggle-desc">پلن حرفه‌ای · تمدید تا ۱۴۰۵/۰۷</div>
+                </div>
+            </div>
+            <i class="ph ph-caret-left" style="color: var(--text-muted);"></i>
+        </div>
+        <div class="toggle-row" style="cursor: pointer;">
+            <div class="toggle-row-left">
+                <i class="ph ph-sign-out" style="color: var(--danger);"></i>
+                <div>
+                    <div class="toggle-label" style="color: var(--danger);">خروج از حساب</div>
+                    <div class="toggle-desc">پایان جلسه فعلی</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+function toggleAccordion(btn) {
+    const item = btn.parentElement;
+    const group = item.dataset.group;
+    const wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.nav-item.has-submenu.open').forEach(el => {
+        if (el.dataset.group !== group) el.classList.remove('open');
+    });
+    item.classList.toggle('open', !wasOpen);
+}
+
+function switchTab(btn) {
+    const parent = btn.parentElement;
+    parent.querySelectorAll('.seg-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    moveIndicator(parent);
+}
+
+function moveIndicator(parent) {
+    const active = parent.querySelector('.seg-tab.active');
+    const indicator = parent.querySelector('.seg-indicator');
+    if (!active || !indicator) return;
+    const parentRect = parent.getBoundingClientRect();
+    const btnRect = active.getBoundingClientRect();
+    indicator.style.width = btnRect.width + 'px';
+    indicator.style.right = (parentRect.right - btnRect.right) + 'px';
+}
+
+function openModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function closeModalOutside(event, id) {
+    if (event.target.classList.contains('modal-overlay')) {
+        closeModal(id);
+    }
+}
+
+function toggleTheme() {
+    const body = document.body;
+    const icon = document.getElementById('themeIcon');
+    const isDark = body.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        body.removeAttribute('data-theme');
+        icon.className = 'ph ph-sun';
+        showToast('تم', 'حالت روشن فعال شد', 'info');
+    } else {
+        body.setAttribute('data-theme', 'dark');
+        icon.className = 'ph ph-moon';
+        showToast('تم', 'حالت تاریک فعال شد', 'info');
+    }
+}
+
+function toggleMobileSidebar() {
+    document.getElementById('sidebar').classList.toggle('mobile-open');
+    document.getElementById('sidebarBackdrop').classList.toggle('active');
+}
+
+function showToast(title, msg, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const colors = {
+        success: { bg: 'var(--success-soft)', color: 'var(--success)', icon: 'ph-check-circle' },
+        warning: { bg: 'var(--warning-soft)', color: 'var(--warning)', icon: 'ph-warning' },
+        danger:  { bg: 'var(--danger-soft)',  color: 'var(--danger)',  icon: 'ph-x-circle' },
+        info:    { bg: 'var(--accent-soft)',  color: 'var(--accent)',  icon: 'ph-info' }
+    };
+    const c = colors[type] || colors.info;
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `
+        <div class="toast-icon" style="background:${c.bg}; color:${c.color}">
+            <i class="ph-fill ${c.icon}"></i>
+        </div>
+        <div class="toast-body">
+            <div class="toast-title">${title}</div>
+            <div class="toast-msg">${msg}</div>
+        </div>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+    }, 3200);
+}
+
+function createBot() {
+    closeModal('newBotModal');
+    showToast('ربات جدید', 'ربات با موفقیت ایجاد و راه‌اندازی شد', 'success');
+}
+
+function saveSettings() {
+    closeModal('settingsModal');
+    showToast('تنظیمات', 'تغییرات با موفقیت ذخیره شد', 'success');
+}
+
+document.querySelectorAll('.stat-card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty('--mx', (e.clientX - rect.left) + 'px');
+        card.style.setProperty('--my', (e.clientY - rect.top) + 'px');
+    });
+});
+
+document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const search = document.getElementById('searchInput');
+        if (search) search.focus();
+    }
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(m => closeModal(m.id));
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar.classList.contains('mobile-open')) toggleMobileSidebar();
+    }
+});
+
+document.querySelectorAll('.nav-link[data-nav]').forEach(link => {
+    link.addEventListener('click', function(e) {
+        if (this.classList.contains('nav-trigger')) return;
+        document.querySelectorAll('.nav-menu > .nav-item > .nav-link').forEach(l => {
+            l.classList.remove('active');
+        });
+        this.classList.add('active');
+    });
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.segmented-control').forEach(ctrl => {
+        moveIndicator(ctrl);
+    });
+    const firstAccordion = document.querySelector('.nav-item.has-submenu');
+    if (firstAccordion) firstAccordion.classList.add('open');
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.setAttribute('data-theme', 'dark');
+        document.getElementById('themeIcon').className = 'ph ph-moon';
+    }
+});
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        document.querySelectorAll('.segmented-control').forEach(ctrl => moveIndicator(ctrl));
+    }, 100);
+});
+</script>
+
+</body>
+</html>
